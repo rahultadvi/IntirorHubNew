@@ -1,6 +1,7 @@
 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import userModel from "../models/userModel.js";
 import siteModel from "../models/siteModel.js";
 import { sendPasswordEmail, sendOtpEmail, sendEmail } from "../utils/emailService.js";
