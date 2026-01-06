@@ -15,11 +15,18 @@ import {
   Play,
   ChevronDown,
   Filter,
+  Zap,
+  Image,
+  FileCode,
+  Bookmark,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
 import { feedApi } from "../services/api";
-
+import jsPDF from 'jspdf';
+// import { generateFeedPDFFromElement } from "../utils/feedPdfGenerator";
+import html2canvas from "html2canvas";
 interface FeedItem {
   id: string;
   user: {
@@ -66,6 +73,7 @@ const Feed: React.FC = () => {
   const { user, token } = useAuth();
   const { activeSite } = useSite();
   const location = useLocation();
+  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newPost, setNewPost] = useState("");
   const [selectedImages, setSelectedImages] = useState<
@@ -83,6 +91,8 @@ const Feed: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+
+  const [openShareFor, setOpenShareFor] = useState<Record<string, boolean>>({});
 
   const activeSiteId = activeSite?.id ?? null;
   const isPostDisabled =
@@ -129,6 +139,8 @@ const Feed: React.FC = () => {
       return;
     }
 
+    
+
     const chosenFiles = Array.from(files).slice(0, availableSlots);
     try {
       const payloads = await Promise.all(
@@ -142,6 +154,21 @@ const Feed: React.FC = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+  const handleDeleteFeed = async (itemId: string) => {
+    if (!token) return;
+
+    const confirmDelete = window.confirm("Are you sure you want to delete this feed?");
+    if (!confirmDelete) return;
+
+    try {
+      await feedApi.deleteFeed(itemId, token); // backend API
+      setFeedItems((prev) => prev.filter((item) => item.id !== itemId));
+      setOpenMenuFor(null);
+    } catch (err) {
+      console.error("Delete feed failed:", err);
+      alert("Failed to delete feed");
     }
   };
 
@@ -208,7 +235,7 @@ const Feed: React.FC = () => {
         // stop all tracks
         try {
           stream.getTracks().forEach((t) => t.stop());
-        } catch (e) {}
+        } catch (e) { }
       };
       mediaRecorderRef.current = mr;
       mr.start();
@@ -217,7 +244,7 @@ const Feed: React.FC = () => {
       console.error("startRecording error", err);
       try {
         alert("Microphone access denied or not available");
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
@@ -351,7 +378,7 @@ const Feed: React.FC = () => {
             if (it.id) map[it.id] = Boolean(it.liked);
           });
           setLikedMap(map);
-        } catch (e) {}
+        } catch (e) { }
       } catch (err) {
         console.error("listFeed error", err);
         setError("Unable to load feed");
@@ -362,15 +389,15 @@ const Feed: React.FC = () => {
     };
 
     loadFeed();
-      // open add form when query param present
-      try {
-        const params = new URLSearchParams(location.search || window.location.search);
-        if (params.get("openAdd")) setShowAddForm(true);
-      } catch (e) {}
+    // open add form when query param present
+    try {
+      const params = new URLSearchParams(location.search || window.location.search);
+      if (params.get("openAdd")) setShowAddForm(true);
+    } catch (e) { }
 
-      const handler = () => setShowAddForm(true);
-      window.addEventListener('open-add-feed', handler as EventListener);
-      return () => window.removeEventListener('open-add-feed', handler as EventListener);
+    const handler = () => setShowAddForm(true);
+    window.addEventListener('open-add-feed', handler as EventListener);
+    return () => window.removeEventListener('open-add-feed', handler as EventListener);
   }, [activeSiteId, token, location.search]);
 
   const toggleLike = async (id: string) => {
@@ -385,6 +412,59 @@ const Feed: React.FC = () => {
       console.error("toggleLike error", err);
     }
   };
+
+  const generateFeedPDFFromElement = async (item: FeedItem) => {
+    const element = document.getElementById(`feed-${item.id}`);
+    if (!element) throw new Error("Feed element not found");
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    return pdf;
+  };
+
+
+  const handleShareFeed = async (item: FeedItem) => {
+    try {
+      const pdf = await generateFeedPDFFromElement(item);
+      const blob = pdf.output("blob");
+
+      const projectName = activeSite?.name || "Project";
+      const filename = `${projectName}_Feed_${item.id}_${new Date()
+        .toISOString()
+        .split("T")[0]}.pdf`;
+
+      const file = new File([blob], filename, {
+        type: "application/pdf",
+      });
+
+      // ✅ Web Share API (Mobile)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: "Site Feed Update",
+          text: item.content,
+          files: [file],
+        });
+        return;
+      }
+
+      // 🖥️ Desktop fallback → download
+      pdf.save(filename);
+    } catch (err) {
+      console.error("Feed PDF Share failed:", err);
+    }
+  };
+
+
 
   const formatTimeAgo = (timestamp: string) => {
     try {
@@ -423,10 +503,65 @@ const Feed: React.FC = () => {
 
 
   const [currentImageIndex, setCurrentImageIndex] = useState<Record<string, number>>({});
+  const feedTypeOptions = [
+    { value: "progress", label: "Progress" },
+    { value: "design", label: "Design" },
+    { value: "material", label: "Material Selection" },
+    { value: "issue", label: "Issue" },
+  ];
+
+  const [feedType, setFeedType] = useState("progress");
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+
+
 
   return (
+
     <div className="pb-20">
+
       {/* Header */}
+
+      {/* Feed Filters */}
+      <div className="mb-5 flex gap-2.5 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+        {[
+          { key: "all", label: "All", icon: Zap },
+          { key: "updates", label: "Progress", icon: Zap },
+          { key: "photos", label: "Design", icon: Image },
+          { key: "documents", label: "Material Selection", icon: FileCode },
+        ].map((f) => {
+          const FilterIcon = f.icon;
+          const filterCount = f.key === "all" ? feedItems.length : feedItems.filter(item => {
+            if (f.key === "updates") return item.type === "update";
+            if (f.key === "photos") return item.type === "photo";
+            if (f.key === "documents") return item.type === "document" || item.type === "milestone";
+            return true;
+          }).length;
+
+          return (
+            <button
+              key={f.key}
+              onClick={() => setActiveFilter(f.key as FilterKey)}
+              className={`
+          flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-200 relative group
+          ${activeFilter === f.key
+                  ? "bg-gradient-to-r from-slate-800 to-slate-700 text-white shadow-lg shadow-slate-800/30 scale-105"
+                  : "bg-white text-slate-600 border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md"
+                }
+        `}
+              title={f.label}
+            >
+              <FilterIcon className={`w-4 h-4 transition-transform duration-200 ${activeFilter === f.key ? 'scale-110' : 'group-hover:scale-105'}`} />
+              <span>{f.label}</span>
+              <span
+                className={`inline-flex items-center justify-center min-w-max ml-1 px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-200 ${activeFilter === f.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'}`}
+              >
+                {filterCount}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Site Feed</h2>
@@ -464,7 +599,9 @@ const Feed: React.FC = () => {
           });
 
           return (
-            <div key={item.id} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <div id={`feed-${item.id}`}
+              key={item.id}
+              className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
               {/* User Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -483,9 +620,31 @@ const Feed: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-400">{formatTimeAgo(item.timestamp)}</span>
-                  <button className="text-slate-400 hover:text-slate-600">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuFor(openMenuFor === item.id ? null : item.id);
+                      }}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+
+
+                    {openMenuFor === item.id && (
+                      <div className="absolute right-0 mt-2 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
+                        <button
+                          onClick={() => handleDeleteFeed(item.id)}
+                          className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                        >
+                          <X className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
 
@@ -515,9 +674,8 @@ const Feed: React.FC = () => {
                         {item.images.map((_, idx) => (
                           <span
                             key={idx}
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                              idx === imageIndex ? "bg-white" : "bg-white/50"
-                            }`}
+                            className={`w-2 h-2 rounded-full transition-colors ${idx === imageIndex ? "bg-white" : "bg-white/50"
+                              }`}
                           ></span>
                         ))}
                       </div>
@@ -552,9 +710,8 @@ const Feed: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => toggleLike(item.id)}
-                    className={`flex items-center gap-1 transition-colors ${
-                      likedMap[item.id] ? "text-rose-500" : "text-slate-500 hover:text-rose-500"
-                    }`}
+                    className={`flex items-center gap-1 transition-colors ${likedMap[item.id] ? "text-rose-500" : "text-slate-500 hover:text-rose-500"
+                      }`}
                   >
                     <Heart className="w-6 h-6" />
                   </button>
@@ -564,9 +721,13 @@ const Feed: React.FC = () => {
                   >
                     <MessageSquare className="w-6 h-6" />
                   </button>
-                  <button className="flex items-center gap-1 text-slate-500 hover:text-emerald-500 transition-colors">
+                  <button
+                    onClick={() => handleShareFeed(item)}
+                    className="flex items-center gap-1 text-slate-500 hover:text-emerald-500 transition-colors"
+                  >
                     <Share className="w-6 h-6" />
                   </button>
+
                 </div>
                 <div className="flex gap-1">
                   <span className="w-2 h-2 rounded-full bg-slate-300"></span>
@@ -661,148 +822,190 @@ const Feed: React.FC = () => {
             ${showAddForm ? "scale-100 translate-y-0" : "scale-95 translate-y-4"}
           `}
         >
-    {/* Header */}
-    <div className="mb-4 flex items-center justify-between">
-      <h3 className="text-lg font-bold text-gray-900">Add Feed</h3>
-      <button
-        onClick={() => setShowAddForm(false)}
-        className="rounded-full p-1 hover:bg-gray-100 transition"
-      >
-        <X className="h-5 w-5 text-gray-500" />
-      </button>
-    </div>
-
-    <div className="flex items-start gap-3">
-      
-
-      <div className="flex-1 min-w-0">
-        <input
-          type="text"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Add a title (optional)"
-          className="mb-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
-        />
-
-        <textarea
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-          placeholder="Share an update..."
-          rows={4}
-          className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
-        />
-
-        {/* Images Preview */}
-        {selectedImages.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-3">
-            {selectedImages.map((image) => (
-              <div
-                key={image.id}
-                className="relative h-20 w-20 overflow-hidden rounded-lg border"
-              >
-                <img
-                  src={image.src}
-                  alt={image.name}
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  onClick={() => handleRemoveImage(image.id)}
-                  className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
+          {/* Header */}
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900">Add Feed</h3>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="rounded-full p-1 hover:bg-gray-100 transition"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
           </div>
-        )}
 
-        {/* Files Preview */}
-        {selectedFiles.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {selectedFiles.map(({ id, file }) => (
-              <div
-                key={id}
-                className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2"
-              >
-                {file.type && file.type.startsWith("audio") ? (
-                  <audio controls className="h-8 w-40">
-                    <source src={URL.createObjectURL(file)} type={file.type} />
-                    Your browser does not support the audio element.
-                  </audio>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <span className="max-w-[120px] truncate text-xs text-gray-700">
-                      {file.name}
-                    </span>
-                  </>
+          <div className="flex items-start gap-3">
+
+
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Add a title (optional)"
+                className="mb-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
+              />
+
+              <textarea
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                placeholder="Share an update..."
+                rows={4}
+                className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
+              />
+              {/* Feed Type Selector */}
+              {/* Feed Type Dropdown */}
+              <div className="relative mt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsTypeOpen(!isTypeOpen)}
+                  className="w-full flex items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-400"
+                >
+                  <span>
+                    {
+                      feedTypeOptions.find((o) => o.value === feedType)?.label
+                    }
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${isTypeOpen ? "rotate-180" : ""
+                      }`}
+                  />
+                </button>
+
+                {isTypeOpen && (
+                  <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+                    {feedTypeOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setFeedType(opt.value);
+                          setIsTypeOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100
+            ${feedType === opt.value
+                            ? "bg-slate-100 font-semibold"
+                            : ""
+                          }
+          `}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
+              </div>
+
+              {/* Images Preview */}
+              {selectedImages.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {selectedImages.map((image) => (
+                    <div
+                      key={image.id}
+                      className="relative h-20 w-20 overflow-hidden rounded-lg border"
+                    >
+                      <img
+                        src={image.src}
+                        alt={image.name}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        onClick={() => handleRemoveImage(image.id)}
+                        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Files Preview */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedFiles.map(({ id, file }) => (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2"
+                    >
+                      {file.type && file.type.startsWith("audio") ? (
+                        <audio controls className="h-8 w-40">
+                          <source src={URL.createObjectURL(file)} type={file.type} />
+                          Your browser does not support the audio element.
+                        </audio>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="max-w-[120px] truncate text-xs text-gray-700">
+                            {file.name}
+                          </span>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleRemoveFile(id)}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="rounded-lg border border-dashed px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400"
+                  >
+                    Photos
+                  </button>
+
+                  <button
+                    onClick={() => attachmentInputRef.current?.click()}
+                    className="rounded-lg border border-dashed px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400"
+                  >
+                    Files
+                  </button>
+
+                  <button
+                    onClick={() => (isRecording ? stopRecording() : startRecording())}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400 ${isRecording ? "bg-red-50 border-red-200 text-red-600" : ""}`}
+                  >
+                    <Mic className="h-4 w-4" />
+                    <span>{isRecording ? "Stop" : "Record"}</span>
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => handleRemoveFile(id)}
-                  className="text-gray-400 hover:text-red-600"
+                  onClick={handleSubmitPost}
+                  disabled={isPostDisabled}
+                  className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-black/90 disabled:bg-black/40"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <Send className="h-4 w-4" />
+                  Post
                 </button>
               </div>
-            ))}
+            </div>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            <input
-              ref={attachmentInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg border border-dashed px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400"
-            >
-              Photos
-            </button>
-
-            <button
-              onClick={() => attachmentInputRef.current?.click()}
-              className="rounded-lg border border-dashed px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400"
-            >
-              Files
-            </button>
-
-            <button
-              onClick={() => (isRecording ? stopRecording() : startRecording())}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-gray-600 hover:border-gray-400 ${isRecording ? "bg-red-50 border-red-200 text-red-600" : ""}`}
-            >
-              <Mic className="h-4 w-4" />
-              <span>{isRecording ? "Stop" : "Record"}</span>
-            </button>
-          </div>
-
-          <button
-            onClick={handleSubmitPost}
-            disabled={isPostDisabled}
-            className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-black/90 disabled:bg-black/40"
-          >
-            <Send className="h-4 w-4" />
-            Post
-          </button>
         </div>
       </div>
-    </div>
-      </div>
-    </div>
 
       {/* Image modal */}
       {imageModal.open && (

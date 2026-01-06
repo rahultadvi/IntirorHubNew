@@ -7,7 +7,8 @@ import {
   Check,
   X,
   Clock,
-    MoreVertical,
+  MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
@@ -34,21 +35,21 @@ interface Room {
 }
 
 const BOQ: React.FC = () => {
-    // Track which menu is open (by item id)
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  // Track which menu is open (by item id)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-    // Close menu on outside click
-    useEffect(() => {
-      const handleClick = (e: MouseEvent) => {
-        // Only close if click is outside any menu button or menu
-        if (!(e.target instanceof HTMLElement)) return;
-        if (!e.target.closest('.boq-menu-btn') && !e.target.closest('.boq-menu-dropdown')) {
-          setOpenMenuId(null);
-        }
-      };
-      document.addEventListener('mousedown', handleClick);
-      return () => document.removeEventListener('mousedown', handleClick);
-    }, []);
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      // Only close if click is outside any menu button or menu
+      if (!(e.target instanceof HTMLElement)) return;
+      if (!e.target.closest('.boq-menu-btn') && !e.target.closest('.boq-menu-dropdown')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoomName, setEditedRoomName] = useState<string>("");
@@ -86,7 +87,7 @@ const BOQ: React.FC = () => {
 
   const rooms = useMemo(() => {
     const roomMap: { [key: string]: Room } = {};
-    
+
     // First, initialize all rooms from allRoomNames
     allRoomNames.forEach((roomName) => {
       roomMap[roomName] = {
@@ -96,7 +97,7 @@ const BOQ: React.FC = () => {
         subtotal: 0,
       };
     });
-    
+
     // Then add items to the rooms
     boqItems
       .filter((item: any) => item.itemName !== 'Room Added') // Exclude dummy room items
@@ -117,7 +118,7 @@ const BOQ: React.FC = () => {
           roomMap[roomName].subtotal += item.totalCost;
         }
       });
-    
+
     return Object.values(roomMap);
   }, [boqItems]);
 
@@ -135,7 +136,7 @@ const BOQ: React.FC = () => {
     try {
       const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
       const { boqItems: items } = response as { boqItems: Record<string, any[]>; stats: any };
-    setBoqItems(Object.values(items).flat());
+      setBoqItems(Object.values(items).flat());
     } catch (error) {
       console.error('Failed to fetch BOQ items', error);
     }
@@ -264,181 +265,181 @@ const BOQ: React.FC = () => {
       const margin = 20;
       let yPosition = margin;
 
-    // Set font
-    pdf.setFont('helvetica', 'normal');
+      // Set font
+      pdf.setFont('helvetica', 'normal');
 
-    // Header
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('BILL OF QUANTITIES', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('BILL OF QUANTITIES', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
 
-    // Company/Project Info
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Project: ${activeSite?.name || 'N/A'}`, margin, yPosition);
-    yPosition += 8;
-    pdf.text(`Room: ${room.name}`, margin, yPosition);
-    yPosition += 8;
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPosition);
-    yPosition += 15;
+      // Company/Project Info
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Project: ${activeSite?.name || 'N/A'}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Room: ${room.name}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPosition);
+      yPosition += 15;
 
-    console.log('Header section completed, yPosition:', yPosition);
+      console.log('Header section completed, yPosition:', yPosition);
 
-    // Table Header
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
+      // Table Header
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
 
-    // Draw table header background
-    pdf.setFillColor(240, 240, 240);
-    pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12, 'F');
+      // Draw table header background
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12, 'F');
 
-    // Draw header border
-    pdf.setLineWidth(0.5);
-    pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12);
+      // Draw header border
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12);
 
-    // Define column positions
-    const colPositions = {
-      sno: margin + 5,
-      item: margin + 20,
-      quantity: margin + 100,
-      unit: margin + 130,
-      rate: margin + 150,
-      amount: pageWidth - margin - 35
-    };
+      // Define column positions
+      const colPositions = {
+        sno: margin + 5,
+        item: margin + 20,
+        quantity: margin + 100,
+        unit: margin + 130,
+        rate: margin + 150,
+        amount: pageWidth - margin - 35
+      };
 
-    // Draw vertical lines for table columns
-    const columnLines = [
-      margin, // Left border
-      margin + 15, // After S.No
-      margin + 90, // After Item Description
-      margin + 125, // After Quantity
-      margin + 145, // After Unit
-      margin + 175, // After Rate
-      pageWidth - margin // Right border
-    ];
+      // Draw vertical lines for table columns
+      const columnLines = [
+        margin, // Left border
+        margin + 15, // After S.No
+        margin + 90, // After Item Description
+        margin + 125, // After Quantity
+        margin + 145, // After Unit
+        margin + 175, // After Rate
+        pageWidth - margin // Right border
+      ];
 
-    // Table content
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+      // Table content
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
 
-    room.items.forEach((item, index) => {
-      console.log(`Processing item ${index + 1}:`, {
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        rate: item.rate,
-        amount: item.amount,
-        status: item.status
-      });
-
-      // Check if we need a new page
-      if (yPosition > pageHeight - 40) {
-        pdf.addPage();
-        yPosition = margin;
-
-        // Redraw header on new page
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFillColor(240, 240, 240);
-        pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12, 'F');
-
-        // Draw header border
-        pdf.setLineWidth(0.5);
-        pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12);
-
-        pdf.text('S.No', colPositions.sno, yPosition + 2);
-        pdf.text('Item Description', colPositions.item, yPosition + 2);
-        pdf.text('Quantity', colPositions.quantity, yPosition + 2);
-        pdf.text('Unit', colPositions.unit, yPosition + 2);
-        pdf.text('Rate (₹)', colPositions.rate, yPosition + 2);
-        pdf.text('Amount (₹)', colPositions.amount, yPosition + 2);
-
-        yPosition += 15;
-        pdf.setLineWidth(0.5);
-        pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
-
-        // Redraw vertical lines
-        pdf.setLineWidth(0.3);
-        columnLines.forEach(x => {
-          pdf.line(x, yPosition - 18, x, yPosition - 3);
+      room.items.forEach((item, index) => {
+        console.log(`Processing item ${index + 1}:`, {
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          rate: item.rate,
+          amount: item.amount,
+          status: item.status
         });
 
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
+        // Check if we need a new page
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage();
+          yPosition = margin;
+
+          // Redraw header on new page
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFillColor(240, 240, 240);
+          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12, 'F');
+
+          // Draw header border
+          pdf.setLineWidth(0.5);
+          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 12);
+
+          pdf.text('S.No', colPositions.sno, yPosition + 2);
+          pdf.text('Item Description', colPositions.item, yPosition + 2);
+          pdf.text('Quantity', colPositions.quantity, yPosition + 2);
+          pdf.text('Unit', colPositions.unit, yPosition + 2);
+          pdf.text('Rate (₹)', colPositions.rate, yPosition + 2);
+          pdf.text('Amount (₹)', colPositions.amount, yPosition + 2);
+
+          yPosition += 15;
+          pdf.setLineWidth(0.5);
+          pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
+
+          // Redraw vertical lines
+          pdf.setLineWidth(0.3);
+          columnLines.forEach(x => {
+            pdf.line(x, yPosition - 18, x, yPosition - 3);
+          });
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+        }
+
+        const isEvenRow = index % 2 === 0;
+
+        // Alternate row background
+        // Item name (with word wrap)
+        const itemName = item.name;
+        const maxItemWidth = 70; // Width available for item description
+        const lines = pdf.splitTextToSize(itemName, maxItemWidth);
+
+        // Calculate row height based on text lines
+        const lineHeight = 5;
+        const rowHeight = Math.max(12, lines.length * lineHeight);
+
+        if (isEvenRow) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight, 'F');
+        }
+        // Draw row borders
+        pdf.setLineWidth(0.3);
+        pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight);
+        // Serial number
+        pdf.text((index + 1).toString(), colPositions.sno, yPosition + 2);
+
+        pdf.text(lines, colPositions.item, yPosition + 2);
+
+        // Quantity
+        pdf.text(item.quantity.toString(), colPositions.quantity, yPosition + 2);
+
+        // Unit
+        pdf.text(item.unit, colPositions.unit, yPosition + 2);
+
+        // Rate (right-aligned)
+        const rateText = formatCurrency(item.rate).replace('₹', '').trim();
+        const rateWidth = pdf.getTextWidth(rateText);
+        pdf.text(rateText, colPositions.rate + 20 - rateWidth, yPosition + 2);
+
+        // Amount (right-aligned)
+        const amountText = formatCurrency(item.amount).replace('₹', '').trim();
+        const amountWidth = pdf.getTextWidth(amountText);
+        pdf.text(amountText, colPositions.amount + 30 - amountWidth, yPosition + 2);
+
+        yPosition += rowHeight;
+      });
+
+      // Total
+      yPosition += 10;
+      if (yPosition > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = margin;
       }
 
-      const isEvenRow = index % 2 === 0;
+      // Draw total line
+      pdf.setLineWidth(1);
+      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
 
-      // Alternate row background
-      // Item name (with word wrap)
-      const itemName = item.name;
-      const maxItemWidth = 70; // Width available for item description
-      const lines = pdf.splitTextToSize(itemName, maxItemWidth);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('TOTAL AMOUNT:', pageWidth - margin - 80, yPosition + 5);
+      pdf.text(formatCurrency(room.subtotal).replace('₹', ''), pageWidth - margin - 25, yPosition + 5);
 
-      // Calculate row height based on text lines
-      const lineHeight = 5;
-      const rowHeight = Math.max(12, lines.length * lineHeight);
+      // Footer
+      const footerY = pageHeight - 20;
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(8);
+      pdf.text('Generated by IntirorHub - Professional Interior Design Management', pageWidth / 2, footerY, { align: 'center' });
 
-      if (isEvenRow) {
-        pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight, 'F');
-      }
-      // Draw row borders
-      pdf.setLineWidth(0.3);
-      pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight);
-      // Serial number
-      pdf.text((index + 1).toString(), colPositions.sno, yPosition + 2);
-
-      pdf.text(lines, colPositions.item, yPosition + 2);
-
-      // Quantity
-      pdf.text(item.quantity.toString(), colPositions.quantity, yPosition + 2);
-
-      // Unit
-      pdf.text(item.unit, colPositions.unit, yPosition + 2);
-
-      // Rate (right-aligned)
-      const rateText = formatCurrency(item.rate).replace('₹', '').trim();
-      const rateWidth = pdf.getTextWidth(rateText);
-      pdf.text(rateText, colPositions.rate + 20 - rateWidth, yPosition + 2);
-
-      // Amount (right-aligned)
-      const amountText = formatCurrency(item.amount).replace('₹', '').trim();
-      const amountWidth = pdf.getTextWidth(amountText);
-      pdf.text(amountText, colPositions.amount + 30 - amountWidth, yPosition + 2);
-
-      yPosition += rowHeight;
-    });
-
-    // Total
-    yPosition += 10;
-    if (yPosition > pageHeight - 20) {
-      pdf.addPage();
-      yPosition = margin;
+      return pdf;
+    } catch (error) {
+      console.error('Error in generatePDFFromElement:', error);
+      throw error; // Re-throw to be caught by handleExportPDF
     }
-
-    // Draw total line
-    pdf.setLineWidth(1);
-    pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.text('TOTAL AMOUNT:', pageWidth - margin - 80, yPosition + 5);
-    pdf.text(formatCurrency(room.subtotal).replace('₹', ''), pageWidth - margin - 25, yPosition + 5);
-
-    // Footer
-    const footerY = pageHeight - 20;
-    pdf.setFont('helvetica', 'italic');
-    pdf.setFontSize(8);
-    pdf.text('Generated by IntirorHub - Professional Interior Design Management', pageWidth / 2, footerY, { align: 'center' });
-
-    return pdf;
-  } catch (error) {
-    console.error('Error in generatePDFFromElement:', error);
-    throw error; // Re-throw to be caught by handleExportPDF
-  }
-};
+  };
 
   const handleExportPDF = async (room: Room) => {
     try {
@@ -539,8 +540,23 @@ const BOQ: React.FC = () => {
     }
   };
 
-  const filteredRooms = selectedRoom === "all" 
-    ? rooms 
+  const handleDeleteBOQItem = async (itemId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token || !isAdmin) return;
+
+    const ok = window.confirm("Are you sure you want to delete this BOQ item?");
+    if (!ok) return;
+
+    try {
+      await boqApi.deleteBOQItem(itemId, token);
+      fetchBOQItems(); // reload list
+    } catch (error) {
+      console.error("Failed to delete BOQ item", error);
+    }
+  };
+
+  const filteredRooms = selectedRoom === "all"
+    ? rooms
     : rooms.filter(room => room.id === selectedRoom);
 
   const filterItemsByCategory = (items: BOQItem[]) => {
@@ -554,12 +570,12 @@ const BOQ: React.FC = () => {
 
   return (
     <>
-    <div className="pb-20">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Bill of Quantities</h2>
-        <p className="text-slate-500 text-sm">Comprehensive cost breakdown and project estimation</p>
-        {/* <div className="mt-4 flex items-center justify-center gap-3">
+      <div className="pb-20">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Bill of Quantities</h2>
+          <p className="text-slate-500 text-sm">Comprehensive cost breakdown and project estimation</p>
+          {/* <div className="mt-4 flex items-center justify-center gap-3">
           <button
             onClick={() => setShowCreateProjectModal(true)}
             className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
@@ -567,446 +583,451 @@ const BOQ: React.FC = () => {
             Create New Site/ Project
           </button>
         </div> */}
-      </div>
+        </div>
 
-      {/* Category Filters */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-        <button
-          onClick={() => setSelectedCategory("all")}
-          className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
-            selectedCategory === "all"
-              ? "bg-slate-800 text-white shadow-lg"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          All Items
-        </button>
-        <button
-          onClick={() => setSelectedCategory("furniture")}
-          className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
-            selectedCategory === "furniture"
-              ? "bg-slate-800 text-white shadow-lg"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          Furniture
-        </button>
-        <button
-          onClick={() => setSelectedCategory("services")}
-          className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
-            selectedCategory === "services"
-              ? "bg-slate-800 text-white shadow-lg"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          Services
-        </button>
-      </div>
-
-      {/* Room Filters + Add Button */}
-      <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-100 flex items-center justify-between">
-        <div className="flex flex-wrap gap-2">
+        {/* Category Filters */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
           <button
-            onClick={() => setSelectedRoom("all")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              selectedRoom === "all"
-                ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-            }`}
+            onClick={() => setSelectedCategory("all")}
+            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "all"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              }`}
           >
-            All Rooms
+            All Items
           </button>
-          {allRoomNames.map((roomName) => (
+          <button
+            onClick={() => setSelectedCategory("furniture")}
+            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "furniture"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              }`}
+          >
+            Furniture
+          </button>
+          <button
+            onClick={() => setSelectedCategory("services")}
+            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "services"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              }`}
+          >
+            Services
+          </button>
+        </div>
+
+        {/* Room Filters + Add Button */}
+        <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-100 flex items-center justify-between">
+          <div className="flex flex-wrap gap-2">
             <button
-              key={roomName}
-              onClick={() => setSelectedRoom(roomName.toLowerCase().replace(/\s+/g, '-'))}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                selectedRoom === roomName.toLowerCase().replace(/\s+/g, '-')
+              onClick={() => setSelectedRoom("all")}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === "all"
                   ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
                   : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
+                }`}
             >
-              {roomName}
+              All Rooms
             </button>
-          ))}
+            {allRoomNames.map((roomName) => (
+              <button
+                key={roomName}
+                onClick={() => setSelectedRoom(roomName.toLowerCase().replace(/\s+/g, '-'))}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === roomName.toLowerCase().replace(/\s+/g, '-')
+                    ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  }`}
+              >
+                {roomName}
+              </button>
+            ))}
+          </div>
+          {/* Add Room Button */}
+          <button
+            className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition-all flex-shrink-0"
+            title="Add Room"
+            onClick={() => {
+              console.log('Add Room clicked');
+              setShowAddRoomModal(true);
+            }}
+          >
+            <Plus className="w-7 h-7" />
+          </button>
         </div>
-        {/* Add Room Button */}
-        <button
-          className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition-all flex-shrink-0"
-          title="Add Room"
-          onClick={() => {
-            console.log('Add Room clicked');
-            setShowAddRoomModal(true);
-          }}
-        >
-          <Plus className="w-7 h-7" />
-        </button>
-      </div>
 
- {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddModal(false)} />
+            <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
         scale-100 translate-y-0 opacity-100
         animate-modalIn">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex flex-col">
-                <h3 className="text-base font-semibold">Add BOQ Item</h3>
-                <span className="text-xs text-gray-500">Add a new item to the Bill of Quantities</span>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold">Add BOQ Item</h3>
+                  <span className="text-xs text-gray-500">Add a new item to the Bill of Quantities</span>
+                </div>
+                <button onClick={() => setShowAddModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
+              <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600">Room Name *</label>
+                  <select
+                    className="w-full mt-1 p-2 border rounded"
+                    value={boqForm.roomName}
+                    onChange={(e) => setBoqForm({ ...boqForm, roomName: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Room</option>
+                    {allRoomNames.map((roomName) => (
+                      <option key={roomName} value={roomName}>{roomName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
+                  <input
+                    className="w-full mt-1 p-2 border rounded"
+                    placeholder="Enter item name or scope of work"
+                    value={boqForm.itemName}
+                    onChange={(e) => setBoqForm({ ...boqForm, itemName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Quantity / Size *</label>
+                  <input
+                    className="w-full mt-1 p-2 border rounded"
+                    placeholder="Enter quantity or size"
+                    type="number"
+                    value={boqForm.quantity}
+                    onChange={(e) => setBoqForm({ ...boqForm, quantity: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Unit *</label>
+                  <select
+                    className="w-full mt-1 p-2 border rounded"
+                    value={boqForm.unit}
+                    onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
+                  >
+                    <option>Sq.ft</option>
+                    <option>Rft</option>
+                    <option>Nos</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Rate per Unit (₹) *</label>
+                  <input
+                    type="number"
+                    className="w-full mt-1 p-2 border rounded"
+                    placeholder="Enter rate per unit"
+                    value={boqForm.rate}
+                    onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Total Cost (₹)</label>
+                  <input
+                    type="text"
+                    className="w-full mt-1 p-2 border rounded bg-gray-100"
+                    readOnly
+                    value={boqForm.quantity && boqForm.rate ? `₹${(parseFloat(boqForm.quantity) * parseFloat(boqForm.rate)).toLocaleString()}` : "Auto Calculated"}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Upload Reference Image</label>
+                  <input
+                    type="file"
+                    className="w-full mt-1 p-2 border rounded"
+                    accept="image/*"
+                    onChange={(e) => setBoqForm({ ...boqForm, referenceImage: e.target.files?.[0] || null })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Comments / Notes</label>
+                  <textarea
+                    className="w-full mt-1 p-2 border rounded"
+                    rows={3}
+                    placeholder="Add any additional comments or notes"
+                    value={boqForm.comments}
+                    onChange={(e) => setBoqForm({ ...boqForm, comments: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
+                  <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitBOQItem({ preventDefault: () => { } } as any, true)}
+                    className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
+                  >
+                    Save & Add Another
+                  </button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-xs text-gray-600">Room Name *</label>
-                <select 
-                  className="w-full mt-1 p-2 border rounded"
-                  value={boqForm.roomName}
-                  onChange={(e) => setBoqForm({...boqForm, roomName: e.target.value})}
-                  required
-                >
-                  <option value="">Select Room</option>
-                  {allRoomNames.map((roomName) => (
-                    <option key={roomName} value={roomName}>{roomName}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
-                <input 
-                  className="w-full mt-1 p-2 border rounded" 
-                  placeholder="Enter item name or scope of work"
-                  value={boqForm.itemName}
-                  onChange={(e) => setBoqForm({...boqForm, itemName: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Quantity / Size *</label>
-                <input 
-                  className="w-full mt-1 p-2 border rounded" 
-                  placeholder="Enter quantity or size"
-                  type="number"
-                  value={boqForm.quantity}
-                  onChange={(e) => setBoqForm({...boqForm, quantity: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Unit *</label>
-                <select 
-                  className="w-full mt-1 p-2 border rounded"
-                  value={boqForm.unit}
-                  onChange={(e) => setBoqForm({...boqForm, unit: e.target.value})}
-                >
-                  <option>Sq.ft</option>
-                  <option>Rft</option>
-                  <option>Nos</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Rate per Unit (₹) *</label>
-                <input 
-                  type="number" 
-                  className="w-full mt-1 p-2 border rounded" 
-                  placeholder="Enter rate per unit"
-                  value={boqForm.rate}
-                  onChange={(e) => setBoqForm({...boqForm, rate: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Total Cost (₹)</label>
-                <input 
-                  type="text" 
-                  className="w-full mt-1 p-2 border rounded bg-gray-100" 
-                  readOnly 
-                  value={boqForm.quantity && boqForm.rate ? `₹${(parseFloat(boqForm.quantity) * parseFloat(boqForm.rate)).toLocaleString()}` : "Auto Calculated"} 
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Upload Reference Image</label>
-                <input 
-                  type="file" 
-                  className="w-full mt-1 p-2 border rounded"
-                  accept="image/*"
-                  onChange={(e) => setBoqForm({...boqForm, referenceImage: e.target.files?.[0] || null})}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600">Comments / Notes</label>
-                <textarea 
-                  className="w-full mt-1 p-2 border rounded" 
-                  rows={3} 
-                  placeholder="Add any additional comments or notes"
-                  value={boqForm.comments}
-                  onChange={(e) => setBoqForm({...boqForm, comments: e.target.value})}
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
-                <button 
-                  type="button" 
-                  onClick={() => handleSubmitBOQItem({ preventDefault: () => {} } as any, true)}
-                  className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
-                >
-                  Save & Add Another
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {showAddRoomModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddRoomModal(false)} />
-          <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
+        {showAddRoomModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddRoomModal(false)} />
+            <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
         scale-100 translate-y-0 opacity-100">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex flex-col">
-                <h3 className="text-base font-semibold">Add New Room</h3>
-                <span className="text-xs text-gray-500">Add a new room to the Bill of Quantities</span>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold">Add New Room</h3>
+                  <span className="text-xs text-gray-500">Add a new room to the Bill of Quantities</span>
+                </div>
+                <button onClick={() => setShowAddRoomModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
               </div>
-              <button onClick={() => setShowAddRoomModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
+              <form onSubmit={(e) => { e.preventDefault(); handleAddRoom(); }} className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600">Room Name *</label>
+                  <input
+                    type="text"
+                    className="w-full mt-1 p-2 border rounded"
+                    placeholder="Enter room name (e.g., Bedroom, Kitchen)"
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
+                  <button type="button" onClick={() => setShowAddRoomModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
+                  <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add Room</button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); handleAddRoom(); }} className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-xs text-gray-600">Room Name *</label>
-                <input
-                  type="text"
-                  className="w-full mt-1 p-2 border rounded"
-                  placeholder="Enter room name (e.g., Bedroom, Kitchen)"
-                  value={newRoomName}
-                  onChange={(e) => setNewRoomName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setShowAddRoomModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add Room</button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        )}
 
-     
 
-      {/* Room Sections */}
-      <div className="space-y-4">
-        {filteredRooms.map((room) => {
-          const filteredItems = filterItemsByCategory(room.items);
-          // Show room even if no items
 
-          const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
+        {/* Room Sections */}
+        <div className="space-y-4">
+          {filteredRooms.map((room) => {
+            const filteredItems = filterItemsByCategory(room.items);
+            // Show room even if no items
 
-          return (
-            <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-slate-100">
-              {/* Room Header */}
-              <div className="flex items-center justify-between mb-4 ">
-                <div className="flex items-center gap-2">
-                  {editingRoomId === room.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editedRoomName}
-                        onChange={(e) => setEditedRoomName(e.target.value)}
-                        className="text-md  text-slate-500 border-1 border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-gray-200 w-3/5"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => handleSaveRoomName()}
-                        className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <h3 className="text-xl font-bold text-slate-800">{room.name}</h3>
-                      {isAdmin && (
+            const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
+
+            return (
+              <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-slate-100">
+                {/* Room Header */}
+                <div className="flex items-center justify-between mb-4 ">
+                  <div className="flex items-center gap-2">
+                    {editingRoomId === room.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editedRoomName}
+                          onChange={(e) => setEditedRoomName(e.target.value)}
+                          className="text-md  text-slate-500 border-1 border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-gray-200 w-3/5"
+                          autoFocus
+                        />
                         <button
-                          onClick={() => handleEditRoomName(room.id, room.name)}
-                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit room name"
+                          onClick={() => handleSaveRoomName()}
+                          className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                         >
-                          <Pencil className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                         </button>
-                      )}
-                    </>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-xl font-bold text-slate-800">{room.name}</h3>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleEditRoomName(room.id, room.name)}
+                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit room name"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {canAddItems && (
+                    <button
+                      onClick={() => {
+                        setBoqForm({ ...boqForm, roomName: room.name });
+                        setShowAddModal(true);
+                      }}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:bg-blue-600 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Item
+                    </button>
                   )}
                 </div>
-                {canAddItems && (
-                  <button 
-                    onClick={() => {
-                      setBoqForm({...boqForm, roomName: room.name});
-                      setShowAddModal(true);
-                    }}  
-                    className="bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:bg-blue-600 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Item
-                  </button>
+
+                {filteredItems.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between mb-3 px-2">
+                      <div className="flex items-center gap-2 w-[45%]">
+                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                          ITEM NAME
+                        </span>
+                      </div>
+
+                      {/* QUANTITY */}
+                      <div className="w-[20%] text-center">
+                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                          QUANTITY
+                        </span>
+                      </div>
+
+                      {/* AMOUNT */}
+                      <div className="w-[35%] text-right pr-6">
+                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                          AMOUNT
+                        </span>
+                      </div>
+                    </div>
+
+
+                    <div className="space-y-6">
+                      {filteredItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-3 border-b border-slate-200 last:border-0"
+                        >
+                          {/* LEFT: Item name + status */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={`w-1 h-10 rounded-full ${item.category === "furniture" ? "bg-blue-500" : "bg-amber-500"
+                                }`}
+                            />
+                            <span
+                              className={`rounded-full w-6 h-6 flex items-center justify-center ${item.status === "approved"
+                                  ? "bg-green-100 text-green-800"
+                                  : item.status === "rejected"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                            >
+                              {item.status === "approved" && <Check className="w-3 h-3" />}
+                              {item.status === "pending" && <Clock className="w-3 h-3" />}
+                              {item.status === "rejected" && <X className="w-3 h-3" />}
+                            </span>
+
+                            <span className="font-semibold text-slate-800 truncate">
+                              {item.name}
+                            </span>
+                          </div>
+
+                          {/* CENTER: Quantity */}
+                          <div className="text-center">
+                            <span className="font-semibold text-slate-700">
+                              {item.quantity} {item.unit}
+                            </span>
+                            <p className="text-[10px] text-slate-400">Qty</p>
+                          </div>
+
+                          {/* RIGHT: Amount + menu */}
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800">
+                              {formatCurrency(item.amount)}
+                            </span>
+
+                            <button
+                              className={`p-1 rounded-full hover:bg-slate-100 boq-menu-btn relative ${openMenuId === String(item.id) ? 'bg-slate-100' : ''}`}
+                              onClick={() => setOpenMenuId(openMenuId === String(item.id) ? null : String(item.id))}
+                              aria-label="More actions"
+                            >
+                              <MoreVertical className="w-5 h-5 text-slate-500" />
+                              {openMenuId === String(item.id) && (
+                                <div className="boq-menu-dropdown absolute right-0 top-8 z-10 bg-white border border-slate-200 rounded shadow-md min-w-[120px]">
+                                  {canApproveItems && (
+                                    <button
+                                      onClick={() => { handleApproveItem(item.id.toString()); setOpenMenuId(null); }}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-green-700 hover:bg-green-50"
+                                    >
+                                      <Check className="w-4 h-4" /> Approve
+                                    </button>
+                                  )}
+                                  {canApproveItems && (
+                                    <button
+                                      onClick={() => { handleRejectItem(item.id.toString()); setOpenMenuId(null); }}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-red-700 hover:bg-red-50"
+                                    >
+                                      <X className="w-4 h-4" /> Reject
+                                    </button>
+                                  )}
+                                  {isAdmin && (
+                                    <button
+                                      onClick={() => {
+                                        handleDeleteBOQItem(item.id.toString());
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete
+                                    </button>
+                                  )}
+
+                                </div>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p className="text-sm">No items added to this room yet.</p>
+                    <p className="text-xs mt-1">Click "Add Item" to get started.</p>
+                  </div>
                 )}
-              </div>
 
-              {filteredItems.length > 0 ? (
-                <>
-<div className="flex items-center justify-between mb-3 px-2">
-  <div className="flex items-center gap-2 w-[45%]">
-    <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-      ITEM NAME
-    </span>
-  </div>
-
-  {/* QUANTITY */}
-  <div className="w-[20%] text-center">
-    <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-      QUANTITY
-    </span>
-  </div>
-
-  {/* AMOUNT */}
-  <div className="w-[35%] text-right pr-6">
-    <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-      AMOUNT
-    </span>
-  </div>
-</div>
-
-
-                <div className="space-y-6">
-  {filteredItems.map((item) => (
-    <div
-      key={item.id}
-      className="flex items-center justify-between py-3 border-b border-slate-200 last:border-0"
-    >
-      {/* LEFT: Item name + status */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div
-          className={`w-1 h-10 rounded-full ${
-            item.category === "furniture" ? "bg-blue-500" : "bg-amber-500"
-          }`}
-        />
-        <span
-          className={`rounded-full w-6 h-6 flex items-center justify-center ${
-            item.status === "approved"
-              ? "bg-green-100 text-green-800"
-              : item.status === "rejected"
-              ? "bg-red-100 text-red-800"
-              : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
-          {item.status === "approved" && <Check className="w-3 h-3" />}
-          {item.status === "pending" && <Clock className="w-3 h-3" />}
-          {item.status === "rejected" && <X className="w-3 h-3" />}
-        </span>
-
-        <span className="font-semibold text-slate-800 truncate">
-          {item.name}
-        </span>
-      </div>
-
-      {/* CENTER: Quantity */}
-      <div className="text-center">
-        <span className="font-semibold text-slate-700">
-          {item.quantity} {item.unit}
-        </span>
-        <p className="text-[10px] text-slate-400">Qty</p>
-      </div>
-
-      {/* RIGHT: Amount + menu */}
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-slate-800">
-          {formatCurrency(item.amount)}
-        </span>
-
-        <button
-          className={`p-1 rounded-full hover:bg-slate-100 boq-menu-btn relative ${openMenuId === String(item.id) ? 'bg-slate-100' : ''}`}
-          onClick={() => setOpenMenuId(openMenuId === String(item.id) ? null : String(item.id))}
-          aria-label="More actions"
-        >
-          <MoreVertical className="w-5 h-5 text-slate-500" />
-          {openMenuId === String(item.id) && (
-            <div className="boq-menu-dropdown absolute right-0 top-8 z-10 bg-white border border-slate-200 rounded shadow-md min-w-[120px]">
-              {canApproveItems && (
-                <button
-                  onClick={() => { handleApproveItem(item.id.toString()); setOpenMenuId(null); }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-green-700 hover:bg-green-50"
-                >
-                  <Check className="w-4 h-4" /> Approve
-                </button>
-              )}
-              {canApproveItems && (
-                <button
-                  onClick={() => { handleRejectItem(item.id.toString()); setOpenMenuId(null); }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-red-700 hover:bg-red-50"
-                >
-                  <X className="w-4 h-4" /> Reject
-                </button>
-              )}
-            </div>
-          )}
-        </button>
-      </div>
-    </div>
-  ))}
-</div>
-
-                </>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <p className="text-sm">No items added to this room yet.</p>
-                  <p className="text-xs mt-1">Click "Add Item" to get started.</p>
+                {/* Subtotal */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                  <span className="text-slate-500 font-medium">Subtotal</span>
+                  <span className="text-2xl font-bold text-slate-800">{formatCurrency(roomSubtotal)}</span>
                 </div>
-              )}
 
-              {/* Subtotal */}
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                <span className="text-slate-500 font-medium">Subtotal</span>
-                <span className="text-2xl font-bold text-slate-800">{formatCurrency(roomSubtotal)}</span>
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => handleExportPDF(room)}
+                    disabled={room.items.length === 0}
+                    className={`flex-1 font-semibold py-3 px-2 rounded-xl flex items-center justify-center gap-1 transition-all ${room.items.length === 0
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-slate-600 text-white hover:bg-slate-700'
+                      }`}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export PDF
+                  </button>
+                  <button
+                    onClick={() => handleShareBOQ(room)}
+                    className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share BOQ
+                  </button>
+                </div>
               </div>
+            );
+          })}
+        </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-4">
-                <button 
-                  onClick={() => handleExportPDF(room)}
-                  disabled={room.items.length === 0}
-                  className={`flex-1 font-semibold py-3 px-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
-                    room.items.length === 0 
-                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                      : 'bg-slate-600 text-white hover:bg-slate-700'
-                  }`}
-                >
-                  <Download className="w-4 h-4" />
-                  Export PDF
-                </button>
-                <button 
-                  onClick={() => handleShareBOQ(room)}
-                  className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Share BOQ
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
-   
       </div>
     </>
 

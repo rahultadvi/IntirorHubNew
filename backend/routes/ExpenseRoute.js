@@ -10,20 +10,21 @@ router.post('/add', auth, ExpenseController.addExpense);
 // Get expenses by site
 router.get('/site/:siteId', auth, ExpenseController.getExpensesBySite);
 
-// Upload invoice (base64 payload)
+// Serve raw invoice file (must come before generic :expenseId route)
+router.get('/invoice-file/:filename', ExpenseController.serveInvoiceFile);
+
+// Upload invoice
 router.post('/:expenseId/upload-invoice', auth, ExpenseController.uploadInvoice);
 
-// Approve or reject (admin only)
+// Approve / status
 router.put('/:expenseId/approve', auth, ExpenseController.approveExpense);
-// Admin can set arbitrary status
 router.put('/:expenseId/status', auth, ExpenseController.updateExpenseStatus);
-// Admin can set payment status (paid/due)
 router.put('/:expenseId/payment-status', auth, ExpenseController.updateExpensePaymentStatus);
 
 // Download invoice
 router.get('/:expenseId/invoice', auth, ExpenseController.downloadInvoice);
 
-// Serve raw invoice file (internal helper)
-router.get('/invoice-file/:filename', ExpenseController.serveInvoiceFile);
+// Delete expense
+router.delete('/:expenseId', auth, ExpenseController.deleteExpense);
 
 export default router;

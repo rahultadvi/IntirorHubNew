@@ -61,6 +61,7 @@ export const listFeed = async (req, res) => {
 
     const items = await Feed.find({
       site: site._id,
+      deletedAt: null, // Exclude soft-deleted items
     })
       .sort({ createdAt: -1 })
       .populate("createdBy", "name email role companyName")
@@ -227,8 +228,52 @@ export const toggleLike = async (req, res) => {
   }
 };
 
+export const deleteFeedItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("deleteFeedItem called with id:", id);
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid id format:", id);
+      return res.status(400).json({ message: "Invalid feed id" });
+    }
+
+    const item = await Feed.findOne({ _id: id }).populate("site", "userId");
+    console.log("Found feed item:", item);
+    if (!item || !item.site) {
+      console.log("Feed item not found for id:", id);
+      return res.status(404).json({ message: "Feed item not found" });
+    }
+
+    // Check if user is the creator or site owner
+    const siteUserId = item.site.userId.toString();
+    const isCreator = String(item.createdBy) === String(req.user._id);
+    const isSiteOwner = siteUserId === req.user._id.toString() || 
+                        (req.user.parentId && siteUserId === req.user.parentId.toString());
+
+    if (!isCreator && !isSiteOwner) {
+      console.log("Permission denied - isCreator:", isCreator, "isSiteOwner:", isSiteOwner);
+      return res.status(403).json({ message: "You do not have permission to delete this feed item" });
+    }
+
+    // Soft delete: mark as deleted instead of removing
+    item.deletedAt = new Date();
+    item.deletedBy = req.user._id;
+    await item.save();
+    
+    console.log("Successfully soft deleted feed item:", id);
+
+    return res.status(200).json({ message: "Feed item deleted" });
+  } catch (error) {
+    console.error("deleteFeedItem error", error);
+    return res.status(500).json({ message: error.message || "Unable to delete feed item" });
+  }
+};
+
 export default {
   listFeed,
   createFeedItem,
   getFeedItem,
+  deleteFeedItem,
+  toggleLike,
 };

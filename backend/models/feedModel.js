@@ -73,10 +73,19 @@ const FeedSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export default mongoose.model("Feed", FeedSchema);

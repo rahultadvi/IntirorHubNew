@@ -75,6 +75,25 @@ const Expenses: React.FC = () => {
   const isAdmin = (user?.role ?? '').toString().toUpperCase() === 'ADMIN';
   const [updatingExpenseId, setUpdatingExpenseId] = useState<string | null>(null);
 
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!token || !isAdmin) return;
+
+    const ok = window.confirm("Are you sure you want to delete this expense?");
+    if (!ok) return;
+
+    try {
+      setUpdatingExpenseId(expenseId);
+      await expenseApi.deleteExpense(expenseId, token);
+      await fetchExpenses();
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error("Failed to delete expense", err);
+    } finally {
+      setUpdatingExpenseId(null);
+    }
+  };
+
+
   const handleUpdateExpenseStatus = async (expenseId: string, status: 'pending' | 'approved' | 'rejected') => {
     if (!token) return;
     try {
@@ -127,7 +146,7 @@ const Expenses: React.FC = () => {
       if (params.get('openAdd')) {
         setIsModalOpen(true);
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [location.search]);
 
   useEffect(() => {
@@ -180,7 +199,7 @@ const Expenses: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 mt-16 ">
         <div className="w-full px-4 py-4">
-        
+
 
           {/* Budget Cards */}
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -394,162 +413,176 @@ const Expenses: React.FC = () => {
               };
 
               return (
-              <div key={expense._id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                {/* Header */}
-                <div className="flex items-start justify-start mb-3">
-                  <div className="flex flex-col items-start text-left flex-1">
-                    <h4 className="font-bold text-slate-800 text-lg mb-2 ml-[10px]">
-                      {expense.title}
-                    </h4>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
-                      {expense.category.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-slate-800">
-                      ₹{expense.amount.toLocaleString('en-IN')}
-                    </span>
-                    {/* Three Dot Menu */}
-                    <div className="relative" ref={openMenuId === expense._id ? menuRef : null}>
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === expense._id ? null : expense._id)}
-                        className="text-slate-400 hover:text-slate-600"
-                        disabled={updatingExpenseId === expense._id}
-                      >
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                <div key={expense._id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                  {/* Header */}
+                  <div className="flex items-start justify-start mb-3">
+                    <div className="flex flex-col items-start text-left flex-1">
+                      <h4 className="font-bold text-slate-800 text-lg mb-2 ml-[10px]">
+                        {expense.title}
+                      </h4>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
+                        {expense.category.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold text-slate-800">
+                        ₹{expense.amount.toLocaleString('en-IN')}
+                      </span>
+                      {/* Three Dot Menu */}
+                      <div className="relative" ref={openMenuId === expense._id ? menuRef : null}>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === expense._id ? null : expense._id)}
+                          className="text-slate-400 hover:text-slate-600"
+                          disabled={updatingExpenseId === expense._id}
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
 
-                      {/* Dropdown Menu */}
-                      {openMenuId === expense._id && (
-                        <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[160px]">
-                          {/* Status Section - Admin Only */}
-                          {isAdmin && (
-                            <div className="px-3 py-2 border-b border-gray-100">
-                              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Status</p>
+                        {/* Dropdown Menu */}
+                        {openMenuId === expense._id && (
+                          <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[160px]">
+                            {/* Status Section - Admin Only */}
+                            {isAdmin && (
+                              <div className="px-3 py-2 border-b border-gray-100">
+                                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Status</p>
+                                <button
+                                  onClick={() => handleUpdateExpenseStatus(expense._id, 'pending')}
+                                  disabled={updatingExpenseId === expense._id}
+                                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
+                                >
+                                  <span>Pending</span>
+                                  {expense.status === 'pending' && <Check className="h-4 w-4 text-indigo-600" />}
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateExpenseStatus(expense._id, 'approved')}
+                                  disabled={updatingExpenseId === expense._id}
+                                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
+                                >
+                                  <span>Approved</span>
+                                  {expense.status === 'approved' && <Check className="h-4 w-4 text-indigo-600" />}
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateExpenseStatus(expense._id, 'rejected')}
+                                  disabled={updatingExpenseId === expense._id}
+                                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
+                                >
+                                  <span>Rejected</span>
+                                  {expense.status === 'rejected' && <Check className="h-4 w-4 text-indigo-600" />}
+                                </button>
+                              </div>
+                            )}
+                            {isAdmin && (
+                              <div className="border-t border-gray-100 mt-1">
+                                <button
+                                  onClick={() => handleDeleteExpense(expense._id)}
+                                  disabled={updatingExpenseId === expense._id}
+                                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                  <X className="w-4 h-4" />
+                                  Delete Expense
+                                </button>
+                              </div>
+                            )}
+
+
+                            {/* Payment Status Section - All Users */}
+                            <div className={`px-3 py-2 ${isAdmin ? '' : 'border-b-0'}`}>
+                              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment</p>
                               <button
-                                onClick={() => handleUpdateExpenseStatus(expense._id, 'pending')}
+                                onClick={() => handleUpdatePaymentStatus(expense._id, 'paid')}
                                 disabled={updatingExpenseId === expense._id}
                                 className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
                               >
-                                <span>Pending</span>
-                                {expense.status === 'pending' && <Check className="h-4 w-4 text-indigo-600" />}
+                                <span>Paid</span>
+                                {expense.paymentStatus === 'paid' && <Check className="h-4 w-4 text-green-600" />}
                               </button>
                               <button
-                                onClick={() => handleUpdateExpenseStatus(expense._id, 'approved')}
+                                onClick={() => handleUpdatePaymentStatus(expense._id, 'due')}
                                 disabled={updatingExpenseId === expense._id}
                                 className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
                               >
-                                <span>Approved</span>
-                                {expense.status === 'approved' && <Check className="h-4 w-4 text-indigo-600" />}
-                              </button>
-                              <button
-                                onClick={() => handleUpdateExpenseStatus(expense._id, 'rejected')}
-                                disabled={updatingExpenseId === expense._id}
-                                className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
-                              >
-                                <span>Rejected</span>
-                                {expense.status === 'rejected' && <Check className="h-4 w-4 text-indigo-600" />}
+                                <span>Due</span>
+                                {expense.paymentStatus === 'due' && <Check className="h-4 w-4 text-orange-600" />}
                               </button>
                             </div>
-                          )}
-
-                          {/* Payment Status Section - All Users */}
-                          <div className={`px-3 py-2 ${isAdmin ? '' : 'border-b-0'}`}>
-                            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment</p>
-                            <button
-                              onClick={() => handleUpdatePaymentStatus(expense._id, 'paid')}
-                              disabled={updatingExpenseId === expense._id}
-                              className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
-                            >
-                              <span>Paid</span>
-                              {expense.paymentStatus === 'paid' && <Check className="h-4 w-4 text-green-600" />}
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePaymentStatus(expense._id, 'due')}
-                              disabled={updatingExpenseId === expense._id}
-                              className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-50 rounded flex items-center justify-between disabled:opacity-50"
-                            >
-                              <span>Due</span>
-                              {expense.paymentStatus === 'due' && <Check className="h-4 w-4 text-orange-600" />}
-                            </button>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Status Badges and Actions */}
+                  <div className="flex items-center gap-2 mb-3">
+                    {expense.paymentStatus === 'paid' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-600">
+                        Paid
+                      </span>
+                    )}
+                    {expense.paymentStatus === 'due' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-600">
+                        Due
+                      </span>
+                    )}
+                    {expense.status === 'approved' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-500 border border-emerald-200">
+                        Approved
+                      </span>
+                    )}
+                    {expense.status === 'pending' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-600">
+                        Pending
+                      </span>
+                    )}
+                    {expense.status === 'rejected' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
+                        Rejected
+                      </span>
+                    )}
+
+                    {expense.invoice?.path ? (
+                      <button
+                        onClick={() => expenseApi.downloadInvoice(expense._id, token || '')}
+                        className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors"
+                      >
+                        <FileText className="w-3 h-3" />
+                        View Invoice
+                      </button>
+                    ) : (
+                      user && user.role !== 'CLIENT' && (
+                        <label className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors cursor-pointer">
+                          <UploadCloud className="w-3 h-3" />
+                          Upload
+                          <input type="file" className="hidden" onChange={async (ev) => {
+                            const file = ev.target.files?.[0];
+                            if (!file || !token || !activeSite) return;
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              const result = reader.result as string;
+                              const base = result.split(',')[1];
+                              try {
+                                await expenseApi.uploadInvoice(expense._id, {
+                                  invoiceBase64: base,
+                                  invoiceFilename: file.name
+                                }, token);
+                                await fetchExpenses();
+                              } catch (err) {
+                                console.error('Upload failed', err);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }} />
+                        </label>
+                      )
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <p className="text-xs text-slate-400 font-medium tracking-wider">
+                    {expense.createdBy?.name?.toUpperCase() || '—'}
+                  </p>
                 </div>
-
-                {/* Status Badges and Actions */}
-                <div className="flex items-center gap-2 mb-3">
-                  {expense.paymentStatus === 'paid' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-600">
-                      Paid
-                    </span>
-                  )}
-                  {expense.paymentStatus === 'due' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-600">
-                      Due
-                    </span>
-                  )}
-                  {expense.status === 'approved' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-500 border border-emerald-200">
-                      Approved
-                    </span>
-                  )}
-                  {expense.status === 'pending' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-600">
-                      Pending
-                    </span>
-                  )}
-                  {expense.status === 'rejected' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
-                      Rejected
-                    </span>
-                  )}
-
-                  {expense.invoice?.path ? (
-                    <button
-                      onClick={() => expenseApi.downloadInvoice(expense._id, token || '')}
-                      className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors"
-                    >
-                      <FileText className="w-3 h-3" />
-                      View Invoice
-                    </button>
-                  ) : (
-                    user && user.role !== 'CLIENT' && (
-                      <label className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors cursor-pointer">
-                        <UploadCloud className="w-3 h-3" />
-                        Upload
-                        <input type="file" className="hidden" onChange={async (ev) => {
-                          const file = ev.target.files?.[0];
-                          if (!file || !token || !activeSite) return;
-                          const reader = new FileReader();
-                          reader.onload = async () => {
-                            const result = reader.result as string;
-                            const base = result.split(',')[1];
-                            try {
-                              await expenseApi.uploadInvoice(expense._id, {
-                                invoiceBase64: base,
-                                invoiceFilename: file.name
-                              }, token);
-                              await fetchExpenses();
-                            } catch (err) {
-                              console.error('Upload failed', err);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }} />
-                      </label>
-                    )
-                  )}
-                </div>
-
-                {/* Footer */}
-                <p className="text-xs text-slate-400 font-medium tracking-wider">
-                  {expense.createdBy?.name?.toUpperCase() || '—'}
-                </p>
-              </div>
-            )})
+              )
+            })
           )}
         </div>
       </div>
@@ -565,8 +598,8 @@ const Expenses: React.FC = () => {
         </button>
       )}
 
-  
-      
+
+
       {/* Add Expense Modal */}
       <AddExpenseModal
         isOpen={isModalOpen}

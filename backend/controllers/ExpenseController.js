@@ -243,11 +243,47 @@ export const serveInvoiceFile = async (req, res) => {
   }
 };
 
+// Delete an expense (admin only)
+export const deleteExpense = async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Only admin can delete expenses' });
+
+    const expense = await Expense.findById(expenseId);
+    if (!expense) return res.status(404).json({ message: 'Expense not found' });
+
+    if (expense.companyName !== req.user.companyName) return res.status(403).json({ message: 'Expense does not belong to your company' });
+
+    // Remove invoice file from disk if present
+    if (expense.invoice && expense.invoice.path) {
+      try {
+        const parts = expense.invoice.path.split('/').pop();
+        const filePath = path.join(INVOICE_FOLDER, parts);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.warn('Failed to delete invoice file:', e.message);
+        // continue with deletion of DB record
+      }
+    }
+
+    await Expense.deleteOne({ _id: expenseId });
+
+    res.json({ message: 'Expense deleted' });
+  } catch (error) {
+    console.error('Error deleting expense', error);
+    res.status(500).json({ message: 'Error deleting expense', error: error.message });
+  }
+};
+
 export default {
   addExpense,
   getExpensesBySite,
   uploadInvoice,
   approveExpense,
   downloadInvoice,
-  serveInvoiceFile
+  serveInvoiceFile,
+  deleteExpense
 };

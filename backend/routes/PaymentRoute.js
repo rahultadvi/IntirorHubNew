@@ -22,4 +22,6 @@ router.put('/:paymentId/status', auth, PaymentController.updatePaymentStatus);
 // Download invoice
 router.get('/:paymentId/invoice', auth, PaymentController.downloadInvoice);
 
+router.delete('/:paymentId', auth, PaymentController.deletePayment);
+
 export default router;

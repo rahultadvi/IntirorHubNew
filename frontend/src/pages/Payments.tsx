@@ -7,6 +7,8 @@ import {
   Plus,
   X,
   Loader2,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +20,7 @@ const Payments: React.FC = () => {
   const { activeSite } = useSite();
   const { user, token } = useAuth();
   const [payments, setPayments] = useState<PaymentDto[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [remindingPaymentId, setRemindingPaymentId] = useState<string | null>(null);
@@ -35,7 +38,7 @@ const Payments: React.FC = () => {
 
   const loadPayments = async () => {
     if (!activeSite || !token) return;
-    
+
     try {
       setLoading(true);
       const response = await paymentApi.getPaymentsBySite(activeSite.id, token);
@@ -53,7 +56,7 @@ const Payments: React.FC = () => {
     }
   }, [activeSite, token]);
 
-  
+
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,14 +68,14 @@ const Payments: React.FC = () => {
       if (params.get('openAdd')) {
         navigate(location.pathname, { replace: true });
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
     try {
       const params = new URLSearchParams(location.search);
       if (params.get('openAdd')) setShowAddForm(true);
-    } catch (e) {}
+    } catch (e) { }
     const handler = () => setShowAddForm(true);
     window.addEventListener('open-add-payment', handler as EventListener);
     return () => window.removeEventListener('open-add-payment', handler as EventListener);
@@ -93,7 +96,7 @@ const Payments: React.FC = () => {
         },
         token
       );
-      
+
       setFormData({ title: "", description: "", amount: "", dueDate: "" });
       closeAddModal();
       loadPayments();
@@ -115,7 +118,23 @@ const Payments: React.FC = () => {
     }
   };
 
-  
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!token || !isAdmin) return;
+
+    const ok = window.confirm("Are you sure you want to delete this payment?");
+    if (!ok) return;
+
+    try {
+      await paymentApi.deletePayment(paymentId, token);
+      showToast("Payment deleted", "success");
+      loadPayments();
+    } catch (error) {
+      console.error("Delete failed", error);
+      showToast("Failed to delete payment", "error");
+    }
+  };
+
+
 
   const handleRemind = async (paymentId: string) => {
     if (!token || !canManagePayments) return;
@@ -187,7 +206,7 @@ const Payments: React.FC = () => {
         setTimeout(() => {
           try {
             container?.removeChild(toast);
-          } catch (e) {}
+          } catch (e) { }
         }, 200);
       }, 3000);
     } catch (e) {
@@ -195,7 +214,7 @@ const Payments: React.FC = () => {
       try {
         // eslint-disable-next-line no-alert
         alert(message);
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
@@ -209,7 +228,7 @@ const Payments: React.FC = () => {
   const progressPercentage = Math.min(100, Math.max(0, rawPercent));
 
   return (
-<div className="min-h-screen pt-2  md:px-2">
+    <div className="min-h-screen pt-2  md:px-2">
       <div className="max-w-md mx-auto">
 
         {payments.length > 0 && (
@@ -220,13 +239,13 @@ const Payments: React.FC = () => {
                 const pDate = new Date(p.updatedAt || p.createdAt || p.dueDate);
                 return pDate > latest ? pDate : latest;
               }, new Date(0));
-              
+
               const now = new Date();
               const diffMs = now.getTime() - lastUpdated.getTime();
               const diffMins = Math.floor(diffMs / 60000);
               const diffHours = Math.floor(diffMs / 3600000);
               const diffDays = Math.floor(diffMs / 86400000);
-              
+
               if (diffMins < 1) return "just now";
               if (diffMins < 60) return `${diffMins} min ago`;
               if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
@@ -299,12 +318,39 @@ const Payments: React.FC = () => {
         )}
 
         {/* Payment Stages */}
-        <div className="space-y-4">
+        <div className="space-y-9">
           {payments.map((payment) => (
             <div
               key={payment._id}
-              className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
-            >
+              className="relative bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
+            >{/* 3 DOT MENU – ADMIN ONLY */}
+              {isAdmin && (
+                <div className="absolute top-4 right-1 z-20 transition">
+                  <button
+                    onClick={() =>
+                      setOpenMenuId(openMenuId === payment._id ? null : payment._id)
+                    }
+                  >
+                    <MoreVertical className="w-5 h-5 mt-1 ml-5 text-slate-600" />
+                  </button>
+
+                  {openMenuId === payment._id && (
+                    <div className="absolute right-0 mt-2 w-36 bg-white border rounded-xl shadow-lg">
+                      <button
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          handleDeletePayment(payment._id);
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                      >
+                        <Trash2    className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h4 className="font-bold text-slate-800 text-base mb-1">{payment.title}</h4>

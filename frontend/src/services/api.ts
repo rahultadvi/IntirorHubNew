@@ -402,6 +402,14 @@ export const feedApi = {
       method: "POST",
       token,
     }),
+
+  deleteFeed: (id: string, token: string) =>
+    request<{
+      message: string;
+    }>(`/feed/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      token,
+    }),
 };
 
 export const paymentApi = {
@@ -463,6 +471,15 @@ export const paymentApi = {
   downloadInvoice: (paymentId: string, token: string) => {
     window.open(`${API_BASE_URL}/payments/${paymentId}/invoice?token=${token}`, '_blank');
   },
+
+  deletePayment: (paymentId: string, token: string) =>
+  request<{
+    message: string;
+  }>(`/payments/${paymentId}`, {
+    method: "DELETE",
+    token,
+  }
+),
 };
 
 export const adminApi = {
@@ -534,7 +551,16 @@ export const expenseApi = {
 
   downloadInvoice: (expenseId: string, token: string) => {
     window.open(`${API_BASE_URL}/expenses/${expenseId}/invoice?token=${token}`, '_blank');
-  }
+
+    
+  },
+  deleteExpense: (expenseId: string, token: string) =>
+  request<{ message: string }>(`/expenses/${expenseId}`, {
+    method: "DELETE",
+    token,
+  }),
+
+  
 };
 
 export const boqApi = {
@@ -580,3 +606,5 @@ export const boqApi = {
   deleteBOQItem: (boqId: string, token: string) =>
     request<{ message: string }>(`/boq/${boqId}`, { method: 'DELETE', token }),
 };
+
+
