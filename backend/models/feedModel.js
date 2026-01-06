@@ -24,68 +24,26 @@ const FeedSchema = new mongoose.Schema(
       enum: ["update", "photo", "document", "milestone"],
       default: "update",
     },
-    title: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    content: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    images: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
+    title: { type: String, trim: true, default: "" },
+    content: { type: String, trim: true, default: "" },
+    images: [{ type: String, trim: true }],
     attachments: [
       {
-        url: {
-          type: String,
-          trim: true,
-        },
-        name: {
-          type: String,
-          trim: true,
-        },
-        type: {
-          type: String,
-          trim: true,
-        },
-        size: {
-          type: Number,
-        },
+        url: String,
+        name: String,
+        type: String,
+        size: Number,
       },
     ],
-    likes: {
-      type: Number,
-      default: 0,
-    },
-    likedBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    commentsCount: {
-      type: Number,
-      default: 0,
-    },
-    deletedAt: {
-      type: Date,
-      default: null,
-      index: true,
-    },
-    deletedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+    likes: { type: Number, default: 0 },
+    likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    commentsCount: { type: Number, default: 0 },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
+const Feed = mongoose.model("Feed", FeedSchema);
+
+export default Feed;
