@@ -10,11 +10,11 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import BoqLibrary from "../component/BoqLibrary";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 import { boqApi } from "../services/api";
 import jsPDF from 'jspdf';
+import BoqLibrary from "../component/BoqLibrary";
 
 interface BOQItem {
   id: number;
@@ -38,8 +38,6 @@ interface Room {
 const BOQ: React.FC = () => {
   // Track which menu is open (by item id)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"boq" | "library">("boq");
-
 
   // Close menu on outside click
   useEffect(() => {
@@ -53,6 +51,8 @@ const BOQ: React.FC = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+  const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoomName, setEditedRoomName] = useState<string>("");
@@ -573,76 +573,111 @@ const BOQ: React.FC = () => {
 
   return (
     <>
-      <div className="pb-20">
+      <div className="min-h-screen bg-slate-50 px-5 py-6 pb-28 relative">
         {/* Header */}
-        {/* BOQ / Library Tabs */}
-<div className="flex gap-2 mb-6 justify-center">
-  <button
-    onClick={() => setActiveTab("boq")}
-    className={`px-6 py-2 rounded-xl text-sm font-semibold ${
-      activeTab === "boq"
-        ? "bg-slate-900 text-white"
-        : "bg-white border text-slate-600"
-    }`}
-  >
-    BOQ
-  </button>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <p className="text-xs text-slate-400 tracking-wide">✨ GOOD EVENING</p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {user?.name || "Alex Johnson"}
+            </h2>
+          </div>
 
-  <button
-    onClick={() => setActiveTab("library")}
-    className={`px-6 py-2 rounded-xl text-sm font-semibold ${
-      activeTab === "library"
-        ? "bg-slate-900 text-white"
-        : "bg-white border text-slate-600"
-    }`}
-  >
-    Library
-  </button>
-</div>
-{/* {activeTab === "boq" ? ((())} */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Bill of Quantities</h2>
-          <p className="text-slate-500 text-sm">Comprehensive cost breakdown and project estimation</p>
-          {/* <div className="mt-4 flex items-center justify-center gap-3">
-          <button
-            onClick={() => setShowCreateProjectModal(true)}
-            className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
-          >
-            Create New Site/ Project
-          </button>
-        </div> */}
+          <div className="flex items-center gap-3">
+            <button className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow">
+              +
+            </button>
+            <img
+              src="https://i.pravatar.cc/100"
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          </div>
         </div>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 bg-white rounded-2xl px-5 py-4 shadow-sm flex justify-between items-center">
+            <div>
+              <p className="text-xs text-slate-400 font-semibold">PROJECT</p>
+              <p className="font-semibold text-slate-900">
+                {activeSite?.name || "Skyline Villa Renovation"}
+              </p>
+            </div>
+            <span className="text-slate-400">⌄</span>
+          </div>
 
-        {/* Category Filters */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "all"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-              }`}
-          >
-            All Items
-          </button>
-          <button
-            onClick={() => setSelectedCategory("furniture")}
-            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "furniture"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-              }`}
-          >
-            Furniture
-          </button>
-          <button
-            onClick={() => setSelectedCategory("services")}
-            className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "services"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-              }`}
-          >
-            Services
+          <button className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+            🔍
           </button>
         </div>
+        <div className="flex justify-center mb-6">
+          <div className="bg-white rounded-full p-1 shadow-sm flex gap-1 w-full max-w-md">
+            <button
+              onClick={() => setActiveTab("boq")}
+              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "boq"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500"
+                }`}
+            >
+              BOQ
+            </button>
+
+            <button
+              onClick={() => setActiveTab("material")}
+              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "material"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500"
+                }`}
+            >
+              Material Used
+            </button>
+
+            <button
+              onClick={() => setActiveTab("library")}
+              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "library"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500"
+                }`}
+            >
+              Library
+            </button>
+          </div>
+        </div>
+
+        {activeTab === "library" && (
+          <BoqLibrary />
+        )}
+
+        {activeTab === "material" && (
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedCategory("all")}
+              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "all"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+            >
+              All Items
+            </button>
+            <button
+              onClick={() => setSelectedCategory("furniture")}
+              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "furniture"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+            >
+              Furniture
+            </button>
+            <button
+              onClick={() => setSelectedCategory("services")}
+              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "services"
+                ? "bg-slate-800 text-white shadow-lg"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+            >
+              Services
+            </button>
+          </div>
+        )}
+
 
         {/* Room Filters + Add Button */}
         <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-100 flex items-center justify-between">
@@ -650,8 +685,8 @@ const BOQ: React.FC = () => {
             <button
               onClick={() => setSelectedRoom("all")}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === "all"
-                  ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
+                : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
             >
               All Rooms
@@ -661,8 +696,8 @@ const BOQ: React.FC = () => {
                 key={roomName}
                 onClick={() => setSelectedRoom(roomName.toLowerCase().replace(/\s+/g, '-'))}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === roomName.toLowerCase().replace(/\s+/g, '-')
-                    ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
+                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 {roomName}
@@ -940,10 +975,10 @@ const BOQ: React.FC = () => {
                             />
                             <span
                               className={`rounded-full w-6 h-6 flex items-center justify-center ${item.status === "approved"
-                                  ? "bg-green-100 text-green-800"
-                                  : item.status === "rejected"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-yellow-100 text-yellow-800"
+                                ? "bg-green-100 text-green-800"
+                                : item.status === "rejected"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
                                 }`}
                             >
                               {item.status === "approved" && <Check className="w-3 h-3" />}
@@ -1035,8 +1070,8 @@ const BOQ: React.FC = () => {
                     onClick={() => handleExportPDF(room)}
                     disabled={room.items.length === 0}
                     className={`flex-1 font-semibold py-3 px-2 rounded-xl flex items-center justify-center gap-1 transition-all ${room.items.length === 0
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-slate-600 text-white hover:bg-slate-700'
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-slate-600 text-white hover:bg-slate-700'
                       }`}
                   >
                     <Download className="w-4 h-4" />
@@ -1049,6 +1084,10 @@ const BOQ: React.FC = () => {
                     <Share2 className="w-4 h-4" />
                     Share BOQ
                   </button>
+                  {/* <button className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-2">
+  📄 BOQ
+</button> */}
+
                 </div>
               </div>
             );

@@ -24,6 +24,7 @@ const ALLOWED_DOCUMENT_TYPES = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/csv",
 ];
 
 /* ================= STORAGE ================= */
@@ -55,7 +56,7 @@ const imageFileFilter = (req, file, cb) => {
   }
 };
 
-// Audio + Documents
+// Attachments (audio + documents)
 const attachmentFileFilter = (req, file, cb) => {
   const isAudio =
     ALLOWED_AUDIO_TYPES.includes(file.mimetype) ||
@@ -63,7 +64,7 @@ const attachmentFileFilter = (req, file, cb) => {
 
   const isDocument =
     ALLOWED_DOCUMENT_TYPES.includes(file.mimetype) ||
-    file.originalname.match(/\.(pdf|doc|docx)$/i);
+    file.originalname.match(/\.(pdf|doc|docx|csv)$/i);
 
   if (isAudio || isDocument) {
     cb(null, true);
@@ -123,7 +124,7 @@ export const uploadAttachments = (folder = "attachments") =>
   }).array("attachments", 10);
 
 // Feed files (image + audio + docs)
-export const uploadFeedFiles = (folder = "feed") =>
+export const uploadFeedFiles = (folder = "feed-files") =>
   multer({
     storage: storage(folder),
     fileFilter: feedFileFilter,
@@ -133,17 +134,15 @@ export const uploadFeedFiles = (folder = "feed") =>
     { name: "attachments", maxCount: 5 },
   ]);
 
-
-
-  export const uploadSingleFile = (folder = "files") =>
+// Single file
+export const uploadSingleFile = (folder = "files") =>
   multer({
     storage: storage(folder),
-    fileFilter: feedFileFilter, // image + audio + docs
+    fileFilter: feedFileFilter,
     limits: { fileSize: SIZE_LIMITS.attachment },
   }).single("file");
 
 /* ================= HELPERS ================= */
-
 
 export const getUploadedImagePaths = (files, folder = "images") => {
   if (!files || files.length === 0) return [];
@@ -168,3 +167,6 @@ export const getUploadedAttachmentPaths = (
   }));
 };
 
+/* ================= DEFAULT EXPORT ================= */
+
+export default uploadAttachments("attachments");

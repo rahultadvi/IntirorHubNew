@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useLocation } from 'react-router-dom';
+// import { useLocation } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -45,7 +45,7 @@ const Expenses: React.FC = () => {
   const { token, user } = useAuth();
   const { activeSite } = useSite();
 
-  const location = useLocation();
+  // const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // FIXED: dynamic budget values

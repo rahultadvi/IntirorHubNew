@@ -1,12 +1,12 @@
 type FilterKey = "all" | "updates" | "photos" | "documents" | "milestones";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useMemo, useRef, useState } from "react";
+// import { useLocation } from "react-router-dom";
 import {
   MessageSquare,
   FileText,
   Send,
   MoreHorizontal,
-  Clock,
+  // Clock,
   X,
   Plus,
   Mic,
@@ -19,7 +19,7 @@ import {
   Image,
   FileCode,
   Bookmark,
-  Trash2,
+  // Trash2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
@@ -73,7 +73,7 @@ const generateId = () =>
 const Feed: React.FC = () => {
   const { user, token } = useAuth();
   const { activeSite } = useSite();
-  const location = useLocation();
+  // const location = useLocation();
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newPost, setNewPost] = useState("");
@@ -86,9 +86,9 @@ const Feed: React.FC = () => {
   const [feedItems, setFeedItems] = useState<FeedItem[]>(initialFeedItems);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   // loading state removed
-  const [error, setError] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [siteError, setSiteError] = useState<string | null>(null);
+  // const [siteError, setSiteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -96,7 +96,7 @@ const Feed: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
 
 
-  const [openShareFor, setOpenShareFor] = useState<Record<string, boolean>>({});
+  // const [openShareFor, setOpenShareFor] = useState<Record<string, boolean>>({});
 
   const activeSiteId = activeSite?.id ?? null;
 const hasContent =
@@ -206,6 +206,15 @@ const isPostDisabled = !hasContent || isSubmitting;
   const handleRemoveFile = (id: string) => {
     setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
   };
+
+  // const fileToBase64 = (file: File): Promise<string> => {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader();
+  //     reader.onload = () => resolve(reader.result as string);
+  //     reader.onerror = reject;
+  //     reader.readAsDataURL(file);
+  //   });
+  // };
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -321,64 +330,7 @@ const isPostDisabled = !hasContent || isSubmitting;
     setFeedItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, comments: (it.comments || 0) + 1 } : it)));
   };
 
-  useEffect(() => {
-    // server-driven likes; clear any client-only state
-    // (previous localStorage-based likes no longer used)
-    setLikedMap({});
 
-    const loadFeed = async () => {
-      if (!token || !activeSiteId) {
-        setFeedItems([]);
-        return;
-      }
-
-      // setLoading removed
-      setError(null);
-      try {
-        const response = await feedApi.listFeed(activeSiteId, token);
-        const items: FeedItem[] = response.items.map((item) => ({
-          id: item.id,
-          user: item.user,
-          type: item.type,
-          feedType: item.feedType || "progress",
-          siteName: item.siteName,
-          title: item.title,
-          content: item.content,
-          images: item.images,
-          attachments: item.attachments,
-          timestamp: item.timestamp,
-          likes: item.likes,
-          comments: item.comments,
-        }));
-        setFeedItems(items);
-        // populate likedMap from server response
-        try {
-          const map: Record<string, boolean> = {};
-          (response.items || []).forEach((it) => {
-            if (it.id) map[it.id] = Boolean(it.liked);
-          });
-          setLikedMap(map);
-        } catch (e) { }
-      } catch (err) {
-        console.error("listFeed error", err);
-        setError("Unable to load feed");
-        setFeedItems([]);
-      } finally {
-        // setLoading removed
-      }
-    };
-
-    loadFeed();
-    // open add form when query param present
-    try {
-      const params = new URLSearchParams(location.search || window.location.search);
-      if (params.get("openAdd")) setShowAddForm(true);
-    } catch (e) { }
-
-    const handler = () => setShowAddForm(true);
-    window.addEventListener('open-add-feed', handler as EventListener);
-    return () => window.removeEventListener('open-add-feed', handler as EventListener);
-  }, [activeSiteId, token, location.search]);
 
   const toggleLike = async (id: string) => {
     if (!token) return;
@@ -470,16 +422,16 @@ const isPostDisabled = !hasContent || isSubmitting;
     return matches || [];
   };
 
-  const extractLocation = (text: string) => {
-    // Try to extract location from content (e.g., "Master Bedroom", "Kitchen", "Living Room")
-    const locations = ["Master Bedroom", "Bedroom", "Kitchen", "Living Room", "Bathroom", "Hall"];
-    for (const loc of locations) {
-      if (text.toLowerCase().includes(loc.toLowerCase())) {
-        return loc;
-      }
-    }
-    return null;
-  };
+  // const extractLocation = (text: string) => {
+  //   // Try to extract location from content (e.g., "Master Bedroom", "Kitchen", "Living Room")
+  //   const locations = ["Master Bedroom", "Bedroom", "Kitchen", "Living Room", "Bathroom", "Hall"];
+  //   for (const loc of locations) {
+  //     if (text.toLowerCase().includes(loc.toLowerCase())) {
+  //       return loc;
+  //     }
+  //   }
+  //   return null;
+  // };
 
 
   const [currentImageIndex, setCurrentImageIndex] = useState<Record<string, number>>({});
@@ -517,7 +469,7 @@ const isPostDisabled = !hasContent || isSubmitting;
       icon: FileCode,
     },
   ];
-  const projectName1 = activeSite?.name || "Project";
+  // const projectName1 = activeSite?.name || "Project";
 
   const feedTypeLabelMap: Record<
     "progress" | "design" | "material" | "issue",
@@ -591,26 +543,26 @@ const isPostDisabled = !hasContent || isSubmitting;
         </button>
       </div>
 
-      {siteError && (
+      {/* {siteError && (
         <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
           {siteError}
         </div>
-      )}
+      )} */}
 
       <div className="space-y-4">
-        {error && (
+        {/* {error && (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <div className="text-sm text-red-700">{error}</div>
           </div>
-        )}
-        {filteredItems.length === 0 && !error && (
+        )} */}
+        {filteredItems.length === 0 && (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <p className="text-sm text-gray-500">No posts yet for this site. Share the first update!</p>
           </div>
         )}
         {filteredItems.map((item) => {
           const hashtags = extractHashtags(item.content);
-          const location = extractLocation(item.content) || item.siteName;
+          // const location = extractLocation(item.content) || item.siteName;
           const imageIndex = currentImageIndex[item.id] || 0;
           const audioAttachment = item.attachments?.find(att => {
             const name = att.name || att.url || "";

@@ -1,6 +1,6 @@
 import "./App.css";
 import type { ReactElement } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./Layout/main";
 import Home from "./pages/Home";
 import Payments from "./pages/Payments";
@@ -77,7 +77,7 @@ const AdminRoute = ({ children }: { children: ReactElement }) => {
 
 function App() {
   const ResetPasswordCatch: React.FC = () => {
-    const location = useLocation();
+    // const location = useLocation();
     if (location.pathname && location.pathname.startsWith("/reset-password")) {
       return <ResetPassword />;
     }

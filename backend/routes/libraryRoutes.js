@@ -1,20 +1,53 @@
 import express from "express";
-import {
-  getLibraryItems,
-  importLibraryCSV
-} from "../controllers/libraryController.js";
+import AuthMiddleware from "../middleware/auth.js";
 
-import AuthMiddleware from "../middleware/AuthMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
+import {
+  addLibraryItem,
+  getLibraryItems,
+  updateLibraryItem,
+  deleteLibraryItem,
+  getLibraryItemsByCategory,
+} from "../controllers/BOQController.js";
+
+import { importLibraryCSV } from "../controllers/libraryController.js";
+import { uploadSingleImage, uploadSingleFile } from "../utils/multer.js";
 
 const router = express.Router();
 
-router.get("/", AuthMiddleware, getLibraryItems);
+/* ================= AUTH ================= */
+router.use(AuthMiddleware);
 
+/* ================= LIBRARY CRUD ================= */
+
+// ✅ Get all library items
+router.get("/", getLibraryItems);
+
+// ✅ Get items by category
+router.get("/category/:category", getLibraryItemsByCategory);
+
+// ✅ Add library item (optional image)
+router.post(
+  "/",
+  uploadSingleImage("boq-images"),
+  addLibraryItem
+);
+
+// ✅ Update library item
+router.put(
+  "/:itemId",
+  uploadSingleImage("boq-images"),
+  updateLibraryItem
+);
+
+// ✅ Delete library item
+router.delete("/:itemId", deleteLibraryItem);
+
+/* ================= CSV IMPORT ================= */
+
+// ✅ Import library items from CSV
 router.post(
   "/import-csv",
-  AuthMiddleware,
-  upload.single("file"),
+  uploadSingleFile("library"),
   importLibraryCSV
 );
 
