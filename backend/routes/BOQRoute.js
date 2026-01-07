@@ -1,11 +1,12 @@
 import express from 'express';
 import * as BOQController from '../controllers/BOQController.js';
+import { uploadSingleImage } from '../utils/multer.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Add BOQ item
-router.post('/add', auth, BOQController.addBOQItem);
+// Add BOQ item with optional image upload
+router.post('/add', auth, uploadSingleImage('boq-images'), BOQController.addBOQItem);
 
 // Get BOQ items by site
 router.get('/site/:siteId', auth, BOQController.getBOQItemsBySite);

@@ -1,6 +1,8 @@
 import BOQItem from '../models/boqModel.js';
+import Library from '../models/libraryModel.js';
 import Site from '../models/siteModel.js';
 import User from '../models/userModel.js';
+import { getUploadedFilePath } from '../utils/multer.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -34,13 +36,20 @@ export const addBOQItem = async (req, res) => {
       companyName: req.user.companyName
     });
 
-    // Save reference image if provided as base64
-    if (referenceImageBase64 && referenceImageFilename) {
+    // Handle file upload or base64 image
+    if (req.file) {
+      // Using multer file upload
+      boqItem.referenceImage = { 
+        path: getUploadedFilePath(req.file, 'boq-images'), 
+        filename: req.file.originalname 
+      };
+    } else if (referenceImageBase64 && referenceImageFilename) {
+      // Save reference image if provided as base64
       const buffer = Buffer.from(referenceImageBase64, 'base64');
       const safeName = `${Date.now()}-${referenceImageFilename}`.replace(/\s+/g, '_');
       const filePath = path.join(REFERENCE_IMAGE_FOLDER, safeName);
       fs.writeFileSync(filePath, buffer);
-      boqItem.referenceImage = { path: `/api/boq/image/${safeName}`, filename: referenceImageFilename };
+      boqItem.referenceImage = { path: `/uploads/boq-images/${safeName}`, filename: referenceImageFilename };
     }
 
     await boqItem.save();
@@ -173,5 +182,175 @@ export const getBOQImage = async (req, res) => {
   } catch (error) {
     console.error('Error serving BOQ image', error);
     res.status(500).json({ message: 'Error serving image' });
+  }
+};
+
+// ✅ LIBRARY FUNCTIONS
+
+export const addLibraryItem = async (req, res) => {
+  try {
+    const { category, subCategory, name, baseRate, unit } = req.body;
+    const companyName = req.user.companyName;
+
+    if (!category || !name || !baseRate || !unit) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const libraryItem = new Library({
+      company: req.user._id,
+      category,
+      subCategory,
+      name,
+      baseRate: Number(baseRate),
+      unit,
+      image: req.file ? getUploadedFilePath(req.file, 'boq-images') : null
+    });
+
+    await libraryItem.save();
+    res.status(201).json({ message: 'Library item added', libraryItem });
+  } catch (error) {
+    console.error('Error adding library item', error);
+    res.status(500).json({ message: 'Error adding library item', error: error.message });
+  }
+};
+
+export const getLibraryItems = async (req, res) => {
+  try {
+    const { category } = req.query;
+    const filter = { company: req.user._id };
+
+    if (category) {
+      filter.category = category;
+    }
+
+    const libraryItems = await Library.find(filter).sort({ category: 1, name: 1 });
+
+    // Group by category
+    const groupedItems = {};
+    libraryItems.forEach(item => {
+      if (!groupedItems[item.category]) {
+        groupedItems[item.category] = [];
+      }
+      groupedItems[item.category].push(item);
+    });
+
+    res.json({
+      libraryItems: category ? libraryItems : groupedItems,
+      count: libraryItems.length
+    });
+  } catch (error) {
+    console.error('Error fetching library items', error);
+    res.status(500).json({ message: 'Error fetching library items', error: error.message });
+  }
+};
+
+export const updateLibraryItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { category, subCategory, name, baseRate, unit } = req.body;
+
+    const libraryItem = await Library.findById(itemId);
+    if (!libraryItem) {
+      return res.status(404).json({ message: 'Library item not found' });
+    }
+
+    // Check ownership
+    if (libraryItem.company.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You do not have permission to update this item' });
+    }
+
+    if (category) libraryItem.category = category;
+    if (subCategory !== undefined) libraryItem.subCategory = subCategory;
+    if (name) libraryItem.name = name;
+    if (baseRate) libraryItem.baseRate = Number(baseRate);
+    if (unit) libraryItem.unit = unit;
+    if (req.file) libraryItem.image = getUploadedFilePath(req.file, 'boq-images');
+
+    await libraryItem.save();
+    res.json({ message: 'Library item updated', libraryItem });
+  } catch (error) {
+    console.error('Error updating library item', error);
+    res.status(500).json({ message: 'Error updating library item', error: error.message });
+  }
+};
+
+export const deleteLibraryItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    const libraryItem = await Library.findById(itemId);
+    if (!libraryItem) {
+      return res.status(404).json({ message: 'Library item not found' });
+    }
+
+    // Check ownership
+    if (libraryItem.company.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You do not have permission to delete this item' });
+    }
+
+    await Library.findByIdAndDelete(itemId);
+    res.json({ message: 'Library item deleted' });
+  } catch (error) {
+    console.error('Error deleting library item', error);
+    res.status(500).json({ message: 'Error deleting library item', error: error.message });
+  }
+};
+
+export const addBOQFromLibrary = async (req, res) => {
+  try {
+    const { libraryItemId, roomName, quantity, siteId } = req.body;
+
+    const site = await Site.findById(siteId);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    const hasAccess = site.companyName === req.user.companyName ||
+                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
+    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+
+    const libraryItem = await Library.findById(libraryItemId);
+    if (!libraryItem) return res.status(404).json({ message: 'Library item not found' });
+
+    const totalCost = libraryItem.baseRate * quantity;
+
+    const boqItem = new BOQItem({
+      roomName,
+      itemName: libraryItem.name,
+      quantity: Number(quantity),
+      unit: libraryItem.unit,
+      rate: libraryItem.baseRate,
+      totalCost,
+      comments: `Added from library - ${libraryItem.category}`,
+      siteId,
+      status: ['MANAGER', 'AGENT'].includes(req.user.role) ? 'pending' : 'approved',
+      createdBy: req.user._id,
+      companyName: req.user.companyName
+    });
+
+    await boqItem.save();
+    res.status(201).json({ message: 'BOQ item added from library', boqItem });
+  } catch (error) {
+    console.error('Error adding BOQ from library', error);
+    res.status(500).json({ message: 'Error adding BOQ from library', error: error.message });
+  }
+};
+
+export const getLibraryItemsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    const validCategories = ['Furniture', 'Finishes', 'Hardware', 'Electrical'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({ message: 'Invalid category' });
+    }
+
+    const items = await Library.find({
+      company: req.user._id,
+      category
+    }).sort({ name: 1 });
+
+    res.json({ category, items, count: items.length });
+  } catch (error) {
+    console.error('Error fetching library items by category', error);
+    res.status(500).json({ message: 'Error fetching items', error: error.message });
   }
 };

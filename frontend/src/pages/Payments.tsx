@@ -331,7 +331,7 @@ const Payments: React.FC = () => {
                       setOpenMenuId(openMenuId === payment._id ? null : payment._id)
                     }
                   >
-                    <MoreVertical className="w-5 h-5 mt-1 ml-5 text-slate-600" />
+                    <MoreVertical className="w-4 h-5 mt-2 ml-5 text-slate-600" />
                   </button>
 
                   {openMenuId === payment._id && (

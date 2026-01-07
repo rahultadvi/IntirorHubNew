@@ -8,6 +8,10 @@ const FeedSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    siteName: {
+      type: String,
+      trim: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -23,6 +27,11 @@ const FeedSchema = new mongoose.Schema(
       type: String,
       enum: ["update", "photo", "document", "milestone"],
       default: "update",
+    },
+    feedType: {
+      type: String,
+      enum: ["progress", "design", "material", "issue"],
+      default: "progress",
     },
     title: { type: String, trim: true, default: "" },
     content: { type: String, trim: true, default: "" },
@@ -43,6 +52,7 @@ const FeedSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 const Feed = mongoose.model("Feed", FeedSchema);
 

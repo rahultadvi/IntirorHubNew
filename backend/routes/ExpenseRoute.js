@@ -2,19 +2,27 @@ import express from 'express';
 import * as ExpenseController from '../controllers/ExpenseController.js';
 import auth from '../middleware/auth.js';
 
+import { uploadSingleFile, uploadSingleImage } from "../utils/multer.js";
+
 const router = express.Router();
 
-// Add expense
+// Add expense (NO FILE)
 router.post('/add', auth, ExpenseController.addExpense);
 
-// Get expenses by site
+// Get expenses
 router.get('/site/:siteId', auth, ExpenseController.getExpensesBySite);
 
-// Serve raw invoice file (must come before generic :expenseId route)
-router.get('/invoice-file/:filename', ExpenseController.serveInvoiceFile);
+// Upload invoice (✅ MULTER YAHAN LAGEGA)
+router.post(
+  '/:expenseId/upload-invoice',
+  auth,
+  uploadSingleFile('invoices'), // 👈 MULTER HERE
+  ExpenseController.uploadInvoice
+);
 
-// Upload invoice
-router.post('/:expenseId/upload-invoice', auth, ExpenseController.uploadInvoice);
+
+// Serve raw invoice file
+router.get('/invoice-file/:filename', ExpenseController.serveInvoiceFile);
 
 // Approve / status
 router.put('/:expenseId/approve', auth, ExpenseController.approveExpense);

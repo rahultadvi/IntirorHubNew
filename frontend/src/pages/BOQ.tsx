@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
+import BoqLibrary from "../component/BoqLibrary";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 import { boqApi } from "../services/api";
@@ -37,6 +38,8 @@ interface Room {
 const BOQ: React.FC = () => {
   // Track which menu is open (by item id)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"boq" | "library">("boq");
+
 
   // Close menu on outside click
   useEffect(() => {
@@ -572,6 +575,31 @@ const BOQ: React.FC = () => {
     <>
       <div className="pb-20">
         {/* Header */}
+        {/* BOQ / Library Tabs */}
+<div className="flex gap-2 mb-6 justify-center">
+  <button
+    onClick={() => setActiveTab("boq")}
+    className={`px-6 py-2 rounded-xl text-sm font-semibold ${
+      activeTab === "boq"
+        ? "bg-slate-900 text-white"
+        : "bg-white border text-slate-600"
+    }`}
+  >
+    BOQ
+  </button>
+
+  <button
+    onClick={() => setActiveTab("library")}
+    className={`px-6 py-2 rounded-xl text-sm font-semibold ${
+      activeTab === "library"
+        ? "bg-slate-900 text-white"
+        : "bg-white border text-slate-600"
+    }`}
+  >
+    Library
+  </button>
+</div>
+{/* {activeTab === "boq" ? ((())} */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Bill of Quantities</h2>
           <p className="text-slate-500 text-sm">Comprehensive cost breakdown and project estimation</p>

@@ -35,6 +35,7 @@ interface FeedItem {
     avatar: string;
   };
   type: "update" | "photo" | "document" | "milestone";
+  feedType?: "progress" | "design" | "material" | "issue";
   title?: string;
   content: string;
   images?: string[];
@@ -92,36 +93,36 @@ const Feed: React.FC = () => {
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+
   const [openShareFor, setOpenShareFor] = useState<Record<string, boolean>>({});
 
   const activeSiteId = activeSite?.id ?? null;
-  const isPostDisabled =
-    (!newTitle.trim() &&
-      !newPost.trim() &&
-      selectedImages.length === 0 &&
-      selectedFiles.length === 0) ||
-    isSubmitting;
+const hasContent =
+  newTitle.trim().length > 0 ||
+  newPost.trim().length > 0 ||
+  imageFiles.length > 0 ||
+  selectedFiles.length > 0;
+
+const isPostDisabled = !hasContent || isSubmitting;
+
 
   const filteredItems = useMemo(() => {
-    if (activeFilter === "all") {
-      return feedItems;
-    }
+    if (activeFilter === "all") return feedItems;
 
-    return feedItems.filter((item) => {
-      switch (activeFilter) {
-        case "updates":
-          return item.type === "update";
-        case "photos":
-          return item.type === "photo";
-        case "documents":
-          return item.type === "document";
-        case "milestones":
-          return item.type === "milestone";
-        default:
-          return true;
-      }
-    });
+    const filterMap: Record<string, string> = {
+      updates: "progress",
+      photos: "design",
+      documents: "material",
+    };
+
+    const targetFeedType = filterMap[activeFilter];
+    if (!targetFeedType) return feedItems;
+
+    return feedItems.filter((item) => (item.feedType || "progress") === targetFeedType);
   }, [activeFilter, feedItems]);
+
 
   const handleImageSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -139,16 +140,23 @@ const Feed: React.FC = () => {
       return;
     }
 
-    
-
     const chosenFiles = Array.from(files).slice(0, availableSlots);
+
+    // ✅ REAL FILES (multer ke liye)
+    setImageFiles((prev) => [...prev, ...chosenFiles]);
+
+    // ✅ PREVIEW (UI ke liye)
     try {
       const payloads = await Promise.all(
         chosenFiles.map((file) => readFileAsDataUrl(file))
       );
+
       setSelectedImages((prev) => [
         ...prev,
-        ...payloads.map((payload) => ({ id: generateId(), ...payload })),
+        ...payloads.map((payload) => ({
+          id: generateId(),
+          ...payload,
+        })),
       ]);
     } finally {
       if (fileInputRef.current) {
@@ -199,15 +207,6 @@ const Feed: React.FC = () => {
     setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -228,11 +227,13 @@ const Feed: React.FC = () => {
         if (e.data && e.data.size > 0) recordingChunksRef.current.push(e.data);
       };
       mr.onstop = () => {
-        const blob = new Blob(recordingChunksRef.current, { type: recordingChunksRef.current[0]?.type || "audio/webm" });
-        const name = `recording-${Date.now()}.webm`;
-        const file = new File([blob], name, { type: blob.type });
+        const blob = new Blob(recordingChunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `recording-${Date.now()}.webm`, { type: "audio/webm" });
+        
+        // Add audio file to selectedFiles for submission
         setSelectedFiles((prev) => [...prev, { id: generateId(), file }]);
-        // stop all tracks
+        
+        // Stop all audio tracks
         try {
           stream.getTracks().forEach((t) => t.stop());
         } catch (e) { }
@@ -258,79 +259,57 @@ const Feed: React.FC = () => {
   const [imageModal, setImageModal] = useState<{ open: boolean; src?: string; desc?: string }>({ open: false });
 
   const handleSubmitPost = async () => {
-    const title = newTitle.trim();
-    const content = newPost.trim();
-    setSiteError(null);
-    if (
-      !title &&
-      !content &&
-      selectedImages.length === 0 &&
-      selectedFiles.length === 0
-    ) {
-      return;
-    }
-    if (!activeSiteId) {
-      setSiteError("Please select a site before posting a feed.");
-      return;
-    }
-    if (!token) {
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      // Convert files to base64
-      const attachments = await Promise.all(
-        selectedFiles.map(async ({ file }) => ({
-          url: await fileToBase64(file),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-        }))
-      );
+    if (!activeSiteId || !token) return;
 
-      const response = await feedApi.createFeed(
-        {
-          siteId: activeSiteId,
-          title,
-          content,
-          images: selectedImages.map((image) => image.src),
-          attachments,
-        },
-        token
-      );
-      const created = response.item;
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData();
+
+      formData.append("siteId", activeSiteId);
+      formData.append("title", newTitle);
+      formData.append("content", newPost);
+      formData.append("feedType", feedType);
+
+      // ✅ images → multer
+      imageFiles.forEach((file) => {
+        formData.append("images", file);
+      });
+
+      // ✅ attachments → multer
+      selectedFiles.forEach(({ file }) => {
+        formData.append("attachments", file);
+      });
+
+      const response = await feedApi.createFeedFormData(formData, token);
+
+      // Ensure feedType is properly set
       const newItem: FeedItem = {
-        id: created.id,
-        user: created.user,
-        type: created.type,
-        title: created.title,
-        content: created.content,
-        images: created.images,
-        attachments: created.attachments,
-        timestamp: created.timestamp,
-        likes: created.likes,
-        comments: created.comments,
-        siteName: created.siteName,
+        ...response.item,
+        feedType: response.item.feedType || feedType || "progress",
       };
+
       setFeedItems((prev) => [newItem, ...prev]);
+
+      // ✅ reset UI
       setNewTitle("");
       setNewPost("");
       setSelectedImages([]);
+      setImageFiles([]);
       setSelectedFiles([]);
       setActiveFilter("all");
       setShowAddForm(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      if (attachmentInputRef.current) {
-        attachmentInputRef.current.value = "";
-      }
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+
     } catch (err) {
-      console.error("createFeed error", err);
+      console.error("create feed failed", err);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const addComment = (itemId: string) => {
     const text = (commentInputs[itemId] || "").trim();
@@ -361,6 +340,8 @@ const Feed: React.FC = () => {
           id: item.id,
           user: item.user,
           type: item.type,
+          feedType: item.feedType || "progress",
+          siteName: item.siteName,
           title: item.title,
           content: item.content,
           images: item.images,
@@ -368,7 +349,6 @@ const Feed: React.FC = () => {
           timestamp: item.timestamp,
           likes: item.likes,
           comments: item.comments,
-          siteName: item.siteName,
         }));
         setFeedItems(items);
         // populate likedMap from server response
@@ -513,6 +493,43 @@ const Feed: React.FC = () => {
   const [feedType, setFeedType] = useState("progress");
   const [isTypeOpen, setIsTypeOpen] = useState(false);
 
+  const projectName = activeSite?.name || "Project";
+
+  const filterButtons = [
+    {
+      key: "all",
+      label: "All",
+      icon: Zap,
+    },
+    {
+      key: "updates",
+      label: `${projectName} Progress`,
+      icon: Zap,
+    },
+    {
+      key: "photos",
+      label: `${projectName} Design`,
+      icon: Image,
+    },
+    {
+      key: "documents",
+      label: `${projectName} Material Selection`,
+      icon: FileCode,
+    },
+  ];
+  const projectName1 = activeSite?.name || "Project";
+
+  const feedTypeLabelMap: Record<
+    "progress" | "design" | "material" | "issue",
+    string
+  > = {
+    progress: "Progress",
+    design: "Design",
+    material: "Material Selection",
+    issue: "Issue",
+  };
+
+
 
 
   return (
@@ -523,19 +540,21 @@ const Feed: React.FC = () => {
 
       {/* Feed Filters */}
       <div className="mb-5 flex gap-2.5 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-        {[
-          { key: "all", label: "All", icon: Zap },
-          { key: "updates", label: "Progress", icon: Zap },
-          { key: "photos", label: "Design", icon: Image },
-          { key: "documents", label: "Material Selection", icon: FileCode },
-        ].map((f) => {
+        {filterButtons.map((f) => {
           const FilterIcon = f.icon;
-          const filterCount = f.key === "all" ? feedItems.length : feedItems.filter(item => {
-            if (f.key === "updates") return item.type === "update";
-            if (f.key === "photos") return item.type === "photo";
-            if (f.key === "documents") return item.type === "document" || item.type === "milestone";
-            return true;
-          }).length;
+          const filterMap: Record<string, string> = {
+            updates: "progress",
+            photos: "design",
+            documents: "material",
+          };
+          const filterCount = f.key === "all"
+            ? feedItems.length
+            : feedItems.filter((item) => {
+              const targetType = filterMap[f.key];
+              if (!targetType) return false;
+              return (item.feedType || "progress") === targetType;
+            }).length;
+
 
           return (
             <button
@@ -684,6 +703,31 @@ const Feed: React.FC = () => {
                 </div>
               )}
 
+              {/* 🔊 AUDIO PLAYER (YAHI ADD KARO) */}
+              {item.attachments &&
+                item.attachments.some((f) => f.type?.startsWith("audio")) && (
+                  <div className="mt-3 space-y-2">
+                    {item.attachments.map((file, idx) => {
+                      if (!file.type?.startsWith("audio")) return null;
+
+                      return (
+                        <audio
+                          key={idx}
+                          controls
+                          className="w-full rounded-lg"
+                        >
+                          <source src={file.url} type={file.type} />
+                          Your browser does not support audio playback
+                        </audio>
+                      );
+                    })}
+                  </div>
+                )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between mb-3">
+                ...
+              </div>
               {/* Voice Note Post */}
               {audioAttachment && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 mb-4 flex items-center gap-4">
@@ -746,18 +790,32 @@ const Feed: React.FC = () => {
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-3">
-                {location && (
-                  <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {location}
-                  </span>
-                )}
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <Bookmark className="w-3 h-3" />
+                  {item.siteName || projectName}
+                </span>
+
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold
+    ${item.feedType === "issue" ? "bg-red-50 text-red-700" :
+                      item.feedType === "material" ? "bg-yellow-50 text-yellow-700" :
+                        item.feedType === "design" ? "bg-purple-50 text-purple-700" :
+                          "bg-emerald-50 text-emerald-700"}
+  `}
+                >
+                  {feedTypeLabelMap[item.feedType ?? "progress"]}
+                </span>
+
                 {hashtags.map((tag, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold"
+                  >
                     {tag}
                   </span>
                 ))}
               </div>
+
 
               {/* View Comments */}
               {item.comments > 0 && (

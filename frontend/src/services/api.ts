@@ -377,6 +377,8 @@ export const feedApi = {
         size?: number;
       }>;
     },
+
+    
     token: string
   ) =>
     request<{
@@ -387,6 +389,32 @@ export const feedApi = {
       body,
       token,
     }),
+  // ✅ MULTER / FORM-DATA API
+ createFeedFormData: async (formData: FormData, token: string) => {
+  const response = await fetch(`${API_BASE_URL}/feed`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  let data: any;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Server error (check backend logs)");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || "Create feed failed");
+  }
+
+  return data;
+},
+
 
   getFeedItem: (id: string, token: string) =>
     request<{
@@ -519,49 +547,101 @@ export const expenseApi = {
     },
     token: string
   ) =>
-    request<{
-      message: string;
-      expense: any;
-    }>("/expenses/add", {
+    request<{ message: string; expense: any }>("/expenses/add", {
       method: "POST",
       body,
       token,
     }),
 
   getExpensesBySite: (siteId: string, token: string, params?: Record<string, string>) => {
-    let q = '';
+    let q = "";
     if (params) {
-      const parts = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
-      if (parts.length) q = `?${parts.join('&')}`;
+      const parts = Object.entries(params).map(
+        ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
+      );
+      if (parts.length) q = `?${parts.join("&")}`;
     }
-    return request<{ expenses: any[] }>(`/expenses/site/${siteId}${q}`, { method: 'GET', token });
+    return request<{ expenses: any[] }>(
+      `/expenses/site/${siteId}${q}`,
+      { method: "GET", token }
+    );
   },
 
-  uploadInvoice: (expenseId: string, payload: { invoiceBase64: string; invoiceFilename: string }, token: string) =>
-    request<{ message: string; expense: any }>(`/expenses/${expenseId}/upload-invoice`, { method: 'POST', body: payload, token }),
+  uploadInvoice: (
+    expenseId: string,
+    payload: { invoiceBase64: string; invoiceFilename: string },
+    token: string
+  ) =>
+    request<{ message: string; expense: any }>(
+      `/expenses/${expenseId}/upload-invoice`,
+      { method: "POST", body: payload, token }
+    ),
 
-  approveExpense: (expenseId: string, action: 'approve' | 'reject', token: string) =>
-    request<{ message: string; expense: any }>(`/expenses/${expenseId}/approve`, { method: 'PUT', body: { action }, token }),
+  // ✅ MULTER / FORM-DATA (YAHI ADD KARNA THA)
+  uploadInvoiceFormData: async (
+    expenseId: string,
+    formData: FormData,
+    token: string
+  ) => {
+    const response = await fetch(
+      `${API_BASE_URL}/expenses/${expenseId}/upload-invoice`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`, // ❌ Content-Type mat lagana
+        },
+        body: formData,
+      }
+    );
 
-  updateExpenseStatus: (expenseId: string, status: 'pending' | 'approved' | 'rejected', token: string) =>
-    request<{ message: string; expense: any }>(`/expenses/${expenseId}/status`, { method: 'PUT', body: { status }, token }),
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Invoice upload failed");
+    }
 
-  updatePaymentStatus: (expenseId: string, paymentStatus: 'paid' | 'due', token: string) =>
-    request<{ message: string; expense: any }>(`/expenses/${expenseId}/payment-status`, { method: 'PUT', body: { paymentStatus }, token }),
+    return data;
+  },
+
+  approveExpense: (expenseId: string, action: "approve" | "reject", token: string) =>
+    request<{ message: string; expense: any }>(
+      `/expenses/${expenseId}/approve`,
+      { method: "PUT", body: { action }, token }
+    ),
+
+  updateExpenseStatus: (
+    expenseId: string,
+    status: "pending" | "approved" | "rejected",
+    token: string
+  ) =>
+    request<{ message: string; expense: any }>(
+      `/expenses/${expenseId}/status`,
+      { method: "PUT", body: { status }, token }
+    ),
+
+  updatePaymentStatus: (
+    expenseId: string,
+    paymentStatus: "paid" | "due",
+    token: string
+  ) =>
+    request<{ message: string; expense: any }>(
+      `/expenses/${expenseId}/payment-status`,
+      { method: "PUT", body: { paymentStatus }, token }
+    ),
 
   downloadInvoice: (expenseId: string, token: string) => {
-    window.open(`${API_BASE_URL}/expenses/${expenseId}/invoice?token=${token}`, '_blank');
-
-    
+    window.open(
+      `${API_BASE_URL}/expenses/${expenseId}/invoice?token=${token}`,
+      "_blank"
+    );
   },
-  deleteExpense: (expenseId: string, token: string) =>
-  request<{ message: string }>(`/expenses/${expenseId}`, {
-    method: "DELETE",
-    token,
-  }),
 
-  
+  deleteExpense: (expenseId: string, token: string) =>
+    request<{ message: string }>(`/expenses/${expenseId}`, {
+      method: "DELETE",
+      token,
+    }),
 };
+
 
 export const boqApi = {
   addBOQItem: (

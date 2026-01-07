@@ -7,18 +7,35 @@ import path from 'path';
 const INVOICE_FOLDER = path.join(process.cwd(), 'uploads', 'invoices');
 
 // Ensure folder exists
-try { fs.mkdirSync(INVOICE_FOLDER, { recursive: true }); } catch (e) {}
+try {
+  fs.mkdirSync(INVOICE_FOLDER, { recursive: true });
+} catch (e) {}
+
+/* ================= ADD EXPENSE ================= */
 
 export const addExpense = async (req, res) => {
   try {
-    const { title, description, category, amount, dueDate, siteId, invoiceBase64, invoiceFilename } = req.body;
+    const {
+      title,
+      description,
+      category,
+      amount,
+      dueDate,
+      siteId,
+      invoiceBase64,
+      invoiceFilename
+    } = req.body;
 
     const site = await Site.findById(siteId);
     if (!site) return res.status(404).json({ message: 'Site not found' });
 
-    const hasAccess = site.companyName === req.user.companyName ||
-                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
-    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+    const hasAccess =
+      site.companyName === req.user.companyName ||
+      (req.user.siteAccess &&
+        req.user.siteAccess.some(id => id.toString() === siteId));
+
+    if (!hasAccess)
+      return res.status(403).json({ message: 'You do not have access to this site' });
 
     const expense = new Expense({
       title,
@@ -28,23 +45,35 @@ export const addExpense = async (req, res) => {
       dueDate,
       siteId,
       createdBy: req.user._id,
-      companyName: req.user.companyName
+      companyName: req.user.companyName,
+      status: req.user.role === 'ADMIN' ? 'approved' : 'pending'
     });
 
-    // Auto-approve if admin
-    if (req.user.role === 'ADMIN') {
-      expense.status = 'approved';
-    } else {
-      expense.status = 'pending';
+    /* ========= MULTER FILE (PRIORITY) ========= */
+    if (req.file) {
+      const safeName = `${Date.now()}-${req.file.originalname}`.replace(/\s+/g, '_');
+      const filePath = path.join(INVOICE_FOLDER, safeName);
+
+      fs.copyFileSync(req.file.path, filePath);
+
+      expense.invoice = {
+        path: `/api/expenses/invoice-file/${safeName}`,
+        filename: req.file.originalname
+      };
     }
 
-    // Save invoice if provided as base64
-    if (invoiceBase64 && invoiceFilename) {
+    /* ========= BASE64 (FALLBACK – OLD LOGIC) ========= */
+    else if (invoiceBase64 && invoiceFilename) {
       const buffer = Buffer.from(invoiceBase64, 'base64');
       const safeName = `${Date.now()}-${invoiceFilename}`.replace(/\s+/g, '_');
       const filePath = path.join(INVOICE_FOLDER, safeName);
+
       fs.writeFileSync(filePath, buffer);
-      expense.invoice = { path: `/api/expenses/invoice-file/${safeName}`, filename: invoiceFilename };
+
+      expense.invoice = {
+        path: `/api/expenses/invoice-file/${safeName}`,
+        filename: invoiceFilename
+      };
     }
 
     await expense.save();
@@ -52,229 +81,277 @@ export const addExpense = async (req, res) => {
     res.status(201).json({ message: 'Expense added', expense });
   } catch (error) {
     console.error('Error adding expense', error);
-    res.status(500).json({ message: 'Error adding expense', error: error.message });
+    res.status(500).json({
+      message: 'Error adding expense',
+      error: error.message
+    });
   }
 };
+
+/* ================= GET EXPENSES ================= */
 
 export const getExpensesBySite = async (req, res) => {
   try {
     const { siteId } = req.params;
+
     const site = await Site.findById(siteId);
     if (!site) return res.status(404).json({ message: 'Site not found' });
 
-    const hasAccess = site.companyName === req.user.companyName ||
-                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
-    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+    const hasAccess =
+      site.companyName === req.user.companyName ||
+      (req.user.siteAccess &&
+        req.user.siteAccess.some(id => id.toString() === siteId));
 
-    let query = { siteId };
+    if (!hasAccess)
+      return res.status(403).json({ message: 'You do not have access to this site' });
 
-    // allow filters via query params (status, category, minAmount, maxAmount, startDate, endDate)
-    if (req.query.status) query.status = req.query.status;
-    if (req.query.category) query.category = req.query.category;
-    if (req.query.minAmount || req.query.maxAmount) {
-      query.amount = {};
-      if (req.query.minAmount) query.amount.$gte = Number(req.query.minAmount);
-      if (req.query.maxAmount) query.amount.$lte = Number(req.query.maxAmount);
-    }
-    if (req.query.startDate || req.query.endDate) {
-      query.dueDate = {};
-      if (req.query.startDate) query.dueDate.$gte = new Date(req.query.startDate);
-      if (req.query.endDate) query.dueDate.$lte = new Date(req.query.endDate);
-    }
+    const expenses = await Expense.find({ siteId })
+      .populate('createdBy', 'name email role')
+      .sort({ dueDate: -1 });
 
-    const expenses = await Expense.find(query).populate('createdBy', 'name email role').sort({ dueDate: -1 });
     res.json({ expenses });
   } catch (error) {
     console.error('Error fetching expenses', error);
-    res.status(500).json({ message: 'Error fetching expenses', error: error.message });
+    res.status(500).json({
+      message: 'Error fetching expenses',
+      error: error.message
+    });
   }
 };
+
+/* ================= UPLOAD INVOICE ================= */
 
 export const uploadInvoice = async (req, res) => {
   try {
     const { expenseId } = req.params;
-    const { invoiceBase64, invoiceFilename } = req.body;
-
-    if (!invoiceBase64 || !invoiceFilename) return res.status(400).json({ message: 'Missing invoice data' });
 
     const expense = await Expense.findById(expenseId);
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
 
-    // Only allow users who have access to the site or admins to upload
     const site = await Site.findById(expense.siteId);
-    const hasAccess = site.companyName === req.user.companyName ||
-                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === expense.siteId.toString()));
-    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+    const hasAccess =
+      site.companyName === req.user.companyName ||
+      (req.user.siteAccess &&
+        req.user.siteAccess.some(id => id.toString() === expense.siteId.toString()));
 
-    const buffer = Buffer.from(invoiceBase64, 'base64');
-    const safeName = `${Date.now()}-${invoiceFilename}`.replace(/\s+/g, '_');
+    if (!hasAccess)
+      return res.status(403).json({ message: 'You do not have access to this site' });
+
+    if (!req.file)
+      return res.status(400).json({ message: 'No file uploaded' });
+
+    const safeName = `${Date.now()}-${req.file.originalname}`.replace(/\s+/g, '_');
     const filePath = path.join(INVOICE_FOLDER, safeName);
-    fs.writeFileSync(filePath, buffer);
-    expense.invoice = { path: `/api/expenses/invoice-file/${safeName}`, filename: invoiceFilename };
+
+    fs.copyFileSync(req.file.path, filePath);
+
+    expense.invoice = {
+      path: `/api/expenses/invoice-file/${safeName}`,
+      filename: req.file.originalname
+    };
 
     await expense.save();
+
     res.json({ message: 'Invoice uploaded', expense });
   } catch (error) {
     console.error('Error uploading invoice', error);
-    res.status(500).json({ message: 'Error uploading invoice', error: error.message });
+    res.status(500).json({
+      message: 'Error uploading invoice',
+      error: error.message
+    });
   }
 };
 
-export const approveExpense = async (req, res) => {
-  try {
-    const { expenseId } = req.params;
-    const { action } = req.body; // 'approve' or 'reject'
-
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Only admin can approve/reject' });
-
-    const expense = await Expense.findById(expenseId);
-    if (!expense) return res.status(404).json({ message: 'Expense not found' });
-
-    if (action === 'approve') {
-      expense.status = 'approved';
-    } else if (action === 'reject') {
-      expense.status = 'rejected';
-    } else {
-      return res.status(400).json({ message: 'Invalid action' });
-    }
-
-    await expense.save();
-    res.json({ message: `Expense ${action}d`, expense });
-  } catch (error) {
-    console.error('Error approving expense', error);
-    res.status(500).json({ message: 'Error approving expense', error: error.message });
-  }
-};
-
-// Update expense status (admin only) - set to pending/approved/rejected
-export const updateExpenseStatus = async (req, res) => {
-  try {
-    const { expenseId } = req.params;
-    const { status } = req.body; // 'pending' | 'approved' | 'rejected'
-
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Only admin can update expense status' });
-
-    const allowed = ['pending', 'approved', 'rejected'];
-    if (!allowed.includes(status)) return res.status(400).json({ message: 'Invalid status' });
-
-    const expense = await Expense.findById(expenseId);
-    if (!expense) return res.status(404).json({ message: 'Expense not found' });
-
-    if (expense.companyName !== req.user.companyName) return res.status(403).json({ message: 'Expense does not belong to your company' });
-
-    expense.status = status;
-    await expense.save();
-
-    res.json({ message: 'Expense status updated', expense });
-  } catch (error) {
-    console.error('Error updating expense status', error);
-    res.status(500).json({ message: 'Error updating expense status', error: error.message });
-  }
-};
-
-// Update expense payment status (admin only)
-export const updateExpensePaymentStatus = async (req, res) => {
-  try {
-    const { expenseId } = req.params;
-    const { paymentStatus } = req.body; // 'paid' | 'due'
-
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Only admin can update payment status' });
-
-    const allowed = ['paid', 'due'];
-    if (!allowed.includes(paymentStatus)) return res.status(400).json({ message: 'Invalid payment status' });
-
-    const expense = await Expense.findById(expenseId);
-    if (!expense) return res.status(404).json({ message: 'Expense not found' });
-
-    if (expense.companyName !== req.user.companyName) return res.status(403).json({ message: 'Expense does not belong to your company' });
-
-    expense.paymentStatus = paymentStatus;
-    if (paymentStatus === 'paid') expense.paidDate = new Date();
-    else expense.paidDate = undefined;
-
-    await expense.save();
-    res.json({ message: 'Expense payment status updated', expense });
-  } catch (error) {
-    console.error('Error updating expense payment status', error);
-    res.status(500).json({ message: 'Error updating expense payment status', error: error.message });
-  }
-};
+/* ================= DOWNLOAD ================= */
 
 export const downloadInvoice = async (req, res) => {
   try {
     const { expenseId } = req.params;
-    const expense = await Expense.findById(expenseId).populate('siteId');
-    if (!expense) return res.status(404).json({ message: 'Expense not found' });
 
-    // Clients can only download if expense approved
-    if (req.user.role === 'CLIENT') {
-      if (expense.status !== 'approved' || !expense.invoice || !expense.invoice.path) {
-        return res.status(403).json({ message: 'Invoice not available' });
-      }
-    } else {
-      // For non-clients, ensure company matches
-      if (expense.companyName !== req.user.companyName) return res.status(403).json({ message: 'Expense does not belong to your company' });
-    }
+    const expense = await Expense.findById(expenseId);
+    if (!expense || !expense.invoice)
+      return res.status(404).json({ message: 'Invoice not found' });
 
-    // Serve the file from uploads folder
-    if (!expense.invoice || !expense.invoice.path) return res.status(404).json({ message: 'Invoice not uploaded' });
+    const fileName = expense.invoice.path.split('/').pop();
+    const filePath = path.join(INVOICE_FOLDER, fileName);
 
-    const parts = expense.invoice.path.split('/').pop();
-    const filePath = path.join(INVOICE_FOLDER, parts);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found' });
+    if (!fs.existsSync(filePath))
+      return res.status(404).json({ message: 'File not found' });
 
     res.download(filePath, expense.invoice.filename || 'invoice');
   } catch (error) {
     console.error('Error downloading invoice', error);
-    res.status(500).json({ message: 'Error downloading invoice', error: error.message });
+    res.status(500).json({
+      message: 'Error downloading invoice',
+      error: error.message
+    });
+  }
+};
+/* ================= APPROVE ================= */
+/* ================= APPROVE ================= */
+export const approveExpense = async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+
+    // Only ADMIN can approve
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Only admin can approve expense" });
+    }
+
+    const expense = await Expense.findById(expenseId);
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    expense.status = "approved";
+    expense.approvedBy = req.user._id;
+    expense.approvedAt = new Date();
+
+    await expense.save();
+
+    res.json({
+      message: "Expense approved successfully",
+      expense
+    });
+  } catch (error) {
+    console.error("Approve expense error:", error);
+    res.status(500).json({
+      message: "Error approving expense",
+      error: error.message
+    });
   }
 };
 
-// Endpoint to serve raw invoice files (internal use)
+
+/* ================= STATUS ================= */
+/* ================= UPDATE STATUS ================= */
+export const updateExpenseStatus = async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ["pending", "approved", "rejected"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status",
+        allowed: allowedStatuses
+      });
+    }
+
+    // Only ADMIN can change status
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        message: "Only admin can update expense status"
+      });
+    }
+
+    const expense = await Expense.findById(expenseId);
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    expense.status = status;
+    await expense.save();
+
+    res.json({
+      message: "Expense status updated",
+      expense
+    });
+  } catch (error) {
+    console.error("Update status error:", error);
+    res.status(500).json({
+      message: "Error updating expense status",
+      error: error.message
+    });
+  }
+};
+
+/* ================= PAYMENT STATUS ================= */
+/* ================= PAYMENT STATUS ================= */
+export const updateExpensePaymentStatus = async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+    const { paymentStatus } = req.body;
+
+    const allowedPaymentStatus = ["unpaid", "paid"];
+
+    if (!allowedPaymentStatus.includes(paymentStatus)) {
+      return res.status(400).json({
+        message: "Invalid payment status",
+        allowed: allowedPaymentStatus
+      });
+    }
+
+    // Only ADMIN can update payment status
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        message: "Only admin can update payment status"
+      });
+    }
+
+    const expense = await Expense.findById(expenseId);
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    expense.paymentStatus = paymentStatus;
+    expense.paidAt = paymentStatus === "paid" ? new Date() : null;
+
+    await expense.save();
+
+    res.json({
+      message: "Payment status updated",
+      expense
+    });
+  } catch (error) {
+    console.error("Payment status error:", error);
+    res.status(500).json({
+      message: "Error updating payment status",
+      error: error.message
+    });
+  }
+};
+
+/* ================= SERVE FILE ================= */
+
 export const serveInvoiceFile = async (req, res) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(INVOICE_FOLDER, filename);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found' });
+
+    if (!fs.existsSync(filePath))
+      return res.status(404).json({ message: 'File not found' });
+
     res.sendFile(filePath);
   } catch (error) {
-    console.error('Error serving invoice file', error);
-    res.status(500).json({ message: 'Error serving invoice file', error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Delete an expense (admin only)
+/* ================= DELETE ================= */
+
 export const deleteExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
 
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Only admin can delete expenses' });
+    if (req.user.role !== 'ADMIN')
+      return res.status(403).json({ message: 'Only admin can delete expenses' });
 
     const expense = await Expense.findById(expenseId);
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
 
-    if (expense.companyName !== req.user.companyName) return res.status(403).json({ message: 'Expense does not belong to your company' });
-
-    // Remove invoice file from disk if present
-    if (expense.invoice && expense.invoice.path) {
-      try {
-        const parts = expense.invoice.path.split('/').pop();
-        const filePath = path.join(INVOICE_FOLDER, parts);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (e) {
-        console.warn('Failed to delete invoice file:', e.message);
-        // continue with deletion of DB record
-      }
+    if (expense.invoice?.path) {
+      const fileName = expense.invoice.path.split('/').pop();
+      const filePath = path.join(INVOICE_FOLDER, fileName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
     await Expense.deleteOne({ _id: expenseId });
 
     res.json({ message: 'Expense deleted' });
   } catch (error) {
-    console.error('Error deleting expense', error);
-    res.status(500).json({ message: 'Error deleting expense', error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -282,7 +359,6 @@ export default {
   addExpense,
   getExpensesBySite,
   uploadInvoice,
-  approveExpense,
   downloadInvoice,
   serveInvoiceFile,
   deleteExpense
