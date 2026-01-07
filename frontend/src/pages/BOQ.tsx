@@ -14,7 +14,7 @@ import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 import { boqApi } from "../services/api";
 import jsPDF from 'jspdf';
-import BoqLibrary from "../component/BoqLibrary";
+// import BoqLibrary from "../component/BoqLibrary";
 
 interface BOQItem {
   id: number;
@@ -37,9 +37,30 @@ interface Room {
 
 const BOQ: React.FC = () => {
   // Track which menu is open (by item id)
+    // const [activeTab, setActiveTab] = useState(...);
+  // const [materials, setMaterials] = useState([]);
+    const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
+   const handleOpenMaterial = (material: any) => {
+    console.log("Open material:", material);
+    // future: modal / navigate
+  };
 
   // Close menu on outside click
+  useEffect(() => {
+    if (activeTab === "material") {
+      setMaterials([
+        {
+          id: "1",
+          name: "Soft Close Hinge",
+          brand: "Hettich • Sensys 8645i",
+          cost: 850,
+          warranty: "5 Years",
+        },
+      ]);
+    }
+  }, [activeTab]);
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       // Only close if click is outside any menu button or menu
@@ -51,18 +72,51 @@ const BOQ: React.FC = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
-  const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
+  
+
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoomName, setEditedRoomName] = useState<string>("");
   const { activeSite } = useSite();
   const { user } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<"furniture" | "services" | "all">("all");
+  const [selectedCategory] = useState<"furniture" | "services" | "all">("all");
   const [selectedRoom, setSelectedRoom] = useState<string>("all");
   const [boqItems, setBoqItems] = useState<any[]>([]);
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [libraryItems, setLibraryItems] = useState<any[]>([]);
+
+
+  // ✅ DUMMY DATA for BOQ Library
+useEffect(() => {
+  if (activeTab === "library") {
+    setLibraryItems([
+      {
+        id: "lib1",
+        title: "Queen Size Bed with Storage",
+        category: "Beds",
+        type: "Custom",
+        rate: 35000,
+        unit: "Nos",
+        image:
+          "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+      },
+      {
+        id: "lib2",
+        title: "Sliding Wardrobe",
+        category: "Wardrobes",
+        type: "Generic",
+        rate: 1450,
+        unit: "Sq. Ft.",
+        image:
+          "https://images.unsplash.com/photo-1615874959474-d609969a20ed",
+      },
+    ]);
+  }
+}, [activeTab]);
+
 
   const [boqForm, setBoqForm] = useState({
     roomName: '',
@@ -608,75 +662,111 @@ const BOQ: React.FC = () => {
             🔍
           </button>
         </div>
-        <div className="flex justify-center mb-6">
-          <div className="bg-white rounded-full p-1 shadow-sm flex gap-1 w-full max-w-md">
-            <button
-              onClick={() => setActiveTab("boq")}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "boq"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-500"
-                }`}
-            >
-              BOQ
-            </button>
+      <div className="flex justify-center mb-6">
+  <div className="bg-white rounded-full p-1 shadow-sm flex gap-1 w-full max-w-md">
+    {["boq", "material", "library"].map((tab) => (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab as any)}
+        className={`flex-1 py-2 rounded-full text-sm font-semibold transition
+          ${activeTab === tab
+            ? "bg-slate-900 text-white"
+            : "text-slate-400 hover:text-slate-600"
+          }`}
+      >
+        {tab === "boq" && "BOQ"}
+        {tab === "material" && "Material Used"}
+        {tab === "library" && "Library"}
+      </button>
+    ))}
+  </div>
+</div>
 
-            <button
-              onClick={() => setActiveTab("material")}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "material"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-500"
-                }`}
-            >
-              Material Used
-            </button>
 
-            <button
-              onClick={() => setActiveTab("library")}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold ${activeTab === "library"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-500"
-                }`}
-            >
-              Library
-            </button>
-          </div>
-        </div>
+{activeTab === "library" && (
+  <div className="grid grid-cols-2 gap-4">
+    {libraryItems.map((item) => (
+      <div
+        key={item.id}
+        className="bg-white rounded-2xl shadow-sm border p-3"
+      >
+        <img
+          src={item.image}
+          alt={item.title}
+          className="h-32 w-full object-cover rounded-xl mb-3"
+        />
 
-        {activeTab === "library" && (
-          <BoqLibrary />
-        )}
+        <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-full">
+          {item.category}
+        </span>
 
-        {activeTab === "material" && (
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-            <button
-              onClick={() => setSelectedCategory("all")}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "all"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-              All Items
-            </button>
-            <button
-              onClick={() => setSelectedCategory("furniture")}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "furniture"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-              Furniture
-            </button>
-            <button
-              onClick={() => setSelectedCategory("services")}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedCategory === "services"
-                ? "bg-slate-800 text-white shadow-lg"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                }`}
-            >
-              Services
-            </button>
-          </div>
-        )}
+        <h3 className="font-semibold text-sm mt-2">
+          {item.title}
+        </h3>
+
+        <p className="text-xs text-slate-500">{item.type}</p>
+
+        <p className="mt-2 font-bold">
+          ₹{item.rate.toLocaleString()} / {item.unit}
+        </p>
+
+        <button className="mt-3 w-full bg-slate-900 text-white py-2 rounded-xl text-sm font-semibold">
+          Add to BOQ
+        </button>
+      </div>
+    ))}
+  </div>
+)}
+
+
+{activeTab === "material" && materials.length > 0 && materials.map((item) => (
+  <div
+    key={item.id}
+    onClick={() => handleOpenMaterial(item)}
+    className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100
+               cursor-pointer transition hover:shadow-md hover:-translate-y-0.5"
+  >
+    {/* HEADER */}
+    <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold tracking-wide text-slate-400">
+          HARDWARE
+        </span>
+        <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+          ✅ Warranty
+        </span>
+      </div>
+
+      <button
+        onClick={(e) => e.stopPropagation()}
+        className="text-slate-400 hover:text-slate-600"
+      >
+        ⋮
+      </button>
+    </div>
+
+    <h3 className="text-lg font-bold">Soft Close Hinge</h3>
+    <p className="text-sm text-slate-500 mb-4">
+      Hettich • Sensys 8645i
+    </p>
+
+    <div className="flex gap-3 mt-4">
+      <button
+        onClick={(e) => e.stopPropagation()}
+        className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl"
+      >
+        Invoice
+      </button>
+
+      <button
+        onClick={(e) => e.stopPropagation()}
+        className="flex-1 border border-dashed py-2 rounded-xl"
+      >
+        Add Photo
+      </button>
+    </div>
+  </div>
+))}
 
 
         {/* Room Filters + Add Button */}
@@ -1084,10 +1174,6 @@ const BOQ: React.FC = () => {
                     <Share2 className="w-4 h-4" />
                     Share BOQ
                   </button>
-                  {/* <button className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-2">
-  📄 BOQ
-</button> */}
-
                 </div>
               </div>
             );
@@ -1102,3 +1188,4 @@ const BOQ: React.FC = () => {
 };
 
 export default BOQ;
+
