@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run lint && npm run type-check && vite build",
     "lint": "eslint .",
+    "type-check": "tsc -b --pretty",
     "preview": "vite preview"
   },
   "dependencies": {
