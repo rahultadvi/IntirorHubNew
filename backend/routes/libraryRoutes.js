@@ -12,7 +12,7 @@ import {
 import { importLibraryCSV } from "../controllers/libraryController.js";
 import { uploadSingleImage, uploadSingleFile } from "../utils/multer.js";
 
-const router = express.Router();
+// const router = express.Router();
 
 /* ================= AUTH ================= */
 router.use(AuthMiddleware);

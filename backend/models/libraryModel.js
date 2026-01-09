@@ -1,46 +1,49 @@
 import mongoose from "mongoose";
 
-const librarySchema = new mongoose.Schema(
+const LibrarySchema = new mongoose.Schema(
   {
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company", // ya User ke companyId
+    CompanyName: {
+      type:String,
       required: true,
       index: true
     },
-
-    category: {
-      type: String,
-      enum: ["Furniture", "Finishes", "Hardware", "Electrical"],
-      required: true
-    },
-
-    subCategory: {
-      type: String,
-      trim: true
-    },
-
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+    },
+
+    qty: {
+      type: Number,
+      required: true,
+      min: 0,
     },
 
     baseRate: {
       type: Number,
-      required: true
+      required: true,
+      min: 0,
     },
 
-    unit: {
-      type: String, // Nos, Sq Ft
-      required: true
+    ratePerQty: {
+      type: Number,
+      required: true,
+      min: 0,
     },
 
-    image: String
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    Category: {
+      type: String,
+      default: "",
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-const Library = mongoose.model("Library", librarySchema);
-
-export default Library;
+export default mongoose.model("Library", LibrarySchema);
