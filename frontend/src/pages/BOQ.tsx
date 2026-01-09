@@ -13,6 +13,7 @@ import {
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 import { boqApi } from "../services/api";
+import libraryData from "../data/libraryData";
 import jsPDF from 'jspdf';
 // import BoqLibrary from "../component/BoqLibrary";
 
@@ -37,12 +38,12 @@ interface Room {
 
 const BOQ: React.FC = () => {
   // Track which menu is open (by item id)
-    // const [activeTab, setActiveTab] = useState(...);
+  // const [activeTab, setActiveTab] = useState(...);
   // const [materials, setMaterials] = useState([]);
-    const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
+  const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  
-   const handleOpenMaterial = (material: any) => {
+
+  const handleOpenMaterial = (material: any) => {
     console.log("Open material:", material);
     // future: modal / navigate
   };
@@ -72,7 +73,7 @@ const BOQ: React.FC = () => {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
-  
+
 
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -87,35 +88,36 @@ const BOQ: React.FC = () => {
   const [newRoomName, setNewRoomName] = useState('');
   const [materials, setMaterials] = useState<any[]>([]);
   const [libraryItems, setLibraryItems] = useState<any[]>([]);
+  
 
 
   // ✅ DUMMY DATA for BOQ Library
-useEffect(() => {
-  if (activeTab === "library") {
-    setLibraryItems([
-      {
-        id: "lib1",
-        title: "Queen Size Bed with Storage",
-        category: "Beds",
-        type: "Custom",
-        rate: 35000,
-        unit: "Nos",
-        image:
-          "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-      },
-      {
-        id: "lib2",
-        title: "Sliding Wardrobe",
-        category: "Wardrobes",
-        type: "Generic",
-        rate: 1450,
-        unit: "Sq. Ft.",
-        image:
-          "https://images.unsplash.com/photo-1615874959474-d609969a20ed",
-      },
-    ]);
-  }
-}, [activeTab]);
+  useEffect(() => {
+    if (activeTab === "library") {
+      setLibraryItems([
+        {
+          id: "lib1",
+          title: "Queen Size Bed with Storage",
+          category: "Beds",
+          type: "Custom",
+          rate: 35000,
+          unit: "Nos",
+          image:
+            "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+        },
+        {
+          id: "lib2",
+          title: "Sliding Wardrobe",
+          category: "Wardrobes",
+          type: "Generic",
+          rate: 1450,
+          unit: "Sq. Ft.",
+          image:
+            "https://images.unsplash.com/photo-1615874959474-d609969a20ed",
+        },
+      ]);
+    }
+  }, [activeTab]);
 
 
   const [boqForm, setBoqForm] = useState({
@@ -630,555 +632,629 @@ useEffect(() => {
       <div className="min-h-screen bg-slate-50 px-5 py-6 pb-28 relative">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
-          <div>
-            <p className="text-xs text-slate-400 tracking-wide">✨ GOOD EVENING</p>
-            <h2 className="text-2xl font-bold text-slate-900">
-              {user?.name || "Alex Johnson"}
-            </h2>
-          </div>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <button className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow">
-              +
-            </button>
-            <img
-              src="https://i.pravatar.cc/100"
-              className="w-10 h-10 rounded-full object-cover"
+        <div className="flex justify-center mb-6">
+          <div
+            role="tablist"
+            aria-label="BOQ Navigation"
+            className="
+      relative
+      bg-white
+      rounded-full
+      p-1
+      shadow-sm
+      flex
+      w-full max-w-md
+    "
+          >
+            {[
+              { key: "boq", label: "BOQ" },
+              { key: "material", label: "Material Used" },
+              { key: "library", label: "Library" },
+            ].map((tab, index) => {
+              const isActive = activeTab === tab.key;
+
+              return (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`
+            relative z-10 flex-1
+            py-2 text-sm font-semibold
+            rounded-full
+            transition-colors duration-200
+            focus:outline-none
+            focus-visible:ring-2 focus-visible:ring-slate-400
+            ${isActive
+                      ? "text-white"
+                      : "text-slate-400 hover:text-slate-600"
+                    }
+          `}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+
+            {/* ACTIVE INDICATOR */}
+            <span
+              className="
+        absolute top-1 bottom-1
+        w-1/3
+        rounded-full
+        bg-slate-900
+        transition-transform duration-300 ease-out
+      "
+              style={{
+                transform:
+                  activeTab === "boq"
+                    ? "translateX(0%)"
+                    : activeTab === "material"
+                      ? "translateX(100%)"
+                      : "translateX(200%)",
+              }}
             />
           </div>
         </div>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 bg-white rounded-2xl px-5 py-4 shadow-sm flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-400 font-semibold">PROJECT</p>
-              <p className="font-semibold text-slate-900">
-                {activeSite?.name || "Skyline Villa Renovation"}
-              </p>
+        {activeTab === "library" && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-5xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {libraryItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl shadow-sm border p-4"
+                  >
+                    <div className="relative">
+                      <img
+                        src={item.image}
+                        className="h-44 w-full object-cover rounded-xl"
+                      />
+                      <span className="absolute top-3 left-3 bg-white px-2 py-1 rounded-full text-xs">
+                        {item.category}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-3 font-semibold text-center">
+                      {item.title}
+                    </h3>
+
+                    <p className="text-xs text-center text-slate-500">
+                      {item.type}
+                    </p>
+
+                    <p className="mt-2 text-center font-bold">
+                      ₹{item.rate.toLocaleString()} / {item.unit}
+                    </p>
+
+                    <button className="mt-4 w-full bg-slate-900 text-white py-2.5 rounded-xl">
+                      Add to BOQ
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <span className="text-slate-400">⌄</span>
           </div>
-
-          <button className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
-            🔍
-          </button>
-        </div>
-      <div className="flex justify-center mb-6">
-  <div className="bg-white rounded-full p-1 shadow-sm flex gap-1 w-full max-w-md">
-    {["boq", "material", "library"].map((tab) => (
-      <button
-        key={tab}
-        onClick={() => setActiveTab(tab as any)}
-        className={`flex-1 py-2 rounded-full text-sm font-semibold transition
-          ${activeTab === tab
-            ? "bg-slate-900 text-white"
-            : "text-slate-400 hover:text-slate-600"
-          }`}
-      >
-        {tab === "boq" && "BOQ"}
-        {tab === "material" && "Material Used"}
-        {tab === "library" && "Library"}
-      </button>
-    ))}
-  </div>
-</div>
+        )}
 
 
-{activeTab === "library" && (
-  <div className="grid grid-cols-2 gap-4">
-    {libraryItems.map((item) => (
-      <div
-        key={item.id}
-        className="bg-white rounded-2xl shadow-sm border p-3"
-      >
-        <img
-          src={item.image}
-          alt={item.title}
-          className="h-32 w-full object-cover rounded-xl mb-3"
-        />
 
-        <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-full">
-          {item.category}
-        </span>
-
-        <h3 className="font-semibold text-sm mt-2">
-          {item.title}
-        </h3>
-
-        <p className="text-xs text-slate-500">{item.type}</p>
-
-        <p className="mt-2 font-bold">
-          ₹{item.rate.toLocaleString()} / {item.unit}
-        </p>
-
-        <button className="mt-3 w-full bg-slate-900 text-white py-2 rounded-xl text-sm font-semibold">
-          Add to BOQ
-        </button>
-      </div>
-    ))}
-  </div>
-)}
-
-
-{activeTab === "material" && materials.length > 0 && materials.map((item) => (
-  <div
-    key={item.id}
-    onClick={() => handleOpenMaterial(item)}
-    className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100
-               cursor-pointer transition hover:shadow-md hover:-translate-y-0.5"
-  >
-    {/* HEADER */}
-    <div className="flex items-start justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold tracking-wide text-slate-400">
-          HARDWARE
-        </span>
-        <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-          ✅ Warranty
-        </span>
-      </div>
-
-      <button
-        onClick={(e) => e.stopPropagation()}
-        className="text-slate-400 hover:text-slate-600"
-      >
-        ⋮
-      </button>
-    </div>
-
-    <h3 className="text-lg font-bold">Soft Close Hinge</h3>
-    <p className="text-sm text-slate-500 mb-4">
-      Hettich • Sensys 8645i
-    </p>
-
-    <div className="flex gap-3 mt-4">
-      <button
-        onClick={(e) => e.stopPropagation()}
-        className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl"
-      >
-        Invoice
-      </button>
-
-      <button
-        onClick={(e) => e.stopPropagation()}
-        className="flex-1 border border-dashed py-2 rounded-xl"
-      >
-        Add Photo
-      </button>
-    </div>
-  </div>
-))}
-
-
-        {/* Room Filters + Add Button */}
-        <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-100 flex items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedRoom("all")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === "all"
-                ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                }`}
-            >
-              All Rooms
-            </button>
-            {allRoomNames.map((roomName) => (
-              <button
-                key={roomName}
-                onClick={() => setSelectedRoom(roomName.toLowerCase().replace(/\s+/g, '-'))}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedRoom === roomName.toLowerCase().replace(/\s+/g, '-')
-                  ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                  }`}
+        {activeTab === "material" && (
+          <div className="max-w-4xl mx-auto space-y-4">
+            {materials.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl p-6 border shadow-sm"
               >
-                {roomName}
-              </button>
+                <div className="flex justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-semibold">
+                    HARDWARE
+                  </span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 rounded-full">
+                    ✔ Warranty
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-center">
+                  {item.name}
+                </h3>
+
+                <p className="text-sm text-center text-slate-500">
+                  {item.brand}
+                </p>
+
+                <p className="text-center font-bold mt-2">
+                  ₹{item.cost}
+                </p>
+
+                <div className="flex gap-3 mt-4">
+                  <button className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl">
+                    Invoice
+                  </button>
+                  <button className="flex-1 border border-dashed py-2 rounded-xl">
+                    Add Photo
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-          {/* Add Room Button */}
-          <button
-            className="w-12 h-12 bg-slate-800 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition-all flex-shrink-0"
-            title="Add Room"
-            onClick={() => {
-              console.log('Add Room clicked');
-              setShowAddRoomModal(true);
-            }}
-          >
-            <Plus className="w-7 h-7" />
-          </button>
-        </div>
+        )}
 
-        {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddModal(false)} />
-            <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
+
+
+        {activeTab === "boq" && (
+          <>
+            <div
+              className="
+    bg-white rounded-2xl
+    p-4 mb-6
+    shadow-sm border border-slate-200
+    flex items-center justify-between
+    gap-3
+  "
+            >
+              {/* ROOM FILTERS */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {/* ALL ROOMS */}
+                <button
+                  onClick={() => setSelectedRoom("all")}
+                  className={`
+        px-4 py-2
+        rounded-xl text-sm font-semibold
+        whitespace-nowrap
+        transition-all
+        focus:outline-none focus:ring-2 focus:ring-blue-300
+        ${selectedRoom === "all"
+                      ? "bg-blue-600 text-white shadow"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }
+      `}
+                >
+                  All Rooms
+                </button>
+
+                {/* DYNAMIC ROOMS */}
+                {allRoomNames.map((roomName) => {
+                  const roomKey = roomName.toLowerCase().replace(/\s+/g, "-");
+                  const isActive = selectedRoom === roomKey;
+
+                  return (
+                    <button
+                      key={roomName}
+                      onClick={() => setSelectedRoom(roomKey)}
+                      className={`
+            px-4 py-2
+            rounded-xl text-sm font-medium
+            whitespace-nowrap
+            transition-all
+            focus:outline-none focus:ring-2 focus:ring-blue-300
+            ${isActive
+                          ? "bg-blue-600 text-white shadow"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }
+          `}
+                    >
+                      {roomName}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ADD ROOM BUTTON */}
+              <button
+                title="Add Room"
+                onClick={() => setShowAddRoomModal(true)}
+                className="
+      w-12 h-12
+      rounded-full
+      bg-slate-900 text-white
+      shadow-lg
+      flex items-center justify-center
+      flex-shrink-0
+      hover:bg-slate-800
+      active:scale-95
+      transition
+      focus:outline-none focus:ring-2 focus:ring-slate-400
+    "
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-200 flex items-center justify-between gap-3">
+              ...
+            </div>
+            {showAddModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddModal(false)} />
+                <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
         scale-100 translate-y-0 opacity-100
         animate-modalIn">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex flex-col">
-                  <h3 className="text-base font-semibold">Add BOQ Item</h3>
-                  <span className="text-xs text-gray-500">Add a new item to the Bill of Quantities</span>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex flex-col">
+                      <h3 className="text-base font-semibold">Add BOQ Item</h3>
+                      <span className="text-xs text-gray-500">Add a new item to the Bill of Quantities</span>
+                    </div>
+                    <button onClick={() => setShowAddModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
+                  </div>
+                  <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600">Room Name *</label>
+                      <select
+                        className="w-full mt-1 p-2 border rounded"
+                        value={boqForm.roomName}
+                        onChange={(e) => setBoqForm({ ...boqForm, roomName: e.target.value })}
+                        required
+                      >
+                        <option value="">Select Room</option>
+                        {allRoomNames.map((roomName) => (
+                          <option key={roomName} value={roomName}>{roomName}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
+                      <input
+                        className="w-full mt-1 p-2 border rounded"
+                        placeholder="Enter item name or scope of work"
+                        value={boqForm.itemName}
+                        onChange={(e) => setBoqForm({ ...boqForm, itemName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Quantity / Size *</label>
+                      <input
+                        className="w-full mt-1 p-2 border rounded"
+                        placeholder="Enter quantity or size"
+                        type="number"
+                        value={boqForm.quantity}
+                        onChange={(e) => setBoqForm({ ...boqForm, quantity: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Unit *</label>
+                      <select
+                        className="w-full mt-1 p-2 border rounded"
+                        value={boqForm.unit}
+                        onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
+                      >
+                        <option>Sq.ft</option>
+                        <option>Rft</option>
+                        <option>Nos</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Rate per Unit (₹) *</label>
+                      <input
+                        type="number"
+                        className="w-full mt-1 p-2 border rounded"
+                        placeholder="Enter rate per unit"
+                        value={boqForm.rate}
+                        onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Total Cost (₹)</label>
+                      <input
+                        type="text"
+                        className="w-full mt-1 p-2 border rounded bg-gray-100"
+                        readOnly
+                        value={boqForm.quantity && boqForm.rate ? `₹${(parseFloat(boqForm.quantity) * parseFloat(boqForm.rate)).toLocaleString()}` : "Auto Calculated"}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Upload Reference Image</label>
+                      <input
+                        type="file"
+                        className="w-full mt-1 p-2 border rounded"
+                        accept="image/*"
+                        onChange={(e) => setBoqForm({ ...boqForm, referenceImage: e.target.files?.[0] || null })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Comments / Notes</label>
+                      <textarea
+                        className="w-full mt-1 p-2 border rounded"
+                        rows={3}
+                        placeholder="Add any additional comments or notes"
+                        value={boqForm.comments}
+                        onChange={(e) => setBoqForm({ ...boqForm, comments: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
+                      <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
+                      <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
+                      <button
+                        type="button"
+                        onClick={() => handleSubmitBOQItem({ preventDefault: () => { } } as any, true)}
+                        className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
+                      >
+                        Save & Add Another
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <button onClick={() => setShowAddModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-600">Room Name *</label>
-                  <select
-                    className="w-full mt-1 p-2 border rounded"
-                    value={boqForm.roomName}
-                    onChange={(e) => setBoqForm({ ...boqForm, roomName: e.target.value })}
-                    required
-                  >
-                    <option value="">Select Room</option>
-                    {allRoomNames.map((roomName) => (
-                      <option key={roomName} value={roomName}>{roomName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
-                  <input
-                    className="w-full mt-1 p-2 border rounded"
-                    placeholder="Enter item name or scope of work"
-                    value={boqForm.itemName}
-                    onChange={(e) => setBoqForm({ ...boqForm, itemName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Quantity / Size *</label>
-                  <input
-                    className="w-full mt-1 p-2 border rounded"
-                    placeholder="Enter quantity or size"
-                    type="number"
-                    value={boqForm.quantity}
-                    onChange={(e) => setBoqForm({ ...boqForm, quantity: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Unit *</label>
-                  <select
-                    className="w-full mt-1 p-2 border rounded"
-                    value={boqForm.unit}
-                    onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
-                  >
-                    <option>Sq.ft</option>
-                    <option>Rft</option>
-                    <option>Nos</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Rate per Unit (₹) *</label>
-                  <input
-                    type="number"
-                    className="w-full mt-1 p-2 border rounded"
-                    placeholder="Enter rate per unit"
-                    value={boqForm.rate}
-                    onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Total Cost (₹)</label>
-                  <input
-                    type="text"
-                    className="w-full mt-1 p-2 border rounded bg-gray-100"
-                    readOnly
-                    value={boqForm.quantity && boqForm.rate ? `₹${(parseFloat(boqForm.quantity) * parseFloat(boqForm.rate)).toLocaleString()}` : "Auto Calculated"}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Upload Reference Image</label>
-                  <input
-                    type="file"
-                    className="w-full mt-1 p-2 border rounded"
-                    accept="image/*"
-                    onChange={(e) => setBoqForm({ ...boqForm, referenceImage: e.target.files?.[0] || null })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Comments / Notes</label>
-                  <textarea
-                    className="w-full mt-1 p-2 border rounded"
-                    rows={3}
-                    placeholder="Add any additional comments or notes"
-                    value={boqForm.comments}
-                    onChange={(e) => setBoqForm({ ...boqForm, comments: e.target.value })}
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                  <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubmitBOQItem({ preventDefault: () => { } } as any, true)}
-                    className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
-                  >
-                    Save & Add Another
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+            )}
 
-        {showAddRoomModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddRoomModal(false)} />
-            <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
+            {showAddModal && (
+              <div className="fixed inset-0 z-50">
+                ...
+              </div>
+            )}
+
+            {showAddRoomModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddRoomModal(false)} />
+                <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
         scale-100 translate-y-0 opacity-100">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex flex-col">
-                  <h3 className="text-base font-semibold">Add New Room</h3>
-                  <span className="text-xs text-gray-500">Add a new room to the Bill of Quantities</span>
-                </div>
-                <button onClick={() => setShowAddRoomModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
-              </div>
-              <form onSubmit={(e) => { e.preventDefault(); handleAddRoom(); }} className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-600">Room Name *</label>
-                  <input
-                    type="text"
-                    className="w-full mt-1 p-2 border rounded"
-                    placeholder="Enter room name (e.g., Bedroom, Kitchen)"
-                    value={newRoomName}
-                    onChange={(e) => setNewRoomName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                  <button type="button" onClick={() => setShowAddRoomModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                  <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add Room</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-
-
-        {/* Room Sections */}
-        <div className="space-y-4">
-          {filteredRooms.map((room) => {
-            const filteredItems = filterItemsByCategory(room.items);
-            // Show room even if no items
-
-            const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
-
-            return (
-              <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-slate-100">
-                {/* Room Header */}
-                <div className="flex items-center justify-between mb-4 ">
-                  <div className="flex items-center gap-2">
-                    {editingRoomId === room.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editedRoomName}
-                          onChange={(e) => setEditedRoomName(e.target.value)}
-                          className="text-md  text-slate-500 border-1 border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-gray-200 w-3/5"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSaveRoomName()}
-                          className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <h3 className="text-xl font-bold text-slate-800">{room.name}</h3>
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleEditRoomName(room.id, room.name)}
-                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit room name"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  {canAddItems && (
-                    <button
-                      onClick={() => {
-                        setBoqForm({ ...boqForm, roomName: room.name });
-                        setShowAddModal(true);
-                      }}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:bg-blue-600 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Item
-                    </button>
-                  )}
-                </div>
-
-                {filteredItems.length > 0 ? (
-                  <>
-                    <div className="flex items-center justify-between mb-3 px-2">
-                      <div className="flex items-center gap-2 w-[45%]">
-                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-                          ITEM NAME
-                        </span>
-                      </div>
-
-                      {/* QUANTITY */}
-                      <div className="w-[20%] text-center">
-                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-                          QUANTITY
-                        </span>
-                      </div>
-
-                      {/* AMOUNT */}
-                      <div className="w-[35%] text-right pr-6">
-                        <span className="text-[10px] font-semibold tracking-wider text-slate-400">
-                          AMOUNT
-                        </span>
-                      </div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex flex-col">
+                      <h3 className="text-base font-semibold">Add New Room</h3>
+                      <span className="text-xs text-gray-500">Add a new room to the Bill of Quantities</span>
                     </div>
+                    <button onClick={() => setShowAddRoomModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
+                  </div>
+                  <form onSubmit={(e) => { e.preventDefault(); handleAddRoom(); }} className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600">Room Name *</label>
+                      <input
+                        type="text"
+                        className="w-full mt-1 p-2 border rounded"
+                        placeholder="Enter room name (e.g., Bedroom, Kitchen)"
+                        value={newRoomName}
+                        onChange={(e) => setNewRoomName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
+                      <button type="button" onClick={() => setShowAddRoomModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
+                      <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add Room</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+            {showAddRoomModal && (
+              <div className="fixed inset-0 z-50">
+                ...
+              </div>
+            )}
 
+            <div className="space-y-4">
+              {filteredRooms.map((room) => {
+                const filteredItems = filterItemsByCategory(room.items);
+                // Show room even if no items
 
-                    <div className="space-y-6">
-                      {filteredItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between py-3 border-b border-slate-200 last:border-0"
-                        >
-                          {/* LEFT: Item name + status */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className={`w-1 h-10 rounded-full ${item.category === "furniture" ? "bg-blue-500" : "bg-amber-500"
-                                }`}
-                            />
-                            <span
-                              className={`rounded-full w-6 h-6 flex items-center justify-center ${item.status === "approved"
-                                ? "bg-green-100 text-green-800"
-                                : item.status === "rejected"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                                }`}
-                            >
-                              {item.status === "approved" && <Check className="w-3 h-3" />}
-                              {item.status === "pending" && <Clock className="w-3 h-3" />}
-                              {item.status === "rejected" && <X className="w-3 h-3" />}
-                            </span>
+                const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
 
-                            <span className="font-semibold text-slate-800 truncate">
-                              {item.name}
-                            </span>
-                          </div>
-
-                          {/* CENTER: Quantity */}
-                          <div className="text-center">
-                            <span className="font-semibold text-slate-700">
-                              {item.quantity} {item.unit}
-                            </span>
-                            <p className="text-[10px] text-slate-400">Qty</p>
-                          </div>
-
-                          {/* RIGHT: Amount + menu */}
+                return (
+                  <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-slate-100">
+                    {/* Room Header */}
+                    <div className="flex items-center justify-between mb-4 ">
+                      <div className="flex items-center gap-2">
+                        {editingRoomId === room.id ? (
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800">
-                              {formatCurrency(item.amount)}
-                            </span>
-
+                            <input
+                              type="text"
+                              value={editedRoomName}
+                              onChange={(e) => setEditedRoomName(e.target.value)}
+                              className="text-md  text-slate-500 border-1 border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-gray-200 w-3/5"
+                              autoFocus
+                            />
                             <button
-                              className={`p-1 rounded-full hover:bg-slate-100 boq-menu-btn relative ${openMenuId === String(item.id) ? 'bg-slate-100' : ''}`}
-                              onClick={() => setOpenMenuId(openMenuId === String(item.id) ? null : String(item.id))}
-                              aria-label="More actions"
+                              onClick={() => handleSaveRoomName()}
+                              className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                             >
-                              <MoreVertical className="w-5 h-5 text-slate-500" />
-                              {openMenuId === String(item.id) && (
-                                <div className="boq-menu-dropdown absolute right-0 top-8 z-10 bg-white border border-slate-200 rounded shadow-md min-w-[120px]">
-                                  {canApproveItems && (
-                                    <button
-                                      onClick={() => { handleApproveItem(item.id.toString()); setOpenMenuId(null); }}
-                                      className="flex w-full items-center gap-2 px-4 py-2 text-green-700 hover:bg-green-50"
-                                    >
-                                      <Check className="w-4 h-4" /> Approve
-                                    </button>
-                                  )}
-                                  {canApproveItems && (
-                                    <button
-                                      onClick={() => { handleRejectItem(item.id.toString()); setOpenMenuId(null); }}
-                                      className="flex w-full items-center gap-2 px-4 py-2 text-red-700 hover:bg-red-50"
-                                    >
-                                      <X className="w-4 h-4" /> Reject
-                                    </button>
-                                  )}
-                                  {isAdmin && (
-                                    <button
-                                      onClick={() => {
-                                        handleDeleteBOQItem(item.id.toString());
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete
-                                    </button>
-                                  )}
-
-                                </div>
-                              )}
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
-                        </div>
-                      ))}
+                        ) : (
+                          <>
+                            <h3 className="text-xl font-bold text-slate-800">{room.name}</h3>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleEditRoomName(room.id, room.name)}
+                                className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit room name"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {canAddItems && (
+                        <button
+                          onClick={() => {
+                            setBoqForm({ ...boqForm, roomName: room.name });
+                            setShowAddModal(true);
+                          }}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:bg-blue-600 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Item
+                        </button>
+                      )}
                     </div>
 
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    <p className="text-sm">No items added to this room yet.</p>
-                    <p className="text-xs mt-1">Click "Add Item" to get started.</p>
+                    {filteredItems.length > 0 ? (
+                      <>
+                        <div className="flex items-center justify-between mb-3 px-2">
+                          <div className="flex items-center gap-2 w-[45%]">
+                            <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                              ITEM NAME
+                            </span>
+                          </div>
+
+                          {/* QUANTITY */}
+                          <div className="w-[20%] text-center">
+                            <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                              QUANTITY
+                            </span>
+                          </div>
+
+                          {/* AMOUNT */}
+                          <div className="w-[35%] text-right pr-6">
+                            <span className="text-[10px] font-semibold tracking-wider text-slate-400">
+                              AMOUNT
+                            </span>
+                          </div>
+                        </div>
+
+
+                        <div className="space-y-6">
+                          {filteredItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between py-3 border-b border-slate-200 last:border-0"
+                            >
+                              {/* LEFT: Item name + status */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div
+                                  className={`w-1 h-10 rounded-full ${item.category === "furniture" ? "bg-blue-500" : "bg-amber-500"
+                                    }`}
+                                />
+                                <span
+                                  className={`rounded-full w-6 h-6 flex items-center justify-center ${item.status === "approved"
+                                    ? "bg-green-100 text-green-800"
+                                    : item.status === "rejected"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                    }`}
+                                >
+                                  {item.status === "approved" && <Check className="w-3 h-3" />}
+                                  {item.status === "pending" && <Clock className="w-3 h-3" />}
+                                  {item.status === "rejected" && <X className="w-3 h-3" />}
+                                </span>
+
+                                <span className="font-semibold text-slate-800 truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+
+                              {/* CENTER: Quantity */}
+                              <div className="text-center">
+                                <span className="font-semibold text-slate-700">
+                                  {item.quantity} {item.unit}
+                                </span>
+                                <p className="text-[10px] text-slate-400">Qty</p>
+                              </div>
+
+                              {/* RIGHT: Amount + menu */}
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-800">
+                                  {formatCurrency(item.amount)}
+                                </span>
+
+                                <button
+                                  className={`p-1 rounded-full hover:bg-slate-100 boq-menu-btn relative ${openMenuId === String(item.id) ? 'bg-slate-100' : ''}`}
+                                  onClick={() => setOpenMenuId(openMenuId === String(item.id) ? null : String(item.id))}
+                                  aria-label="More actions"
+                                >
+                                  <MoreVertical className="w-5 h-5 text-slate-500" />
+                                  {openMenuId === String(item.id) && (
+                                    <div className="boq-menu-dropdown absolute right-0 top-8 z-10 bg-white border border-slate-200 rounded shadow-md min-w-[120px]">
+                                      {canApproveItems && (
+                                        <button
+                                          onClick={() => { handleApproveItem(item.id.toString()); setOpenMenuId(null); }}
+                                          className="flex w-full items-center gap-2 px-4 py-2 text-green-700 hover:bg-green-50"
+                                        >
+                                          <Check className="w-4 h-4" /> Approve
+                                        </button>
+                                      )}
+                                      {canApproveItems && (
+                                        <button
+                                          onClick={() => { handleRejectItem(item.id.toString()); setOpenMenuId(null); }}
+                                          className="flex w-full items-center gap-2 px-4 py-2 text-red-700 hover:bg-red-50"
+                                        >
+                                          <X className="w-4 h-4" /> Reject
+                                        </button>
+                                      )}
+                                      {isAdmin && (
+                                        <button
+                                          onClick={() => {
+                                            handleDeleteBOQItem(item.id.toString());
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          Delete
+                                        </button>
+                                      )}
+
+                                    </div>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-slate-500">
+                        <p className="text-sm">No items added to this room yet.</p>
+                        <p className="text-xs mt-1">Click "Add Item" to get started.</p>
+                      </div>
+                    )}
+
+                    {/* Subtotal */}
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                      <span className="text-slate-500 font-medium">Subtotal</span>
+                      <span className="text-2xl font-bold text-slate-800">{formatCurrency(roomSubtotal)}</span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleExportPDF(room)}
+                        disabled={room.items.length === 0}
+                        className={`flex-1 font-semibold py-3 px-2 rounded-xl flex items-center justify-center gap-1 transition-all ${room.items.length === 0
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-slate-600 text-white hover:bg-slate-700'
+                          }`}
+                      >
+                        <Download className="w-4 h-4" />
+                        Export PDF
+                      </button>
+                      <button
+                        onClick={() => handleShareBOQ(room)}
+                        className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share BOQ
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                {/* Subtotal */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                  <span className="text-slate-500 font-medium">Subtotal</span>
-                  <span className="text-2xl font-bold text-slate-800">{formatCurrency(roomSubtotal)}</span>
+                );
+              })}
+            </div>
+            <div className="space-y-4">
+              {filteredRooms.map((room) => (
+                <div key={room.id}>
+                  ...
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-4">
-                  <button
-                    onClick={() => handleExportPDF(room)}
-                    disabled={room.items.length === 0}
-                    className={`flex-1 font-semibold py-3 px-2 rounded-xl flex items-center justify-center gap-1 transition-all ${room.items.length === 0
-                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                      : 'bg-slate-600 text-white hover:bg-slate-700'
-                      }`}
-                  >
-                    <Download className="w-4 h-4" />
-                    Export PDF
-                  </button>
-                  <button
-                    onClick={() => handleShareBOQ(room)}
-                    className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share BOQ
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </>
+        )}
 
 
       </div>
