@@ -134,7 +134,7 @@ export const updateLibraryItem = async (req, res) => {
     }
 
     // 🔐 Ownership check (FIXED)
-    if (item.companyName !== req.user.companyName) {
+    if (item.CompanyName !== req.user.CompanyName) {
       return res.status(403).json({
         message: "Access denied",
       });
