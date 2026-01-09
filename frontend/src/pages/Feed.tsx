@@ -1,5 +1,5 @@
 type FilterKey = "all" | "updates" | "photos" | "documents" | "milestones";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 // import { useLocation } from "react-router-dom";
 import {
   MessageSquare,
@@ -85,20 +85,42 @@ const Feed: React.FC = () => {
   >([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>(initialFeedItems);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  // loading state removed
-  // const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [siteError, setSiteError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
 
-
-  // const [openShareFor, setOpenShareFor] = useState<Record<string, boolean>>({});
-
   const activeSiteId = activeSite?.id ?? null;
+
+  // Load feed data when component mounts or active site changes
+  useEffect(() => {
+    const loadFeed = async () => {
+      if (!activeSiteId || !token) {
+        setFeedItems([]);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await feedApi.listFeed(activeSiteId, token);
+        setFeedItems(response.items || []);
+      } catch (err) {
+        console.error("Failed to load feed:", err);
+        setError("Failed to load feed. Please try again.");
+        setFeedItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeed();
+  }, [activeSiteId, token]);
 const hasContent =
   newTitle.trim().length > 0 ||
   newPost.trim().length > 0 ||
@@ -543,24 +565,24 @@ const isPostDisabled = !hasContent || isSubmitting;
         </button>
       </div>
 
-      {/* {siteError && (
+      {error && (
         <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
-          {siteError}
+          {error}
         </div>
-      )} */}
+      )}
 
       <div className="space-y-4">
-        {/* {error && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <div className="text-sm text-red-700">{error}</div>
+        {loading && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center">
+            <p className="text-sm text-gray-500">Loading feed...</p>
           </div>
-        )} */}
-        {filteredItems.length === 0 && (
+        )}
+        {!loading && filteredItems.length === 0 && !error && (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <p className="text-sm text-gray-500">No posts yet for this site. Share the first update!</p>
           </div>
         )}
-        {filteredItems.map((item) => {
+        {!loading && filteredItems.map((item) => {
           const hashtags = extractHashtags(item.content);
           // const location = extractLocation(item.content) || item.siteName;
           const imageIndex = currentImageIndex[item.id] || 0;
