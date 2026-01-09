@@ -19,6 +19,7 @@ import {
   Image,
   FileCode,
   Bookmark,
+  AlertCircle,
   // Trash2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -477,18 +478,23 @@ const isPostDisabled = !hasContent || isSubmitting;
     },
     {
       key: "updates",
-      label: `${projectName} Progress`,
+      label: `Progress`,
       icon: Zap,
     },
     {
       key: "photos",
-      label: `${projectName} Design`,
+      label: `Design`,
       icon: Image,
     },
     {
       key: "documents",
-      label: `${projectName} Material Selection`,
+      label: `Material Selection`,
       icon: FileCode,
+    },
+    {
+      key: "issue",
+      label: `Issue`,
+      icon: AlertCircle,
     },
   ];
   // const projectName1 = activeSite?.name || "Project";

@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import userRouter from "./routes/UserRoute.js";
 import siteRouter from "./routes/SiteRoute.js";
@@ -12,19 +14,23 @@ import libraryRoutes from "./routes/libraryRoutes.js";
 
 dotenv.config();
 
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Generate server instance ID on startup - this invalidates all tokens on restart
+const SERVER_INSTANCE_ID = Date.now().toString();
+console.log('Server instance ID:', SERVER_INSTANCE_ID);
+// Make it available globally for JWT token generation/validation
+process.env.SERVER_INSTANCE_ID = SERVER_INSTANCE_ID;
+
 const app = express();
 const PORT = process.env.PORT;
 
 
-app.use(cors({
-  origin: '*',
-  credentials: true,
-}))
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
-// ✅ Serve uploaded files statically
-app.use('/uploads', express.static('uploads'));
 
 connectDB();
 
@@ -34,40 +40,27 @@ app.use("/api/feed", feedRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/expenses", expenseRouter);
 app.use("/api/boq", boqRouter);
-app.use("/uploads", express.static("uploads"));
 app.use("/api/library", libraryRoutes);
 
+// Serve uploads directory FIRST - allows access to all subdirectories (feed-files, feed-images, boq-images, invoices, etc.)
+// This must come before frontend static to avoid conflicts with frontend/dist/uploads
+const uploadsPath = path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsPath));
 
-app.get("/health", (_req, res) => {
-    res.status(200).json({ status: "ok" });
+// Serve static files from frontend/dist
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+app.use(express.static(frontendDistPath));
+
+// Catch-all handler: send back React's index.html file for client-side routing
+// This should be last, after all API routes and static file serving
+app.use((req, res, next) => {
+  // Don't serve index.html for API routes or uploads
+  if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistPath, "index.html"));
 });
-// app.use(express.json({ limit: "50mb" }));
-// app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-
-// ✅ Error handling middleware (MUST be AFTER all routes)
-app.use((err, req, res, next) => {
-  console.error("Server error:", err);
-  
-  // Multer errors
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ message: "File too large" });
-  }
-  if (err.code === 'LIMIT_FILE_COUNT') {
-    return res.status(413).json({ message: "Too many files" });
-  }
-  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-    return res.status(400).json({ message: "Unexpected file field" });
-  }
-  
-  // Custom multer filter errors
-  if (err.message && err.message.includes("Invalid file type")) {
-    return res.status(400).json({ message: err.message });
-  }
-  
-  // Default error
-  res.status(500).json({ message: "Internal server error", error: err.message });
-});
 
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

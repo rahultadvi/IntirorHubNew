@@ -9,7 +9,10 @@ import { generateTemporaryPassword } from "../utils/password.js";
 import crypto from "crypto";
 
 const buildToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET || "development-secret", {
+  jwt.sign({ 
+    id,
+    instanceId: process.env.SERVER_INSTANCE_ID || Date.now().toString() // Include server instance ID
+  }, process.env.JWT_SECRET || "development-secret", {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 

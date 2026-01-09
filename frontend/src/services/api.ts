@@ -151,6 +151,15 @@ const request = async <T>(
   const payload = await parseResponse<T>(response);
 
   if (!response.ok) {
+    // Check for session expiration
+    if (response.status === 401 && payload && (payload as any).code === "SESSION_EXPIRED") {
+      // Clear session and redirect to login
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authUser");
+      // Trigger a custom event that AuthContext can listen to
+      window.dispatchEvent(new CustomEvent("session-expired"));
+    }
+    
     throw new ApiError(
       response.status,
       payload?.message || response.statusText || "Request failed",

@@ -57,6 +57,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
+  // Listen for session expiration events
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearSession();
+      // Redirect to login page
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('session-expired', handleSessionExpired);
+    };
+  }, []);
+
   useEffect(() => {
     if (!token) {
       return;
@@ -99,7 +113,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           persistUser(profile.user);
         }
       } catch (e) {
-        // ignore polling errors
+        // If session expired, clear session
+        if (e instanceof Error && e.message.includes('Session expired')) {
+          clearSession();
+        }
+        // ignore other polling errors
       }
     }, 15000);
     return () => {
