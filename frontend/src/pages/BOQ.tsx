@@ -13,7 +13,7 @@ import {
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 import { boqApi } from "../services/api";
-import libraryData from "../data/libraryData";
+// import libraryData from "../data/libraryData";
 import jsPDF from 'jspdf';
 // import BoqLibrary from "../component/BoqLibrary";
 
@@ -43,10 +43,10 @@ const BOQ: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const handleOpenMaterial = (material: any) => {
-    console.log("Open material:", material);
-    // future: modal / navigate
-  };
+  // const handleOpenMaterial = (material: any) => {
+  //   console.log("Open material:", material);
+  //   // future: modal / navigate
+  // };
 
   // Close menu on outside click
   useEffect(() => {
@@ -652,7 +652,7 @@ const BOQ: React.FC = () => {
               { key: "boq", label: "BOQ" },
               { key: "material", label: "Material Used" },
               { key: "library", label: "Library" },
-            ].map((tab, index) => {
+            ].map((tab,) => {
               const isActive = activeTab === tab.key;
 
               return (
