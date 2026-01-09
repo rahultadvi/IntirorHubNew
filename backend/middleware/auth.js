@@ -18,8 +18,9 @@ const AuthMiddleware = async (req, res, next) => {
         const decode = jwt.verify(token, process.env.JWT_SECRET || "development-secret");
 
         // Check if token was issued before server restart (instance ID mismatch)
+        // Only check if token has instanceId (new tokens) - allow old tokens without instanceId for backward compatibility
         const currentInstanceId = process.env.SERVER_INSTANCE_ID;
-        if (currentInstanceId && decode.instanceId !== currentInstanceId) {
+        if (currentInstanceId && decode.instanceId && decode.instanceId !== currentInstanceId) {
             return res.status(401).json({ 
                 message: "Session expired. Please login again.",
                 code: "SESSION_EXPIRED"

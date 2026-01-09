@@ -217,7 +217,7 @@ const Signup: React.FC = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        placeholder="Ganesh Suthar"
+                        placeholder="John Doe"
                         className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-12 pr-4 text-sm text-black outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
                       />
                     </div>
@@ -231,7 +231,7 @@ const Signup: React.FC = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        placeholder="08003779983"
+                        placeholder="1234567890"
                         required
                         className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-12 pr-4 text-sm text-black outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
                       />

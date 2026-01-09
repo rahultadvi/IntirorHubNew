@@ -18,6 +18,7 @@ const ALLOWED_AUDIO_TYPES = [
   "audio/webm",
   "audio/mp3",
   "audio/m4a",
+  "video/webm", // WebM can be video or audio
 ];
 
 const ALLOWED_DOCUMENT_TYPES = [
@@ -86,7 +87,12 @@ const feedFileFilter = (req, file, cb) => {
   if (isImage || isAudio || isDocument) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid feed file type"), false);
+    console.error("Feed file filter rejected:", {
+      filename: file.originalname,
+      mimetype: file.mimetype,
+      fieldname: file.fieldname
+    });
+    cb(new Error(`Invalid feed file type: ${file.mimetype || 'unknown'} for ${file.originalname}`), false);
   }
 };
 

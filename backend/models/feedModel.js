@@ -38,10 +38,10 @@ const FeedSchema = new mongoose.Schema(
     images: [{ type: String, trim: true }],
     attachments: [
       {
-        url: String,
-        name: String,
-        type: String,
-        size: Number,
+        url: { type: String, required: true },
+        name: { type: String, default: "" },
+        type: { type: String, default: "application/octet-stream" },
+        size: { type: Number, default: 0 },
       },
     ],
     likes: { type: Number, default: 0 },

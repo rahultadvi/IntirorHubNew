@@ -13,8 +13,8 @@ import {
   Heart,
   Share,
   Play,
+  Pause,
   ChevronDown,
-  Filter,
   Zap,
   Image,
   FileCode,
@@ -289,6 +289,10 @@ const isPostDisabled = !hasContent || isSubmitting;
   };
 
   const [imageModal, setImageModal] = useState<{ open: boolean; src?: string; desc?: string }>({ open: false });
+  
+  // Audio playback state
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
 
   const handleSubmitPost = async () => {
     if (!activeSiteId || !token) return;
@@ -561,14 +565,11 @@ const isPostDisabled = !hasContent || isSubmitting;
         })}
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="flex items-center justify-center mb-6">
+        <div className="text-center">
           <h2 className="text-2xl font-bold text-slate-800">Site Feed</h2>
           <p className="text-slate-500 text-sm">Live updates from the field</p>
         </div>
-        <button className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center hover:shadow-md transition-shadow">
-          <Filter className="w-5 h-5 text-slate-600" />
-        </button>
       </div>
 
       {error && (
@@ -592,10 +593,6 @@ const isPostDisabled = !hasContent || isSubmitting;
           const hashtags = extractHashtags(item.content);
           // const location = extractLocation(item.content) || item.siteName;
           const imageIndex = currentImageIndex[item.id] || 0;
-          const audioAttachment = item.attachments?.find(att => {
-            const name = att.name || att.url || "";
-            return (att.type && att.type.startsWith("audio")) || /\.(mp3|wav|ogg|webm)$/i.test(name);
-          });
 
           return (
             <div id={`feed-${item.id}`}
@@ -683,51 +680,83 @@ const isPostDisabled = !hasContent || isSubmitting;
                 </div>
               )}
 
-              {/* 🔊 AUDIO PLAYER (YAHI ADD KARO) */}
+              {/* 🔊 CUSTOM VOICE NOTE PLAYER */}
               {item.attachments &&
                 item.attachments.some((f) => f.type?.startsWith("audio")) && (
                   <div className="mt-3 space-y-2">
                     {item.attachments.map((file, idx) => {
                       if (!file.type?.startsWith("audio")) return null;
+                      
+                      const audioId = `${item.id}-${idx}`;
+                      const isPlaying = playingAudioId === audioId;
+                      
+
+                      const handlePlayPause = () => {
+                        const audio = audioRefs.current[audioId];
+                        if (!audio) return;
+
+                        if (isPlaying) {
+                          audio.pause();
+                          setPlayingAudioId(null);
+                        } else {
+                          // Pause any other playing audio
+                          Object.values(audioRefs.current).forEach(a => a.pause());
+                          audio.play();
+                          setPlayingAudioId(audioId);
+                        }
+                      };
 
                       return (
-                        <audio
-                          key={idx}
-                          controls
-                          className="w-full rounded-lg"
-                        >
-                          <source src={file.url} type={file.type} />
-                          Your browser does not support audio playback
-                        </audio>
+                        <div key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 flex items-center gap-4">
+                          {/* Hidden audio element */}
+                          <audio
+                            ref={(el) => {
+                              if (el) audioRefs.current[audioId] = el;
+                            }}
+                            onEnded={() => setPlayingAudioId(null)}
+                            onPause={() => {
+                              if (playingAudioId === audioId) setPlayingAudioId(null);
+                            }}
+                            className="hidden"
+                          >
+                            <source src={file.url} type={file.type} />
+                          </audio>
+                          
+                          {/* Play/Pause Button */}
+                          <button
+                            onClick={handlePlayPause}
+                            className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors"
+                          >
+                            {isPlaying ? (
+                              <Pause className="w-6 h-6 text-white" />
+                            ) : (
+                              <Play className="w-6 h-6 text-white ml-1" />
+                            )}
+                          </button>
+                          
+                          {/* Waveform and Info */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-1 mb-2">
+                              {[...Array(13)].map((_, i) => {
+                                const height = isPlaying 
+                                  ? `${Math.random() * 20 + 10}px` 
+                                  : `${Math.random() * 8 + 4}px`;
+                                return (
+                                  <div
+                                    key={i}
+                                    className="w-1 bg-blue-400 rounded-full transition-all duration-150"
+                                    style={{ height }}
+                                  ></div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-sm font-medium text-blue-600">VOICE NOTE</p>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between mb-3">
-                ...
-              </div>
-              {/* Voice Note Post */}
-              {audioAttachment && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 mb-4 flex items-center gap-4">
-                  <button className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors">
-                    <Play className="w-6 h-6 text-white ml-1" />
-                  </button>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1 mb-2">
-                      {[...Array(13)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1 bg-blue-400 rounded-full"
-                          style={{ height: `${Math.random() * 20 + 10}px` }}
-                        ></div>
-                      ))}
-                    </div>
-                    <p className="text-sm font-medium text-blue-600">0:45 • VOICE NOTE</p>
-                  </div>
-                </div>
-              )}
 
               {/* Action Buttons */}
               <div className="flex items-center justify-between mb-3">

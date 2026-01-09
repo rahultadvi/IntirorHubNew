@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import userRouter from "./routes/UserRoute.js";
@@ -18,8 +19,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Generate server instance ID on startup - this invalidates all tokens on restart
-const SERVER_INSTANCE_ID = Date.now().toString();
+// Use persistent server instance ID - sessions will persist across restarts
+// If SERVER_INSTANCE_ID is set in .env, use that; otherwise generate a stable one based on JWT_SECRET
+const SERVER_INSTANCE_ID = process.env.SERVER_INSTANCE_ID || 
+  (process.env.JWT_SECRET ? crypto.createHash('sha256').update(process.env.JWT_SECRET).digest('hex').substring(0, 16) : 'default-instance-id');
 console.log('Server instance ID:', SERVER_INSTANCE_ID);
 // Make it available globally for JWT token generation/validation
 process.env.SERVER_INSTANCE_ID = SERVER_INSTANCE_ID;

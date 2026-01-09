@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import path from "path";
 import Feed from "../models/feedModel.js";
 import Site from "../models/siteModel.js";
 
@@ -97,29 +98,130 @@ export const createFeedItem = async (req, res) => {
     const trimmedContent = (content || "").trim();
 
     // ✅ MULTER FILES (ONLY ONCE)
+    console.log("=== FILES RECEIVED ===");
+    console.log("req.files:", JSON.stringify(req.files, null, 2));
+    console.log("req.files?.images:", req.files?.images);
+    console.log("req.files?.attachments:", req.files?.attachments);
+    
     const uploadedImages = req.files?.images
       ? req.files.images.map(f => `${process.env.BACKEND_URL || `http://${req.get('host')}`}/uploads/feed-files/${f.filename}`)
       : [];
 
+    // Handle attachments from multer (file uploads)
     let normalizedAttachments = req.files?.attachments
-  ? req.files.attachments.map(f => ({
-      url: `/uploads/feed-files/${f.filename}`,
-      name: f.originalname,
-      type: f.mimetype,
-      size: f.size,
-    }))
-  : [];
-    // ✅ DEFENSIVE: Parse if stringified
-    // if (Array.isArray(normalizedAttachments) && normalizedAttachments.length > 0) {
-    //   if (typeof normalizedAttachments[0] === 'string') {
-    //     try {
-    //       normalizedAttachments = JSON.parse(normalizedAttachments[0]);
-    //     } catch (e) {
-    //       console.error("Failed to parse attachments", e);
-    //       normalizedAttachments = [];
-    //     }
-    //   }
-    // }
+      ? req.files.attachments.map(f => {
+          console.log("Processing attachment:", {
+            filename: f.filename,
+            originalname: f.originalname,
+            mimetype: f.mimetype,
+            size: f.size,
+            fieldname: f.fieldname
+          });
+          return {
+            url: `/uploads/feed-files/${f.filename}`,
+            name: f.originalname,
+            type: f.mimetype,
+            size: f.size,
+          };
+        })
+      : [];
+    
+    console.log("Normalized attachments from multer:", normalizedAttachments);
+
+    // ✅ Handle attachments from request body (if sent as JSON string or array)
+    if (req.body.attachments) {
+      console.log("Raw attachments from body:", typeof req.body.attachments, req.body.attachments);
+      try {
+        let bodyAttachments = req.body.attachments;
+        
+        // If it's a string, try to parse it
+        if (typeof bodyAttachments === 'string') {
+          let cleaned = bodyAttachments.trim();
+          
+          // Handle JavaScript-like string concatenation format
+          // Remove string concatenation operators and quotes
+          cleaned = cleaned
+            .replace(/\+\s*['"]/g, '') // Remove + ' or + "
+            .replace(/\+\s*\n/g, '')   // Remove + newline
+            .replace(/['"]\s*\+/g, '')   // Remove ' + or " +
+            .replace(/\\n/g, ' ')      // Replace \n with space
+            .replace(/\n/g, ' ')        // Replace actual newlines with space
+            .replace(/\s+/g, ' ')       // Normalize whitespace
+            .trim();
+          
+          // Try JSON.parse first (after converting single quotes to double quotes for JSON)
+          try {
+            // Convert single quotes to double quotes for JSON compatibility
+            let jsonString = cleaned.replace(/'/g, '"');
+            bodyAttachments = JSON.parse(jsonString);
+          } catch (parseError) {
+            // If JSON.parse fails, extract all objects using regex
+            // Pattern: { url: '...', name: '...', type: '...', size: ... }
+            const objectPattern = /\{\s*url:\s*['"]([^'"]+)['"]\s*,\s*name:\s*['"]([^'"]+)['"]\s*,\s*type:\s*['"]([^'"]+)['"]\s*,\s*size:\s*(\d+)\s*\}/g;
+            const matches = [];
+            let match;
+            
+            while ((match = objectPattern.exec(cleaned)) !== null) {
+              matches.push({
+                url: match[1],
+                name: match[2],
+                type: match[3],
+                size: parseInt(match[4]),
+              });
+            }
+            
+            if (matches.length > 0) {
+              bodyAttachments = matches;
+            } else {
+              // Fallback: try to extract at least the URL
+              const urlMatch = cleaned.match(/url:\s*['"]([^'"]+)['"]/);
+              if (urlMatch) {
+                bodyAttachments = [{
+                  url: urlMatch[1],
+                  name: path.basename(urlMatch[1]),
+                  type: 'application/octet-stream',
+                  size: 0,
+                }];
+              } else {
+                console.error("Could not parse attachments string:", cleaned);
+                throw parseError;
+              }
+            }
+          }
+        }
+        
+        // If it's an array, normalize each item
+        if (Array.isArray(bodyAttachments)) {
+          const parsedAttachments = bodyAttachments.map(att => {
+            // If attachment is already an object with the right structure, use it
+            if (typeof att === 'object' && att !== null && att.url) {
+              return {
+                url: att.url,
+                name: att.name || path.basename(att.url),
+                type: att.type || 'application/octet-stream',
+                size: att.size || 0,
+              };
+            }
+            // If it's a string (URL), convert to object
+            if (typeof att === 'string') {
+              return {
+                url: att,
+                name: path.basename(att),
+                type: 'application/octet-stream',
+                size: 0,
+              };
+            }
+            return null;
+          }).filter(Boolean);
+          
+          // Merge with multer attachments (multer takes precedence for duplicates)
+          normalizedAttachments = [...parsedAttachments, ...normalizedAttachments];
+        }
+      } catch (error) {
+        console.error("Failed to parse attachments from body:", error);
+        // Continue with multer attachments only if parsing fails
+      }
+    }
 
     if (!trimmedContent && uploadedImages.length === 0 && normalizedAttachments.length === 0) {
       return res.status(400).json({ message: "Content, images or attachments required" });
@@ -128,6 +230,9 @@ export const createFeedItem = async (req, res) => {
     let type = "update";
     if (uploadedImages.length) type = "photo";
     else if (normalizedAttachments.length) type = "document";
+
+
+    console.log("NORMALIZED ATTACHMENTS:", normalizedAttachments);
 
    const feed = await Feed.create({
   site: siteId,
@@ -139,7 +244,7 @@ export const createFeedItem = async (req, res) => {
   title: trimmedTitle,
   content: trimmedContent,
   images: uploadedImages,
-  attachments: normalizedAttachments, // ✅ DIRECT ARRAY
+  attachments: normalizedAttachments, // ✅ Save attachments (audio files, documents, etc.)
   likes: 0,
   likedBy: [],
   commentsCount: 0,
