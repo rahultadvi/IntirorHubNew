@@ -11,8 +11,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
-import { useAuth } from "../context/AuthContext";
-import { boqApi } from "../services/api";
+import {  useAuth } from "../context/AuthContext";
+import { boqApi,libraryApi } from "../services/api";
 // import libraryData from "../data/libraryData";
 import jsPDF from 'jspdf';
 // import BoqLibrary from "../component/BoqLibrary";
@@ -48,31 +48,31 @@ const BOQ: React.FC = () => {
   //   // future: modal / navigate
   // };
 
-  // Close menu on outside click
-  useEffect(() => {
-    if (activeTab === "material") {
-      setMaterials([
-        {
-          id: "1",
-          name: "Soft Close Hinge",
-          brand: "Hettich • Sensys 8645i",
-          cost: 850,
-          warranty: "5 Years",
-        },
-      ]);
-    }
-  }, [activeTab]);
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      // Only close if click is outside any menu button or menu
-      if (!(e.target instanceof HTMLElement)) return;
-      if (!e.target.closest('.boq-menu-btn') && !e.target.closest('.boq-menu-dropdown')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  // // Close menu on outside click
+  // useEffect(() => {
+  //   if (activeTab === "material") {
+  //     setMaterials([
+  //       {
+  //         id: "1",
+  //         name: "Soft Close Hinge",
+  //         brand: "Hettich • Sensys 8645i",
+  //         cost: 850,
+  //         warranty: "5 Years",
+  //       },
+  //     ]);
+  //   }
+  // }, [activeTab]);
+  // useEffect(() => {
+  //   const handleClick = (e: MouseEvent) => {
+  //     // Only close if click is outside any menu button or menu
+  //     if (!(e.target instanceof HTMLElement)) return;
+  //     if (!e.target.closest('.boq-menu-btn') && !e.target.closest('.boq-menu-dropdown')) {
+  //       setOpenMenuId(null);
+  //     }
+  //   };
+  //   document.addEventListener('mousedown', handleClick);
+  //   return () => document.removeEventListener('mousedown', handleClick);
+  // }, []);
 
 
 
@@ -80,44 +80,102 @@ const BOQ: React.FC = () => {
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoomName, setEditedRoomName] = useState<string>("");
   const { activeSite } = useSite();
-  const { user } = useAuth();
+
   const [selectedCategory] = useState<"furniture" | "services" | "all">("all");
   const [selectedRoom, setSelectedRoom] = useState<string>("all");
-  const [boqItems, setBoqItems] = useState<any[]>([]);
+  // const [boqItems, setBoqItems] = useState<any[]>([]);
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [libraryItems, setLibraryItems] = useState<any[]>([]);
-  
+  // const [materials, setMaterials] = useState<any[]>([]);
+  // const [libraryItems, setLibraryItems] = useState<any[]>([]);
+  const [addedMap, setAddedMap] = useState<Record<string, boolean>>({});
+  const [qtyMap, setQtyMap] = useState<Record<string, number>>({});
+  const [roomMap, setRoomMap] = useState<Record<string, string>>({});
+const [itemType, setItemType] = useState<"all" | "furniture" | "services">("all");
+const { user, token } = useAuth();
 
+// Material Used – search & category
+const [materialSearch, setMaterialSearch] = useState("");
+const [materialCategory, setMaterialCategory] = useState<
+  "All" | "Finishes" | "Hardware" | "Electrical" | "Electronics"
+>("Hardware");
+
+// 🔍 Library search & category (SAFE)
+const [librarySearch, setLibrarySearch] = useState("");
+const [libraryCategory, setLibraryCategory] = useState<
+  "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
+>("All");
 
   // ✅ DUMMY DATA for BOQ Library
-  useEffect(() => {
-    if (activeTab === "library") {
-      setLibraryItems([
-        {
-          id: "lib1",
-          title: "Queen Size Bed with Storage",
-          category: "Beds",
-          type: "Custom",
-          rate: 35000,
-          unit: "Nos",
-          image:
-            "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-        },
-        {
-          id: "lib2",
-          title: "Sliding Wardrobe",
-          category: "Wardrobes",
-          type: "Generic",
-          rate: 1450,
-          unit: "Sq. Ft.",
-          image:
-            "https://images.unsplash.com/photo-1615874959474-d609969a20ed",
-        },
-      ]);
-    }
-  }, [activeTab]);
+  // useEffect(() => {
+  //   if (activeTab === "library") {
+  //     setLibraryItems([
+  //       {
+  //         id: "lib1",
+  //         title: "Queen Size Bed with Storage",
+  //         category: "Beds",
+  //         type: "Custom",
+  //         rate: 35000,
+  //         unit: "Nos",
+  //         image:
+  //           "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+  //       },
+  //       {
+  //         id: "lib2",
+  //         title: "Sliding Wardrobe",
+  //         category: "Wardrobes",
+  //         type: "Generic",
+  //         rate: 1450,
+  //         unit: "Sq. Ft.",
+  //         image:
+  //           "https://images.unsplash.com/photo-1615874959474-d609969a20ed",
+  //       },
+  //     ]);
+  //   }
+  // }, [activeTab]);
+  interface LibraryItem {
+  _id: string;
+  name: string;
+  Category?: string;
+  description?: string;
+  image?: string;
+  ratePerQty: number;
+  qty: string;
+}
+
+const [boqItems, setBoqItems] = useState<any[]>([]); // backend dependent, ok
+const [materials, setMaterials] = useState<any[]>([]);
+const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+
+const fetchLibraryItems = async () => {
+  if (!token) {
+    console.log("⛔ Token not ready yet");
+    return;
+  }
+
+  try {
+    const res = await libraryApi.getLibraryItems(token, {
+      category: libraryCategory === "All" ? undefined : libraryCategory,
+      search: librarySearch || undefined,
+    });
+
+    console.log("✅ Library Response:", res);
+
+    // ✅ API TYPE MATCH
+    setLibraryItems(res.items);
+  } catch (error) {
+    console.error("❌ Failed to fetch library", error);
+    setLibraryItems([]);
+  }
+};
+
+
+
+useEffect(() => {
+  if (activeTab === "library" && token) {
+    fetchLibraryItems();
+  }
+}, [activeTab, libraryCategory, librarySearch, token]);
 
 
   const [boqForm, setBoqForm] = useState({
@@ -183,117 +241,141 @@ const BOQ: React.FC = () => {
 
 
 
-  useEffect(() => {
-    if (activeSite) {
-      fetchBOQItems();
-    }
-  }, [activeSite]);
+useEffect(() => {
+  if (activeSite && token) {
+    fetchBOQItems();
+  }
+}, [activeSite, token]);
 
-  const fetchBOQItems = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token || !activeSite) return;
-    try {
-      const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
-      const { boqItems: items } = response as { boqItems: Record<string, any[]>; stats: any };
-      setBoqItems(Object.values(items).flat());
-    } catch (error) {
-      console.error('Failed to fetch BOQ items', error);
-    }
-  };
+ const fetchBOQItems = async () => {
+  if (!token || !activeSite) return;
 
-  const handleAddRoom = async () => {
-    if (!newRoomName.trim()) return;
-    const token = localStorage.getItem('authToken');
-    if (!token || !activeSite) return;
-    const dummyItem = {
-      roomName: newRoomName,
-      itemName: 'Room Added',
-      quantity: 1,
-      unit: 'Nos',
-      rate: 0,
-      totalCost: 0,
-      comments: '',
-      siteId: activeSite.id,
-    };
-    try {
-      await boqApi.addBOQItem(dummyItem, token);
-      setNewRoomName('');
-      setShowAddRoomModal(false);
-      fetchBOQItems();
-    } catch (error) {
-      console.error('Failed to add room', error);
-    }
-  };
-
-  const handleSubmitBOQItem = async (e: React.FormEvent, keepModalOpen = false) => {
-    e.preventDefault();
-    const token = localStorage.getItem('authToken');
-    if (!token || !activeSite) return;
-
-    const totalCost = parseFloat(boqForm.quantity) * parseFloat(boqForm.rate) || 0;
-
-    const itemData = {
-      roomName: boqForm.roomName,
-      itemName: boqForm.itemName,
-      quantity: parseFloat(boqForm.quantity),
-      unit: boqForm.unit,
-      rate: parseFloat(boqForm.rate),
-      totalCost,
-      comments: boqForm.comments,
-      siteId: activeSite.id,
+  try {
+    const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
+    const { boqItems } = response as {
+      boqItems: Record<string, any[]>;
+      stats: any;
     };
 
-    // Handle image upload
+    setBoqItems(Object.values(boqItems || {}).flat());
+  } catch (error) {
+    console.error("Failed to fetch BOQ items", error);
+    setBoqItems([]);
+  }
+};
+
+
+const handleAddRoom = async () => {
+  if (!newRoomName.trim()) return;
+  if (!token || !activeSite) return;
+
+  const dummyItem = {
+    roomName: newRoomName,
+    itemName: "Room Added",
+    quantity: 1,
+    unit: "Nos",
+    rate: 0,
+    totalCost: 0,
+    comments: "",
+    siteId: activeSite.id,
+  };
+
+  await boqApi.addBOQItem(dummyItem, token);
+  setNewRoomName("");
+  setShowAddRoomModal(false);
+  fetchBOQItems();
+};
+
+
+const handleSubmitBOQItem = async (
+  e?: React.FormEvent,
+  keepModalOpen = false
+) => {
+  e?.preventDefault();
+
+  // 🔐 Auth & site validation
+  if (!token || !activeSite) {
+    console.error("Token or active site missing");
+    return;
+  }
+
+  // ✅ Basic validation
+  if (
+    !boqForm.roomName ||
+    !boqForm.itemName ||
+    !boqForm.quantity ||
+    !boqForm.rate
+  ) {
+    alert("Please fill all required fields");
+    return;
+  }
+
+  const quantity = parseFloat(boqForm.quantity);
+  const rate = parseFloat(boqForm.rate);
+
+  if (isNaN(quantity) || isNaN(rate)) {
+    alert("Quantity and Rate must be valid numbers");
+    return;
+  }
+
+  const totalCost = quantity * rate;
+
+  // 📦 Base payload
+  const payload: any = {
+    roomName: boqForm.roomName,
+    itemName: boqForm.itemName,
+    quantity,
+    unit: boqForm.unit,
+    rate,
+    totalCost,
+    comments: boqForm.comments,
+    siteId: activeSite.id,
+  };
+
+  try {
+    // 🖼️ If image exists → convert to base64
     if (boqForm.referenceImage) {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        const imageData = {
-          ...itemData,
-          referenceImageBase64: base64,
-          referenceImageFilename: boqForm.referenceImage!.name,
-        };
-        try {
-          await boqApi.addBOQItem(imageData, token);
-          if (!keepModalOpen) {
-            setShowAddModal(false);
-          }
-          setBoqForm({
-            roomName: '',
-            itemName: '',
-            quantity: '',
-            unit: 'Sq.ft',
-            rate: '',
-            comments: '',
-            referenceImage: null,
-          });
-          fetchBOQItems();
-        } catch (error) {
-          console.error('Failed to add BOQ item', error);
-        }
-      };
-      reader.readAsDataURL(boqForm.referenceImage);
-    } else {
-      try {
-        await boqApi.addBOQItem(itemData, token);
-        if (!keepModalOpen) {
-          setShowAddModal(false);
-        }
-        setBoqForm({
-          roomName: '',
-          itemName: '',
-          quantity: '',
-          unit: 'Sq.ft',
-          rate: '',
-          comments: '',
-          referenceImage: null,
-        });
-        fetchBOQItems();
-      } catch (error) {
-        console.error('Failed to add BOQ item', error);
-      }
+      const file = boqForm.referenceImage;
+
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      payload.referenceImageBase64 = base64;
+      payload.referenceImageFilename = file.name;
     }
-  };
+
+    // 🚀 API call
+    await boqApi.addBOQItem(payload, token);
+
+    // 🔄 Reset form
+    setBoqForm({
+      roomName: keepModalOpen ? boqForm.roomName : "",
+      itemName: "",
+      quantity: "",
+      unit: "Sq.ft",
+      rate: "",
+      comments: "",
+      referenceImage: null,
+    });
+
+    // 📦 Refresh BOQ list
+    fetchBOQItems();
+
+    // ❌ Close modal if needed
+    if (!keepModalOpen) {
+      setShowAddModal(false);
+    }
+  } catch (error) {
+    console.error("Failed to add BOQ item", error);
+    alert("Failed to add BOQ item. Please try again.");
+  }
+};
+
 
   const handleEditRoomName = (roomId: string, currentName: string) => {
     setEditingRoomId(roomId);
@@ -499,6 +581,24 @@ const BOQ: React.FC = () => {
       throw error; // Re-throw to be caught by handleExportPDF
     }
   };
+const filteredLibraryItems = useMemo(() => {
+  const search = librarySearch.toLowerCase();
+
+  return (libraryItems ?? []).filter((item) => {
+    const searchMatch =
+      item.name?.toLowerCase().includes(search) ||
+      item.Category?.toLowerCase().includes(search) ||
+      item.description?.toLowerCase().includes(search);
+
+    const categoryMatch =
+      libraryCategory === "All" ||
+      item.Category === libraryCategory;
+
+    return searchMatch && categoryMatch;
+  });
+}, [libraryItems, librarySearch, libraryCategory]);
+
+
 
   const handleExportPDF = async (room: Room) => {
     try {
@@ -578,7 +678,7 @@ const BOQ: React.FC = () => {
 
 
   const handleApproveItem = async (itemId: string) => {
-    const token = localStorage.getItem('authToken');
+
     if (!token) return;
     try {
       await boqApi.updateBOQStatus(itemId, 'approved', token);
@@ -589,7 +689,7 @@ const BOQ: React.FC = () => {
   };
 
   const handleRejectItem = async (itemId: string) => {
-    const token = localStorage.getItem('authToken');
+
     if (!token) return;
     try {
       await boqApi.updateBOQStatus(itemId, 'rejected', token);
@@ -600,7 +700,7 @@ const BOQ: React.FC = () => {
   };
 
   const handleDeleteBOQItem = async (itemId: string) => {
-    const token = localStorage.getItem("authToken");
+
     if (!token || !isAdmin) return;
 
     const ok = window.confirm("Are you sure you want to delete this BOQ item?");
@@ -627,6 +727,24 @@ const BOQ: React.FC = () => {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
+  // ✅ 1 sec ke liye "Added"
+const filteredMaterials = useMemo(() => {
+  const search = materialSearch.toLowerCase();
+
+  return materials.filter((item) => {
+    const searchMatch =
+      item.name?.toLowerCase().includes(search) ||
+      item.brand?.toLowerCase().includes(search);
+
+    const categoryMatch =
+      materialCategory === "All" ||
+      item.category?.toLowerCase() === materialCategory.toLowerCase();
+
+    return searchMatch && categoryMatch;
+  });
+}, [materials, materialSearch, materialCategory]);
+
+
   return (
     <>
       <div className="min-h-screen bg-slate-50 px-5 py-6 pb-28 relative">
@@ -652,7 +770,9 @@ const BOQ: React.FC = () => {
               { key: "boq", label: "BOQ" },
               { key: "material", label: "Material Used" },
               { key: "library", label: "Library" },
-            ].map((tab,) => {
+            ].map((tab, index
+
+            ) => {
               const isActive = activeTab === tab.key;
 
               return (
@@ -702,39 +822,104 @@ const BOQ: React.FC = () => {
         {activeTab === "library" && (
           <div className="flex justify-center">
             <div className="w-full max-w-5xl">
+           {/* BOQ LIBRARY HEADER */}
+<div className="mb-6">
+  <h2 className="text-xl font-bold text-slate-800">
+    BOQ Library
+  </h2>
+  <p className="text-sm text-slate-500 mt-1">
+    Pre-built items for faster estimation
+  </p>
+</div>
+
+{/* SEARCH BAR */}
+<div className="flex gap-3 mb-4">
+  <div className="relative flex-1">
+    <span className="absolute left-3 top-3 text-slate-400">🔍</span>
+    <input
+      type="text"
+      placeholder="Search items, brands..."
+      value={librarySearch}
+      onChange={(e) => setLibrarySearch(e.target.value)}
+      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200
+        focus:ring-2 focus:ring-slate-300 outline-none"
+    />
+  </div>
+
+  <button
+    onClick={() => {
+      setLibrarySearch("");
+      setLibraryCategory("All");
+    }}
+    className="w-12 h-12 rounded-xl border flex items-center justify-center text-slate-600"
+    title="Reset filters"
+  >
+    ⟲
+  </button>
+</div>
+
+{/* CATEGORY PILLS */}
+<div className="flex gap-3 mb-6 overflow-x-auto">
+  {["All", "Furniture", "Finishes", "Hardware", "Electrical"].map((cat) => (
+    <button
+      key={cat}
+      onClick={() => setLibraryCategory(cat as any)}
+      className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition
+        ${
+          libraryCategory === cat
+            ? "bg-slate-900 text-white"
+            : "bg-white border text-slate-600 hover:bg-slate-100"
+        }`}
+    >
+      {cat}
+    </button>
+  ))}
+</div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {libraryItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-2xl shadow-sm border p-4"
-                  >
-                    <div className="relative">
-                      <img
-                        src={item.image}
-                        className="h-44 w-full object-cover rounded-xl"
-                      />
-                      <span className="absolute top-3 left-3 bg-white px-2 py-1 rounded-full text-xs">
-                        {item.category}
-                      </span>
-                    </div>
+{filteredLibraryItems.map((item) => {
+  const id = item._id;
+  const isAdded = addedMap[id];
+  const qty = qtyMap[id] || 1;
+  const total = qty * item.ratePerQty;
 
-                    <h3 className="mt-3 font-semibold text-center">
-                      {item.title}
-                    </h3>
+  return (
+  <div key={id} className="bg-white rounded-2xl p-4 border">
+  
+  {/* IMAGE */}
+  <img
+    src={
+      item.image
+        ? item.image.startsWith("http")
+          ? item.image
+          : `${import.meta.env.VITE_API_BASE_URL}/${item.image}`
+        : "/placeholder.png"
+    }
+    alt={item.name}
+    className="h-40 w-full object-cover rounded-xl"
+  />
 
-                    <p className="text-xs text-center text-slate-500">
-                      {item.type}
-                    </p>
+  <h3 className="mt-3 font-semibold text-center">
+    {item.name}
+  </h3>
 
-                    <p className="mt-2 text-center font-bold">
-                      ₹{item.rate.toLocaleString()} / {item.unit}
-                    </p>
+  <p className="text-xs text-center text-slate-500">
+    {item.description || item.Category}
+  </p>
 
-                    <button className="mt-4 w-full bg-slate-900 text-white py-2.5 rounded-xl">
-                      Add to BOQ
-                    </button>
-                  </div>
-                ))}
+  <p className="mt-2 text-center font-bold">
+    ₹{item.ratePerQty} / {item.qty}
+  </p>
+
+  <button className="mt-4 w-full bg-slate-900 text-white rounded-xl py-2">
+    + Add to BOQ
+  </button>
+</div>
+
+  );
+})}
+
+
               </div>
             </div>
           </div>
@@ -744,42 +929,68 @@ const BOQ: React.FC = () => {
 
         {activeTab === "material" && (
           <div className="max-w-4xl mx-auto space-y-4">
-            {materials.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-2xl p-6 border shadow-sm"
-              >
-                <div className="flex justify-between mb-2">
-                  <span className="text-xs text-slate-400 font-semibold">
-                    HARDWARE
-                  </span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 rounded-full">
-                    ✔ Warranty
-                  </span>
-                </div>
+            {/* MATERIAL USED HEADER */}
+<div className="mb-6">
+  <div className="flex items-center justify-between">
+    <div>
+      <h2 className="text-xl font-bold text-slate-800">
+        Material Used
+      </h2>
+      <p className="text-sm text-slate-500 mt-1">
+        Installed materials with proof & warranty
+      </p>
+    </div>
 
-                <h3 className="text-lg font-bold text-center">
-                  {item.name}
-                </h3>
+    <button className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow">
+      📄 Report
+    </button>
+  </div>
+</div>
 
-                <p className="text-sm text-center text-slate-500">
-                  {item.brand}
-                </p>
+{/* SEARCH */}
+<div className="flex gap-3 mb-4">
+  <div className="relative flex-1">
+    <span className="absolute left-3 top-3 text-slate-400">🔍</span>
+    <input
+      type="text"
+      placeholder="Search material, brand..."
+      value={materialSearch}
+      onChange={(e) => setMaterialSearch(e.target.value)}
+      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200
+        focus:ring-2 focus:ring-slate-300 outline-none"
+    />
+  </div>
 
-                <p className="text-center font-bold mt-2">
-                  ₹{item.cost}
-                </p>
+  <button
+    onClick={() => {
+      setMaterialSearch("");
+      setMaterialCategory("All");
+    }}
+    className="w-12 h-12 rounded-xl border flex items-center justify-center"
+    title="Reset"
+  >
+    ⟲
+  </button>
+</div>
 
-                <div className="flex gap-3 mt-4">
-                  <button className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl">
-                    Invoice
-                  </button>
-                  <button className="flex-1 border border-dashed py-2 rounded-xl">
-                    Add Photo
-                  </button>
-                </div>
-              </div>
-            ))}
+{/* CATEGORY PILLS */}
+<div className="flex gap-3 mb-6 overflow-x-auto">
+  {["All", "Finishes", "Hardware", "Electrical", "Electronics"].map((cat) => (
+    <button
+      key={cat}
+      onClick={() => setMaterialCategory(cat as any)}
+      className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition
+        ${
+          materialCategory === cat
+            ? "bg-slate-900 text-white"
+            : "bg-white border text-slate-600 hover:bg-slate-100"
+        }`}
+    >
+      {cat}
+    </button>
+  ))}
+</div>
+
           </div>
         )}
 
@@ -796,6 +1007,7 @@ const BOQ: React.FC = () => {
     gap-3
   "
             >
+             
               {/* ROOM FILTERS */}
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                 {/* ALL ROOMS */}
@@ -813,13 +1025,15 @@ const BOQ: React.FC = () => {
                     }
       `}
                 >
+                  
                   All Rooms
                 </button>
-
+ 
                 {/* DYNAMIC ROOMS */}
                 {allRoomNames.map((roomName) => {
                   const roomKey = roomName.toLowerCase().replace(/\s+/g, "-");
                   const isActive = selectedRoom === roomKey;
+                 
 
                   return (
                     <button
@@ -838,12 +1052,14 @@ const BOQ: React.FC = () => {
           `}
                     >
                       {roomName}
+                     
                     </button>
                   );
                 })}
               </div>
 
               {/* ADD ROOM BUTTON */}
+              
               <button
                 title="Add Room"
                 onClick={() => setShowAddRoomModal(true)}
@@ -863,9 +1079,7 @@ const BOQ: React.FC = () => {
                 <Plus className="w-6 h-6" />
               </button>
             </div>
-            <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-200 flex items-center justify-between gap-3">
-              ...
-            </div>
+             <p>vkjsdfkvj;lk</p>
             {showAddModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowAddModal(false)} />
@@ -971,13 +1185,13 @@ const BOQ: React.FC = () => {
                     <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
                       <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
                       <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
-                      <button
-                        type="button"
-                        onClick={() => handleSubmitBOQItem({ preventDefault: () => { } } as any, true)}
-                        className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
-                      >
-                        Save & Add Another
-                      </button>
+                    <button
+  type="button"
+  onClick={() => handleSubmitBOQItem(undefined, true)}
+  className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
+>
+  Save & Add Another
+</button>
                     </div>
                   </form>
                 </div>

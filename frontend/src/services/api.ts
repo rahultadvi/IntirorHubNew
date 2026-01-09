@@ -127,6 +127,39 @@ const buildHeaders = (token?: string, hasBody = false): HeadersInit => {
   return headers;
 };
 
+export const libraryApi = {
+  getLibraryItems: (
+    token: string,
+    params?: {
+      category?: string;
+      search?: string;
+    }
+  ) => {
+    let q = "";
+
+    if (params) {
+      const parts = Object.entries(params)
+        .filter(([_, v]) => v)
+        .map(
+          ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`
+        );
+
+      if (parts.length) {
+        q = `?${parts.join("&")}`;
+      }
+    }
+
+    return request<{
+      items: any[];
+      count: number;
+    }>(`/library${q}`, {
+      method: "GET",
+      token,
+    });
+  },
+};
+
+
 const parseResponse = async <T>(response: Response): Promise<ApiResponse<T> | null> => {
   const contentType = response.headers.get("content-type");
 
