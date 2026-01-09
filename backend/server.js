@@ -11,7 +11,7 @@ import feedRouter from "./routes/FeedRoute.js";
 import paymentRouter from "./routes/PaymentRoute.js";
 import expenseRouter from "./routes/ExpenseRoute.js";
 import boqRouter from "./routes/BOQRoute.js";
-// import libraryRoutes from "./routes/libraryRoutes.js";
+import libraryRoutes from "./routes/libraryRoutes.js";
 
 dotenv.config();
 
