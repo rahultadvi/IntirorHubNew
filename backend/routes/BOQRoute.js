@@ -1,6 +1,6 @@
 import express from 'express';
 import * as BOQController from '../controllers/BOQController.js';
-import { uploadSingleImage } from '../utils/multer.js';
+import { uploadSingleImage, uploadBOQFiles } from '../utils/multer.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -10,6 +10,9 @@ router.post('/add', auth, uploadSingleImage('boq-images'), BOQController.addBOQI
 
 // Get BOQ items by site
 router.get('/site/:siteId', auth, BOQController.getBOQItemsBySite);
+
+// Update BOQ item (quantity, purchaseRate, bill, photo)
+router.put('/:boqId', auth, uploadBOQFiles(), BOQController.updateBOQItem);
 
 // Update BOQ status
 router.put('/:boqId/status', auth, BOQController.updateBOQStatus);

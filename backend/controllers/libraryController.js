@@ -1,4 +1,22 @@
 import Library from "../models/libraryModel.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load library data from JSON file
+const loadLibraryData = () => {
+  try {
+    const libraryDataPath = path.join(__dirname, "../models/libraryData.json");
+    const fileContent = fs.readFileSync(libraryDataPath, "utf8");
+    return JSON.parse(fileContent);
+  } catch (error) {
+    console.error("Error loading library data:", error);
+    return [];
+  }
+};
 
 /**
  * ✅ ADD LIBRARY ITEM
@@ -50,17 +68,19 @@ export const addLibraryItem = async (req, res) => {
 /**
  * ✅ GET ALL LIBRARY ITEMS (Company wise)
  * GET /library
+ * If company has no data, bulk insert from libraryData.json
  */
 export const getLibraryItems = async (req, res) => {
   try {
     const { category, search } = req.query;
+    const companyName = req.user.companyName;
 
     // ✅ COMPANY WISE FILTER (MOST IMPORTANT)
     const filter = {
-      companyName: req.user.companyName,
+      companyName: companyName,
     };
 
-    if (category) {
+    if (category && category !== "All") {
       filter.Category = category;
     }
 
@@ -68,18 +88,88 @@ export const getLibraryItems = async (req, res) => {
       filter.name = { $regex: search, $options: "i" };
     }
 
+    // Check if company has any library items
+    const existingCount = await Library.countDocuments({ companyName });
+
+    // If no data exists for this company, bulk insert from libraryData.json
+    if (existingCount === 0) {
+      console.log(`No library data found for company: ${companyName}. Bulk inserting...`);
+      
+      const libraryData = loadLibraryData();
+      
+      // Map libraryData.json to Library model format
+      const itemsToInsert = libraryData.map((item) => {
+        // Extract numeric value from rate strings (e.g., "₹18,000" -> 18000)
+        const extractNumber = (str) => {
+          if (!str) return 0;
+          const numStr = str.toString().replace(/[₹,\s]/g, "");
+          return parseFloat(numStr) || 0;
+        };
+
+        // Map tag to Category (normalize tag by trimming and converting to uppercase)
+        const normalizeTag = (tag) => (tag || "").trim().toUpperCase();
+        const normalizedTag = normalizeTag(item.tag);
+        
+        const tagToCategory = {
+          "BEDS": "Furniture",
+          "WARDROBE": "Furniture",
+          "WAREDROBES": "Furniture",
+          "TV UNIT": "Furniture",
+          "SHOE RACK": "Furniture",
+          "APPLICES": "Electronics",
+          "ELECTRICAL": "Electrical",
+          "CELLIGN LIGHTS  (ELECTRICAL)": "Electrical",
+          "DOORS": "Hardware",
+          "WALL PANNELS": "Finishes",
+          " FALSE CELLING": "Finishes",
+          "FLOOR": "Finishes",
+          "BATHROOM ASSC.": "Hardware",
+          "SERVICES": "Services",
+        };
+
+        // Determine category from tag
+        let category = "Furniture"; // Default
+        if (tagToCategory[normalizedTag]) {
+          category = tagToCategory[normalizedTag];
+        } else if (normalizedTag.includes("ELECTRICAL") || normalizedTag.includes("LIGHT")) {
+          category = "Electrical";
+        } else if (normalizedTag.includes("DOOR") || normalizedTag.includes("BATHROOM")) {
+          category = "Hardware";
+        } else if (normalizedTag.includes("FLOOR") || normalizedTag.includes("WALL") || normalizedTag.includes("CELLING")) {
+          category = "Finishes";
+        }
+
+        return {
+          companyName: companyName,
+          name: item.name,
+          qty: item.qty || 1,
+          baseRate: extractNumber(item.baseRate),
+          ratePerQty: extractNumber(item.baseRate), // Use baseRate as ratePerQty initially
+          description: item.description || "",
+          tag: item.tag || "",
+          Category: category,
+        };
+      });
+
+      // Bulk insert
+      if (itemsToInsert.length > 0) {
+        await Library.insertMany(itemsToInsert);
+        console.log(`Bulk inserted ${itemsToInsert.length} library items for company: ${companyName}`);
+      }
+    }
+
+    // Now fetch the library items
     const libraryItems = await Library.find(filter).sort({ createdAt: -1 });
 
     res.json({
-      data: {
-        items: libraryItems,
-        count: libraryItems.length,
-      },
+      items: libraryItems,
+      count: libraryItems.length,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Get Library Items Error:", err);
     res.status(500).json({
       message: "Failed to fetch library",
+      error: err.message,
     });
   }
 };
@@ -134,7 +224,7 @@ export const updateLibraryItem = async (req, res) => {
     }
 
     // 🔐 Ownership check (FIXED)
-    if (item.CompanyName !== req.user.CompanyName) {
+    if (item.companyName !== req.user.companyName) {
       return res.status(403).json({
         message: "Access denied",
       });

@@ -257,11 +257,11 @@ const Payments: React.FC = () => {
 
         {/* Contract Value and Received */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-4 text-center shadow-inner">
+          <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-slate-100">
             <p className="text-[10px] font-bold tracking-wider text-slate-400 mb-2">CONTRACT VALUE</p>
             <p className="text-xl font-bold text-slate-800">{formatCurrency(contractValue)}</p>
           </div>
-          <div className="bg-blue-50 rounded-2xl p-4 text-center">
+          <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-slate-100">
             <p className="text-[10px] font-semibold tracking-wider text-blue-500 mb-2">RECEIVED</p>
             <p className="text-xl font-bold text-blue-600">{formatCurrency(receivedAmount)}</p>
           </div>
@@ -371,7 +371,7 @@ const Payments: React.FC = () => {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className="text-xs text-slate-500 mb-4 text-left">
                 Due: {new Date(payment.dueDate).toLocaleDateString("en-IN", {
                   day: "2-digit",
                   month: "short",
@@ -431,7 +431,14 @@ const Payments: React.FC = () => {
 
         {/* Add Payment Modal */}
         {showAddForm && isAdmin && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeAddModal();
+              }
+            }}
+          >
             <div className="bg-white rounded-2xl p-6 max-w-md w-full">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Add Payment</h3>
@@ -530,8 +537,8 @@ const Payments: React.FC = () => {
               right-5
               z-50
               p-4
-              bg-gray-800
-              hover:bg-border border-white
+              bg-black
+              hover:bg-gray-900
               text-white
               rounded-full
               shadow-xl

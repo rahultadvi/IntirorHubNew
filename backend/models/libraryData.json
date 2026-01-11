@@ -1,0 +1,848 @@
+[
+  {
+    "name": "Single Bed – Box Storage",
+    "qty": 1,
+    "baseRate": "₹18,000",
+    "ratePerQty": "₹18,000 / Nos",
+    "description": "Ply + laminate",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Single Bed – Upholstered",
+    "qty": 1,
+    "baseRate": "₹24,000",
+    "ratePerQty": "₹24,000 / Nos",
+    "description": "Fabric headboard",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Queen Bed – Box Storage",
+    "qty": 1,
+    "baseRate": "₹28,000",
+    "ratePerQty": "₹28,000 / Nos",
+    "description": "Hydraulic storage",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Queen Bed – Upholstered",
+    "qty": 1,
+    "baseRate": "₹38,000",
+    "ratePerQty": "₹38,000 / Nos",
+    "description": "Fabric / leatherette",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "King Bed – Box Storage",
+    "qty": 1,
+    "baseRate": "₹35,000",
+    "ratePerQty": "₹35,000 / Nos",
+    "description": "Heavy duty",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "King Bed – Upholstered",
+    "qty": 1,
+    "baseRate": "₹48,000",
+    "ratePerQty": "₹48,000 / Nos",
+    "description": "Premium finish",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Bunk Bed",
+    "qty": 1,
+    "baseRate": "₹42,000",
+    "ratePerQty": "₹42,000 / Nos",
+    "description": "Kids room",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Drawer unit",
+    "qty": 1,
+    "baseRate": "₹10,000",
+    "ratePerQty": "₹10,000 / Nos",
+    "description": "Drawer unit",
+    "FIELD6": "",
+    "tag": "BEDS"
+  },
+  {
+    "name": "Wardrobe – Hinged",
+    "qty": 1,
+    "baseRate": "₹1,450",
+    "ratePerQty": "₹1,450 / Sq.ft",
+    "description": "Internal shelves",
+    "FIELD6": "",
+    "tag": "WAREDROBES"
+  },
+  {
+    "name": "Wardrobe – Sliding",
+    "qty": 1,
+    "baseRate": "₹1,750",
+    "ratePerQty": "₹1,750 / Sq.ft",
+    "description": "Soft close",
+    "FIELD6": "",
+    "tag": "WAREDROBES"
+  },
+  {
+    "name": "Wardrobe – PU Finish",
+    "qty": 1,
+    "baseRate": "₹2,200",
+    "ratePerQty": "₹2,200 / Sq.ft",
+    "description": "Premium finish",
+    "FIELD6": "",
+    "tag": "WAREDROBES"
+  },
+  {
+    "name": "Wardrobe – Glass Shutter",
+    "qty": 1,
+    "baseRate": "₹2,500",
+    "ratePerQty": "₹2,500 / Sq.ft",
+    "description": "Tinted glass",
+    "FIELD6": "",
+    "tag": "WAREDROBES"
+  },
+  {
+    "name": "Loft Storage",
+    "qty": 1,
+    "baseRate": "₹1,100",
+    "ratePerQty": "₹1,100 / Sq.ft",
+    "description": "Overhead",
+    "FIELD6": "",
+    "tag": "WAREDROBES"
+  },
+  {
+    "name": "TV Unit – Basic",
+    "qty": 1,
+    "baseRate": "₹7,500",
+    "ratePerQty": "₹7,500 / Rft",
+    "description": "Laminate finish",
+    "FIELD6": "",
+    "tag": "TV UNIT"
+  },
+  {
+    "name": "TV Unit – Storage",
+    "qty": 1,
+    "baseRate": "₹9,500",
+    "ratePerQty": "₹9,500 / Rft",
+    "description": "Drawers",
+    "FIELD6": "",
+    "tag": "TV UNIT"
+  },
+  {
+    "name": "TV Unit – Wall Hung",
+    "qty": 1,
+    "baseRate": "₹12,000",
+    "ratePerQty": "₹12,000 / Rft",
+    "description": "Floating",
+    "FIELD6": "",
+    "tag": "TV UNIT"
+  },
+  {
+    "name": "TV Unit – PU Finish",
+    "qty": 1,
+    "baseRate": "₹16,000",
+    "ratePerQty": "₹16,000 / Rft",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "TV UNIT"
+  },
+  {
+    "name": "TV Unit – Panel + Unit",
+    "qty": 1,
+    "baseRate": "₹22,000",
+    "ratePerQty": "₹22,000 / Set",
+    "description": "Full wall",
+    "FIELD6": "",
+    "tag": "TV UNIT"
+  },
+  {
+    "name": "Wall Panel – Laminate",
+    "qty": 1,
+    "baseRate": "₹850",
+    "ratePerQty": "₹850 / Sq.ft",
+    "description": "MDF base",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "Wall Panel – PU Finish",
+    "qty": 1,
+    "baseRate": "₹1,600",
+    "ratePerQty": "₹1,600 / Sq.ft",
+    "description": "Smooth paint",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "Wall Panel – Deco Paint",
+    "qty": 1,
+    "baseRate": "₹1,100",
+    "ratePerQty": "₹1,100 / Sq.ft",
+    "description": "Texture",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "MDF Grooved Panel",
+    "qty": 1,
+    "baseRate": "₹950",
+    "ratePerQty": "₹950 / Sq.ft",
+    "description": "CNC grooves",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "Fluted Panel",
+    "qty": 1,
+    "baseRate": "₹1,450",
+    "ratePerQty": "₹1,450 / Sq.ft",
+    "description": "Vertical design",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "PU Finish (Furniture)",
+    "qty": 1,
+    "baseRate": "₹650",
+    "ratePerQty": "₹650 / Sq.ft",
+    "description": "Spray paint",
+    "FIELD6": "",
+    "tag": "WALL PANNELS"
+  },
+  {
+    "name": "Main Safety Door",
+    "qty": 1,
+    "baseRate": "₹38,000",
+    "ratePerQty": "₹38,000 / Nos",
+    "description": "Steel",
+    "FIELD6": "",
+    "tag": "DOORS"
+  },
+  {
+    "name": "Wooden Flush Door",
+    "qty": 1,
+    "baseRate": "₹9,500",
+    "ratePerQty": "₹9,500 / Nos",
+    "description": "Internal",
+    "FIELD6": "",
+    "tag": "DOORS"
+  },
+  {
+    "name": "Veneer Door",
+    "qty": 1,
+    "baseRate": "₹14,000",
+    "ratePerQty": "₹14,000 / Nos",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "DOORS"
+  },
+  {
+    "name": "Digital Door Lock",
+    "qty": 1,
+    "baseRate": "₹22,000",
+    "ratePerQty": "₹22,000 / Nos",
+    "description": "Fingerprint",
+    "FIELD6": "",
+    "tag": "DOORS"
+  },
+  {
+    "name": "Door Lock – Standard",
+    "qty": 1,
+    "baseRate": "₹2,200",
+    "ratePerQty": "₹2,200 / Nos",
+    "description": "Internal",
+    "FIELD6": "",
+    "tag": "DOORS"
+  },
+  {
+    "name": "Shoe Rack – Basic",
+    "qty": 1,
+    "baseRate": "₹12,000",
+    "ratePerQty": "₹12,000 / Nos",
+    "description": "Laminate",
+    "FIELD6": "",
+    "tag": "SHOE RACK"
+  },
+  {
+    "name": "Shoe Rack – Seating",
+    "qty": 1,
+    "baseRate": "₹18,000",
+    "ratePerQty": "₹18,000 / Nos",
+    "description": "Cushion",
+    "FIELD6": "",
+    "tag": "SHOE RACK"
+  },
+  {
+    "name": "Shoe Rack – Full Height",
+    "qty": 1,
+    "baseRate": "₹22,000",
+    "ratePerQty": "₹22,000 / Nos",
+    "description": "Storage",
+    "FIELD6": "",
+    "tag": "SHOE RACK"
+  },
+  {
+    "name": "Modular Switchboard",
+    "qty": 1,
+    "baseRate": "₹1,600",
+    "ratePerQty": "₹1,600 / Nos",
+    "description": "Branded",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "LED Panel Light",
+    "qty": 1,
+    "baseRate": "₹850",
+    "ratePerQty": "₹850 / Nos",
+    "description": "Ceiling",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "Strip Light",
+    "qty": 1,
+    "baseRate": "₹120",
+    "ratePerQty": "₹120 / Rft",
+    "description": "Cove",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "Ceiling Fan",
+    "qty": 1,
+    "baseRate": "₹4,000",
+    "ratePerQty": "₹4,000 / Nos",
+    "description": "Decorative",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "Exhaust Fan",
+    "qty": 1,
+    "baseRate": "₹2,500",
+    "ratePerQty": "₹2,500 / Nos",
+    "description": "Kitchen/bath",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "Geyser – 15L",
+    "qty": 1,
+    "baseRate": "₹8,500",
+    "ratePerQty": "₹8,500 / Nos",
+    "description": "Vertical",
+    "FIELD6": "",
+    "tag": "ELECTRICAL"
+  },
+  {
+    "name": "Split AC – 1T",
+    "qty": 1,
+    "baseRate": "₹32,000",
+    "ratePerQty": "₹32,000 / Nos",
+    "description": "Inverter",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Split AC – 1.5T",
+    "qty": 1,
+    "baseRate": "₹38,000",
+    "ratePerQty": "₹38,000 / Nos",
+    "description": "Inverter",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Split AC – 2T",
+    "qty": 1,
+    "baseRate": "₹48,000",
+    "ratePerQty": "₹48,000 / Nos",
+    "description": "Large room",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Refrigerator – Single Door",
+    "qty": 1,
+    "baseRate": "₹18,000",
+    "ratePerQty": "₹18,000 / Nos",
+    "description": "Budget",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Refrigerator – Double Door",
+    "qty": 1,
+    "baseRate": "₹32,000",
+    "ratePerQty": "₹32,000 / Nos",
+    "description": "Family",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Refrigerator – Side by Side",
+    "qty": 1,
+    "baseRate": "₹65,000",
+    "ratePerQty": "₹65,000 / Nos",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Chimney",
+    "qty": 1,
+    "baseRate": "₹18,000",
+    "ratePerQty": "₹18,000 / Nos",
+    "description": "Wall mount",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Hob – 3 Burner",
+    "qty": 1,
+    "baseRate": "₹12,000",
+    "ratePerQty": "₹12,000 / Nos",
+    "description": "Glass",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Hob – 4 Burner",
+    "qty": 1,
+    "baseRate": "₹16,000",
+    "ratePerQty": "₹16,000 / Nos",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Built-in Oven",
+    "qty": 1,
+    "baseRate": "₹28,000",
+    "ratePerQty": "₹28,000 / Nos",
+    "description": "Kitchen",
+    "FIELD6": "",
+    "tag": "APPLICES"
+  },
+  {
+    "name": "Wall Hung WC",
+    "qty": 1,
+    "baseRate": "₹22,000",
+    "ratePerQty": "₹22,000 / Nos",
+    "description": "Concealed",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Wash Basin",
+    "qty": 1,
+    "baseRate": "₹6,500",
+    "ratePerQty": "₹6,500 / Nos",
+    "description": "Counter top",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Shower Set",
+    "qty": 1,
+    "baseRate": "₹5,500",
+    "ratePerQty": "₹5,500 / Nos",
+    "description": "SS",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Vanity Unit",
+    "qty": 1,
+    "baseRate": "₹14,000",
+    "ratePerQty": "₹14,000 / Nos",
+    "description": "Storage",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Mirror with Light",
+    "qty": 1,
+    "baseRate": "₹6,000",
+    "ratePerQty": "₹6,000 / Nos",
+    "description": "LED",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Towel Rod",
+    "qty": 1,
+    "baseRate": "₹850",
+    "ratePerQty": "₹850 / Nos",
+    "description": "SS",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Soap Dispenser",
+    "qty": 1,
+    "baseRate": "₹650",
+    "ratePerQty": "₹650 / Nos",
+    "description": "Wall mount",
+    "FIELD6": "",
+    "tag": "BATHROOM ASSC."
+  },
+  {
+    "name": "Carpentry Work",
+    "qty": 1,
+    "baseRate": "₹280",
+    "ratePerQty": "₹280 / Sq.ft",
+    "description": "Furniture",
+    "FIELD6": "",
+    "tag": "SERVICES"
+  },
+  {
+    "name": "Electrical Work",
+    "qty": 1,
+    "baseRate": "₹450",
+    "ratePerQty": "₹450 / Point",
+    "description": "Wiring",
+    "FIELD6": "",
+    "tag": "SERVICES"
+  },
+  {
+    "name": "Plumbing Work",
+    "qty": 1,
+    "baseRate": "₹500",
+    "ratePerQty": "₹500 / Point",
+    "description": "Sanitary",
+    "FIELD6": "",
+    "tag": "SERVICES"
+  },
+  {
+    "name": "Painting Work",
+    "qty": 1,
+    "baseRate": "₹15",
+    "ratePerQty": "₹15 / Sq.ft",
+    "description": "Roller",
+    "FIELD6": "",
+    "tag": "SERVICES"
+  },
+  {
+    "name": "Installation Charges",
+    "qty": 1,
+    "baseRate": "₹120",
+    "ratePerQty": "₹120 / Sq.ft",
+    "description": "Modular",
+    "FIELD6": "",
+    "tag": "SERVICES"
+  },
+  {
+    "name": "Gypsum False Ceiling – Plain",
+    "qty": 1,
+    "baseRate": "₹110",
+    "ratePerQty": "₹110 / Sq.ft",
+    "description": "Single-level ceiling",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Gypsum False Ceiling – Design",
+    "qty": 1,
+    "baseRate": "₹160",
+    "ratePerQty": "₹160 / Sq.ft",
+    "description": "Cut-outs & shapes",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Gypsum False Ceiling – Double Height",
+    "qty": 1,
+    "baseRate": "₹220",
+    "ratePerQty": "₹220 / Sq.ft",
+    "description": "Living area",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "POP False Ceiling",
+    "qty": 1,
+    "baseRate": "₹140",
+    "ratePerQty": "₹140 / Sq.ft",
+    "description": "Traditional",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Wooden False Ceiling",
+    "qty": 1,
+    "baseRate": "₹320",
+    "ratePerQty": "₹320 / Sq.ft",
+    "description": "Veneer / laminate",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "PVC False Ceiling",
+    "qty": 1,
+    "baseRate": "₹95",
+    "ratePerQty": "₹95 / Sq.ft",
+    "description": "Budget option",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Metal Grid Ceiling",
+    "qty": 1,
+    "baseRate": "₹180",
+    "ratePerQty": "₹180 / Sq.ft",
+    "description": "Commercial",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Cove Ceiling (Gypsum)",
+    "qty": 1,
+    "baseRate": "₹180",
+    "ratePerQty": "₹180 / Rft",
+    "description": "Indirect lighting",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Ceiling Cornice / Moulding",
+    "qty": 1,
+    "baseRate": "₹120",
+    "ratePerQty": "₹120 / Rft",
+    "description": "POP detail",
+    "FIELD6": "",
+    "tag": " FALSE CELLING"
+  },
+  {
+    "name": "Downlight (LED)",
+    "qty": 1,
+    "baseRate": "₹650",
+    "ratePerQty": "₹650 / Nos",
+    "description": "Cut-out light",
+    "FIELD6": "",
+    "tag": "CELLIGN LIGHTS  (ELECTRICAL)"
+  },
+  {
+    "name": "COB Light",
+    "qty": 1,
+    "baseRate": "₹1,200",
+    "ratePerQty": "₹1,200 / Nos",
+    "description": "Focus lighting",
+    "FIELD6": "",
+    "tag": "CELLIGN LIGHTS  (ELECTRICAL)"
+  },
+  {
+    "name": "Profile Light",
+    "qty": 1,
+    "baseRate": "₹950",
+    "ratePerQty": "₹950 / Rft",
+    "description": "Linear",
+    "FIELD6": "",
+    "tag": "CELLIGN LIGHTS  (ELECTRICAL)"
+  },
+  {
+    "name": "Strip Light (Cove)",
+    "qty": 1,
+    "baseRate": "₹120",
+    "ratePerQty": "₹120 / Rft",
+    "description": "Warm/white",
+    "FIELD6": "",
+    "tag": "CELLIGN LIGHTS  (ELECTRICAL)"
+  },
+  {
+    "name": "Vitrified Tile – Basic",
+    "qty": 1,
+    "baseRate": "₹95",
+    "ratePerQty": "₹95 / Sq.ft",
+    "description": "Living/bedroom",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Vitrified Tile – Premium",
+    "qty": 1,
+    "baseRate": "₹140",
+    "ratePerQty": "₹140 / Sq.ft",
+    "description": "Large format",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Ceramic Tile – Bathroom",
+    "qty": 1,
+    "baseRate": "₹85",
+    "ratePerQty": "₹85 / Sq.ft",
+    "description": "Anti-skid",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Parking Tile",
+    "qty": 1,
+    "baseRate": "₹75",
+    "ratePerQty": "₹75 / Sq.ft",
+    "description": "Heavy duty",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Marble – Makrana White",
+    "qty": 1,
+    "baseRate": "₹450",
+    "ratePerQty": "₹450 / Sq.ft",
+    "description": "Polished",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Marble – Italian",
+    "qty": 1,
+    "baseRate": "₹950",
+    "ratePerQty": "₹950 / Sq.ft",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Granite Flooring",
+    "qty": 1,
+    "baseRate": "₹320",
+    "ratePerQty": "₹320 / Sq.ft",
+    "description": "Durable",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Kota Stone",
+    "qty": 1,
+    "baseRate": "₹120",
+    "ratePerQty": "₹120 / Sq.ft",
+    "description": "Budget stone",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Wooden Flooring (Laminate)",
+    "qty": 1,
+    "baseRate": "₹320",
+    "ratePerQty": "₹320 / Sq.ft",
+    "description": "Click lock",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Engineered Wood Flooring",
+    "qty": 1,
+    "baseRate": "₹550",
+    "ratePerQty": "₹550 / Sq.ft",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Vinyl Flooring",
+    "qty": 1,
+    "baseRate": "₹180",
+    "ratePerQty": "₹180 / Sq.ft",
+    "description": "Waterproof",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "SPC Flooring",
+    "qty": 1,
+    "baseRate": "₹260",
+    "ratePerQty": "₹260 / Sq.ft",
+    "description": "Rigid core",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Tile Skirting",
+    "qty": 1,
+    "baseRate": "₹85",
+    "ratePerQty": "₹85 / Rft",
+    "description": "Matching tile",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Marble Skirting",
+    "qty": 1,
+    "baseRate": "₹180",
+    "ratePerQty": "₹180 / Rft",
+    "description": "Stone",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Wooden Skirting",
+    "qty": 1,
+    "baseRate": "₹220",
+    "ratePerQty": "₹220 / Rft",
+    "description": "MDF",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "PVC Skirting",
+    "qty": 1,
+    "baseRate": "₹95",
+    "ratePerQty": "₹95 / Rft",
+    "description": "Waterproof",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Aluminium Skirting",
+    "qty": 1,
+    "baseRate": "₹260",
+    "ratePerQty": "₹260 / Rft",
+    "description": "Premium",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Tile Laying Labour",
+    "qty": 1,
+    "baseRate": "₹45",
+    "ratePerQty": "₹45 / Sq.ft",
+    "description": "Adhesive method",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Marble Installation Labour",
+    "qty": 1,
+    "baseRate": "₹85",
+    "ratePerQty": "₹85 / Sq.ft",
+    "description": "Polishing included",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Wooden Flooring Installation",
+    "qty": 1,
+    "baseRate": "₹60",
+    "ratePerQty": "₹60 / Sq.ft",
+    "description": "Click system",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  },
+  {
+    "name": "Floor Levelling (Screed)",
+    "qty": 1,
+    "baseRate": "₹35",
+    "ratePerQty": "₹35 / Sq.ft",
+    "description": "Surface prep",
+    "FIELD6": "",
+    "tag": "FLOOR"
+  }
+ ]

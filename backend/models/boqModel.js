@@ -26,6 +26,11 @@ const boqItemSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  purchaseRate: {
+    type: Number,
+    default: null,
+    min: 0
+  },
   totalCost: {
     type: Number,
     required: true,
@@ -43,6 +48,16 @@ const boqItemSchema = new mongoose.Schema({
   referenceImage: {
     path: { type: String, default: null },
     filename: { type: String, default: null }
+  },
+  bill: {
+    type: String, // File path
+    trim: true,
+    default: null
+  },
+  photo: {
+    type: String, // File path
+    trim: true,
+    default: null
   },
   siteId: {
     type: mongoose.Schema.Types.ObjectId,

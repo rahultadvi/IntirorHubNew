@@ -597,7 +597,7 @@ const Expenses: React.FC = () => {
         <button
           onClick={() => setIsModalOpen(true)}
           title="Add Expense"
-          className="fixed bottom-24 right-6 w-14 h-14 bg-slate-800 text-white rounded-full shadow-lg shadow-slate-300 flex items-center justify-center hover:bg-slate-700 transition-all hover:scale-105 z-40"
+          className="fixed bottom-24 right-6 w-14 h-14 bg-black text-white rounded-full shadow-lg shadow-slate-300 flex items-center justify-center hover:bg-gray-900 transition-all hover:scale-105 z-40"
         >
           <Plus className="w-6 h-6" />
         </button>

@@ -60,7 +60,12 @@ const ManageSites: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateProjectModal(true)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowCreateProjectModal(true);
+              }}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-black hover:bg-gray-800 text-white rounded-lg font-semibold shadow-sm transition-all"
             >
               <Plus className="h-5 w-5" />
@@ -81,7 +86,12 @@ const ManageSites: React.FC = () => {
               </div>
               <p className="text-gray-500 mb-4">No sites yet. Create your first site to get started.</p>
               <button
-                onClick={() => setShowCreateProjectModal(true)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCreateProjectModal(true);
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg font-medium"
               >
                 <Plus className="h-4 w-4" />
@@ -143,20 +153,25 @@ const ManageSites: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="mt-4 flex flex-row gap-2">
                       {isCurrent ? (
-                        <div className="w-full text-center py-2 text-sm font-medium text-gray-900">
+                        <div className="flex-1 text-center py-2 text-sm font-medium text-gray-900 bg-gray-100 rounded-lg">
                           Currently Active
                         </div>
                       ) : (
                         <button
                           onClick={() => setActiveSite(site.id)}
-                          className="w-full px-2 py-2 bg-black hover:bg-gray-400 text-white rounded-lg font-sm transition-all"
+                          className="flex-1 px-2 py-2 bg-black hover:bg-gray-400 text-white rounded-lg text-sm font-medium transition-all"
                         >
-                          Switch this Site
+                          Switch Site
                         </button>
                       )}
-                      <button onClick={() => setEditingSite(site)} className="w-full px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm">Edit</button>
+                      <button 
+                        onClick={() => setEditingSite(site)} 
+                        className="flex-1 px-2 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-sm font-medium transition-all"
+                      >
+                        Edit Site
+                      </button>
                     </div>
                   </div>
                 );
@@ -166,12 +181,22 @@ const ManageSites: React.FC = () => {
         </div>
       </div>
       {showCreateProjectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" onClick={() => setShowCreateProjectModal(false)} />
-          <div className="relative bg-white rounded-xl w-full max-w-lg p-4 sm:p-6 shadow-lg
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCreateProjectModal(false);
+            }
+          }}
+        >
+          <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" />
+          <div 
+            className="relative bg-white rounded-xl w-full max-w-lg p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
-        scale-100 translate-y-0 opacity-100">
+        scale-100 translate-y-0 opacity-100"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start justify-between mb-3">
               <div className="flex flex-col">
                 <h3 className="text-base font-semibold">Create New Site/ Project</h3>
@@ -305,9 +330,9 @@ const ManageSites: React.FC = () => {
                   onChange={(e) => setCreateProjectForm({...createProjectForm, totalProjectValue: e.target.value})}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                <button type="button" onClick={() => { setShowCreateProjectModal(false); }} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-green-600 text-white">Create Project</button>
+              <div className="flex flex-row items-center justify-end gap-2 mt-2">
+                <button type="button" onClick={() => { setShowCreateProjectModal(false); }} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors">Create Project</button>
               </div>
             </form>
           </div>
@@ -380,11 +405,23 @@ const EditSiteModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-6">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-md bg-white rounded-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Edit site</h3>
-          <button onClick={onClose} className="p-1 text-gray-500">✕</button>
+          <button onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <label className="block mb-3 text-sm">
           Name
@@ -414,9 +451,9 @@ const EditSiteModal: React.FC<{
           Expected Completion Date
           <input type="date" value={expectedCompletionDate} onChange={(e) => setExpectedCompletionDate(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </label>
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100">Cancel</button>
-          <button onClick={save} disabled={loading} className="px-4 py-2 rounded-lg bg-green-600 text-white">{loading ? 'Saving' : 'Save'}</button>
+        <div className="flex flex-row items-center justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
+          <button onClick={save} disabled={loading} className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving' : 'Save'}</button>
         </div>
       </div>
     </div>

@@ -62,9 +62,20 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-8rem)]" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div 
+        className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-8rem)]" 
+        style={{ WebkitOverflowScrolling: 'touch' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
@@ -114,9 +125,9 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
             </div>
           </div>
 
-          <div className="sm:col-span-2 flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-            <button type="button" onClick={onClose} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-            <button type="submit" disabled={loading} className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">{loading ? 'Saving...' : 'Create'}</button>
+          <div className="sm:col-span-2 flex flex-row items-center justify-end gap-2 mt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving...' : 'Create'}</button>
           </div>
         </form>
       </div>

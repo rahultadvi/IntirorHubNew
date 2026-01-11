@@ -148,6 +148,51 @@ export const uploadSingleFile = (folder = "files") =>
     limits: { fileSize: SIZE_LIMITS.attachment },
   }).single("file");
 
+// Material files (invoice, photo, warrantyDoc)
+export const uploadMaterialFiles = (folder = "materials") =>
+  multer({
+    storage: storage(folder),
+    fileFilter: (req, file, cb) => {
+      // Allow images and PDFs
+      const isImage = ALLOWED_IMAGE_TYPES.includes(file.mimetype);
+      const isPDF = file.mimetype === "application/pdf";
+      const isDocument = ALLOWED_DOCUMENT_TYPES.includes(file.mimetype);
+      
+      if (isImage || isPDF || isDocument) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only images, PDFs, and documents are allowed"), false);
+      }
+    },
+    limits: { fileSize: SIZE_LIMITS.attachment },
+  }).fields([
+    { name: "invoice", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+    { name: "warrantyDoc", maxCount: 1 },
+  ]);
+
+// BOQ files (bill, photo)
+export const uploadBOQFiles = (folder = "boq") =>
+  multer({
+    storage: storage(folder),
+    fileFilter: (req, file, cb) => {
+      // Allow images and PDFs
+      const isImage = ALLOWED_IMAGE_TYPES.includes(file.mimetype);
+      const isPDF = file.mimetype === "application/pdf";
+      const isDocument = ALLOWED_DOCUMENT_TYPES.includes(file.mimetype);
+      
+      if (isImage || isPDF || isDocument) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only images, PDFs, and documents are allowed"), false);
+      }
+    },
+    limits: { fileSize: SIZE_LIMITS.attachment },
+  }).fields([
+    { name: "bill", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+  ]);
+
 /* ================= HELPERS ================= */
 
 export const getUploadedImagePaths = (files, folder = "images") => {

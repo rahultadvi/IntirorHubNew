@@ -110,10 +110,10 @@ const Header: React.FC = () => {
 
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`relative z-50 transition-all duration-500 ${
         scrolled 
-          ? "bg-gradient-to-b from-blue-50 to-white shadow-lg shadow-gray-200/50" 
-          : "bg-gradient-to-b from-blue-50 to-white"
+          ? "bg-gradient-to-b from-blue-50 shadow-lg shadow-gray-200/50" 
+          : "bg-gradient-to-b from-blue-50"
       }`}
     >
       <div className="px-4 md:px-8 py-3">
@@ -311,23 +311,23 @@ const Header: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsSiteMenuOpen(false);
-                    navigate("/home/manage-sites");
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  <Building2 className="h-4 w-4 text-gray-500" />
-                  <span>Open Manage Sites</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSiteMenuOpen(false);
                     openCreateSite();
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >
                   <Building2 className="h-4 w-4 text-gray-500" />
-                  <span>Create new site</span>
+                  <span>Add Sites</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSiteMenuOpen(false);
+                    navigate("/home/manage-sites");
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  <Building2 className="h-4 w-4 text-gray-500" />
+                  <span>Manage Sites</span>
                 </button>
               </div>
             </div>

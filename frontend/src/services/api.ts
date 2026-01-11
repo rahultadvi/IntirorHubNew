@@ -157,6 +157,27 @@ export const libraryApi = {
       token,
     });
   },
+  updateLibraryItem: (
+    id: string,
+    body: {
+      name?: string;
+      ratePerQty?: number;
+      baseRate?: number;
+      qty?: number;
+      description?: string;
+      Category?: string;
+    },
+    token: string
+  ) => {
+    return request<{
+      message: string;
+      item: any;
+    }>(`/library/${id}`, {
+      method: "PUT",
+      body,
+      token,
+    });
+  },
 };
 
 
@@ -693,7 +714,8 @@ export const boqApi = {
       quantity: number | string;
       unit: string;
       rate: number | string;
-      totalCost: number;
+      purchaseRate?: number | string;
+      totalCost?: number;
       comments?: string;
       siteId: string;
       referenceImageBase64?: string;
@@ -722,11 +744,112 @@ export const boqApi = {
     }>(`/boq/site/${siteId}${q}`, { method: 'GET', token });
   },
 
+  updateBOQItem: (boqId: string, body: { quantity?: number; purchaseRate?: number | null }, token: string) =>
+    request<{ message: string; boqItem: any }>(`/boq/${boqId}`, { method: 'PUT', body, token }),
+
+  updateBOQItemFiles: async (boqId: string, formData: FormData, token: string) => {
+    const response = await fetch(`${API_BASE_URL}/boq/${boqId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update BOQ item files");
+    }
+    return data;
+  },
+
   updateBOQStatus: (boqId: string, status: 'pending' | 'approved' | 'rejected', token: string) =>
     request<{ message: string; boqItem: any }>(`/boq/${boqId}/status`, { method: 'PUT', body: { status }, token }),
 
   deleteBOQItem: (boqId: string, token: string) =>
     request<{ message: string }>(`/boq/${boqId}`, { method: 'DELETE', token }),
 };
+
+export const materialApi = {
+  addMaterial: async (formData: FormData, token: string) => {
+    const response = await fetch(`${API_BASE_URL}/materials/add`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to add material");
+    }
+    return data;
+  },
+
+  getMaterialsBySite: (siteId: string, token: string) =>
+    request<{ materials: MaterialDto[] }>(`/materials/site/${siteId}`, {
+      method: "GET",
+      token,
+    }),
+
+  getMaterial: (materialId: string, token: string) =>
+    request<{ material: MaterialDto }>(`/materials/${materialId}`, {
+      method: "GET",
+      token,
+    }),
+
+  updateMaterial: async (materialId: string, formData: FormData, token: string) => {
+    const response = await fetch(`${API_BASE_URL}/materials/${materialId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update material");
+    }
+    return data;
+  },
+
+  deleteMaterial: (materialId: string, token: string) =>
+    request<{ message: string }>(`/materials/${materialId}`, {
+      method: "DELETE",
+      token,
+    }),
+};
+
+export interface MaterialDto {
+  _id: string;
+  category: "Finishes" | "Hardware" | "Electrical" | "Electronics";
+  name: string;
+  description?: string;
+  installedAt: string;
+  vendor: {
+    name: string;
+    city?: string;
+  };
+  cost: number;
+  warranty: {
+    duration?: string;
+    model?: string;
+    since?: string;
+  };
+  invoice?: string;
+  photo?: string;
+  warrantyDoc?: string;
+  siteId: string;
+  createdBy: {
+    _id: string;
+    name?: string;
+    email: string;
+  };
+  companyName: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 

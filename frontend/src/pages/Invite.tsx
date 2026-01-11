@@ -226,7 +226,7 @@ const Invite: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <div className="mx-auto w-full max-w-3xl px-4 pt-32 pb-16">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-4 pb-16">
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.4em] text-gray-400">
             Invite team

@@ -13,7 +13,7 @@ try { fs.mkdirSync(REFERENCE_IMAGE_FOLDER, { recursive: true }); } catch (e) {}
 
 export const addBOQItem = async (req, res) => {
   try {
-    const { roomName, itemName, quantity, unit, rate, totalCost, comments, siteId, referenceImageBase64, referenceImageFilename } = req.body;
+    const { roomName, itemName, quantity, unit, rate, purchaseRate, comments, siteId, referenceImageBase64, referenceImageFilename } = req.body;
 
     const site = await Site.findById(siteId);
     if (!site) return res.status(404).json({ message: 'Site not found' });
@@ -22,13 +22,19 @@ export const addBOQItem = async (req, res) => {
                       (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
     if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
 
+    // Calculate effective rate (use purchaseRate if provided, otherwise use rate)
+    const effectivePurchaseRate = purchaseRate !== undefined && purchaseRate !== null ? Number(purchaseRate) : Number(rate);
+    // Calculate totalCost using purchaseRate if available, otherwise use rate
+    const calculatedTotalCost = Number(quantity) * effectivePurchaseRate;
+
     const boqItem = new BOQItem({
       roomName,
       itemName,
       quantity: Number(quantity),
       unit,
       rate: Number(rate),
-      totalCost: Number(totalCost),
+      purchaseRate: effectivePurchaseRate,
+      totalCost: calculatedTotalCost,
       comments,
       siteId,
       status: ['MANAGER', 'AGENT'].includes(req.user.role) ? 'pending' : 'approved',
@@ -104,6 +110,59 @@ export const getBOQItemsBySite = async (req, res) => {
   } catch (error) {
     console.error('Error fetching BOQ items', error);
     res.status(500).json({ message: 'Error fetching BOQ items', error: error.message });
+  }
+};
+
+export const updateBOQItem = async (req, res) => {
+  try {
+    const { boqId } = req.params;
+    const { quantity, purchaseRate } = req.body;
+
+    const boqItem = await BOQItem.findById(boqId);
+    if (!boqItem) return res.status(404).json({ message: 'BOQ item not found' });
+
+    const site = await Site.findById(boqItem.siteId);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    const hasAccess = site.companyName === req.user.companyName ||
+                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === boqItem.siteId.toString()));
+    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+
+    // Only Admin can update quantity and purchase rate
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can update BOQ item quantity and purchase rate' });
+    }
+
+    // Update quantity
+    if (quantity !== undefined) {
+      boqItem.quantity = Number(quantity);
+    }
+
+    // Update purchase rate
+    if (purchaseRate !== undefined) {
+      boqItem.purchaseRate = purchaseRate === null ? null : Number(purchaseRate);
+    }
+
+    // Handle file uploads for bill and photo
+    if (req.files?.bill) {
+      boqItem.bill = process.env.BACKEND_URL + `/uploads/boq/${req.files.bill[0].filename}`;
+    }
+    if (req.files?.photo) {
+      boqItem.photo = process.env.BACKEND_URL + `/uploads/boq/${req.files.photo[0].filename}`;
+    }
+
+    // Recalculate totalCost using purchaseRate if available, otherwise use rate (base price)
+    const effectiveRate = (boqItem.purchaseRate !== null && boqItem.purchaseRate !== undefined) 
+      ? boqItem.purchaseRate 
+      : boqItem.rate;
+    boqItem.totalCost = boqItem.quantity * effectiveRate;
+
+    await boqItem.save();
+
+    res.json({ message: 'BOQ item updated', boqItem });
+  } catch (error) {
+    console.error('Error updating BOQ item', error);
+    res.status(500).json({ message: 'Error updating BOQ item', error: error.message });
   }
 };
 

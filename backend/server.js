@@ -12,6 +12,7 @@ import paymentRouter from "./routes/PaymentRoute.js";
 import expenseRouter from "./routes/ExpenseRoute.js";
 import boqRouter from "./routes/BOQRoute.js";
 import libraryRoutes from "./routes/libraryRoutes.js";
+import materialRouter from "./routes/MaterialRoute.js";
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use("/api/payments", paymentRouter);
 app.use("/api/expenses", expenseRouter);
 app.use("/api/boq", boqRouter);
 app.use("/api/library", libraryRoutes);
+app.use("/api/materials", materialRouter);
 
 // Serve uploads directory FIRST - allows access to all subdirectories (feed-files, feed-images, boq-images, invoices, etc.)
 // This must come before frontend static to avoid conflicts with frontend/dist/uploads

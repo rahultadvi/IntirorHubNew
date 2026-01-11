@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const LibrarySchema = new mongoose.Schema(
   {
-    CompanyName: {
+    companyName: {
       type:String,
       required: true,
       index: true
@@ -36,9 +36,14 @@ const LibrarySchema = new mongoose.Schema(
       trim: true,
     },
 
-    Category: {
+    tag: {
       type: String,
       default: "",
+    },
+
+    Category: {
+      type: String,
+      trim: true,
     },
   },
   {

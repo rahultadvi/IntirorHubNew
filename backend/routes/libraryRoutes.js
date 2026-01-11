@@ -6,8 +6,8 @@ import {
   getLibraryItems,
   updateLibraryItem,
   deleteLibraryItem,
-  getLibraryItemsByCategory,
-} from "../controllers/BOQController.js";
+  getLibraryItemById,
+} from "../controllers/libraryController.js";
 
 // import { importLibraryCSV } from "../controllers/libraryController.js";
 import { uploadSingleImage, uploadSingleFile } from "../utils/multer.js";
@@ -22,8 +22,8 @@ router.use(AuthMiddleware);
 // Get all library items
 router.get("/", getLibraryItems);
 
-// Get items by category
-router.get("/category/:category", getLibraryItemsByCategory);
+// Get single library item
+router.get("/:id", getLibraryItemById);
 
 // Add library item (optional image)
 router.post(
@@ -34,13 +34,12 @@ router.post(
 
 // Update library item
 router.put(
-  "/:itemId",
-  uploadSingleImage("boq-images"),
+  "/:id",
   updateLibraryItem
 );
 
 // Delete library item
-router.delete("/:itemId", deleteLibraryItem);
+router.delete("/:id", deleteLibraryItem);
 
 /* ================= CSV IMPORT ================= */
 
