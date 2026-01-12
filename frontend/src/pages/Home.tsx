@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
-import { feedApi, expenseApi, boqApi } from "../services/api";
+import { expenseApi, feedApi } from "../services/api";
 
 interface FeedItem {
   id: string;
@@ -62,34 +62,13 @@ const Home: React.FC = () => {
   const [startDateDisplay, setStartDateDisplay] = useState<string | null>(null);
   const [targetDateDisplay, setTargetDateDisplay] = useState<string | null>(null);
 
-  const [boqStats, setBoqStats] = useState<{ total: number; approved: number; pending: number; totalCost?: number }>({
+  const [boqStats] = useState<{ total: number; approved: number; pending: number; totalCost?: number }>({
     total: 0,
     approved: 0,
     pending: 0,
   });
 
   useEffect(() => {
-    const loadBOQStats = async () => {
-      if (!token || !activeSite?.id) {
-        setBoqStats({ total: 0, approved: 0, pending: 0 });
-        return;
-      }
-      try {
-        const res = await boqApi.getBOQItemsBySite(activeSite.id, token);
-        if (res && res.stats) {
-          setBoqStats({
-            total: res.stats.total ?? 0,
-            approved: res.stats.approved ?? 0,
-            pending: res.stats.pending ?? 0,
-            totalCost: res.stats.totalCost ?? 0,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load BOQ stats', err);
-        setBoqStats({ total: 0, approved: 0, pending: 0 });
-      }
-    };
-
     const loadRecentFeeds = async () => {
       if (!token || !activeSite?.id) {
         setRecentFeeds([]);
@@ -115,7 +94,6 @@ const Home: React.FC = () => {
       }
     };
 
-    loadBOQStats();
     loadRecentFeeds();
   }, [activeSite, token]);
 
@@ -260,9 +238,8 @@ const Home: React.FC = () => {
         <div className="flex items-center justify-between mb-4 relative">
           <span className="bg-white/25 backdrop-blur-sm text-white text-[11px] font-bold px-4 py-2 rounded-full tracking-wide inline-flex items-center gap-2">
             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            ELECTRICAL & FALSE CEILING
+            {siteCategory}
           </span>
-          <span className="text-white/60 text-xs font-medium">{siteCategory}</span>
         </div>
 
         <div className="text-center mb-5 relative">
@@ -315,7 +292,7 @@ const Home: React.FC = () => {
       {/* Quick Actions */}
       <div className="flex items-center justify-between gap-3 mb-6">
         <button 
-          onClick={() => navigate('/home/feed')}
+          onClick={() => navigate('/home/feed?action=add')}
           className="flex-1 bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-slate-100/50 flex flex-col items-center gap-2 hover:shadow-xl transition-all duration-300 group relative"
         >
           <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
@@ -325,7 +302,7 @@ const Home: React.FC = () => {
         </button>
         
         <button 
-          onClick={() => navigate('/home/expenses')}
+          onClick={() => navigate('/home/expenses?action=add')}
           className="flex-1 bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-slate-100/50 flex flex-col items-center gap-2 hover:shadow-xl transition-all duration-300 group relative"
         >
           <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
@@ -335,7 +312,7 @@ const Home: React.FC = () => {
         </button>
         
         <button 
-          onClick={() => navigate('/home/boq')}
+          onClick={() => navigate('/home/boq?action=add')}
           className="flex-1 bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-slate-100/50 flex flex-col items-center gap-2 hover:shadow-xl transition-all duration-300 group relative"
         >
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
@@ -369,25 +346,33 @@ const Home: React.FC = () => {
       </div>
 
       {/* Payment Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-slate-100/50 group">
-          <div className="w-11 h-11 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mb-3 shadow-inner group-hover:scale-110 transition-transform">
-            <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
+      <div className="grid grid-cols-2 gap-2.5 mb-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2.5 shadow-lg border border-slate-100/50 group">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+              <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-wider text-emerald-600 leading-tight mb-0.5">RECEIVED</p>
+              <p className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent leading-tight">
+                {formatCurrency(usedPaid)}
+              </p>
+            </div>
           </div>
-          <p className="text-[10px] font-bold tracking-wider text-emerald-600 mb-1">RECEIVED</p>
-          <p className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-            {formatCurrency(usedPaid)}
-          </p>
         </div>
         
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-slate-100/50 group">
-          <div className="w-11 h-11 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl flex items-center justify-center mb-3 shadow-inner group-hover:scale-110 transition-transform">
-            <Clock className="w-5 h-5 text-amber-600" />
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2.5 shadow-lg border border-slate-100/50 group">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+              <Clock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-wider text-amber-600 leading-tight mb-0.5">DUE<br/>AMOUNT</p>
+              <p className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent leading-tight">
+                {formatCurrency(dueAmount)}
+              </p>
+            </div>
           </div>
-          <p className="text-[10px] font-bold tracking-wider text-amber-600 mb-1">DUE AMOUNT</p>
-          <p className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-            {formatCurrency(dueAmount)}
-          </p>
         </div>
       </div>
 
@@ -525,8 +510,8 @@ const Home: React.FC = () => {
                     <h4 className="font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
                       {feed.title || feed.content}
                     </h4>
-                    <p className="text-sm text-slate-500">
-                      Uploaded by <span className="font-semibold text-slate-600">{feed.user.name} ({feed.user.role})</span>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Uploaded by {feed.user.name} ({feed.user.role})
                     </p>
                     <p className="text-xs text-slate-400 font-medium">
                       {isToday ? `Today, ${displayTime}` : displayTime}

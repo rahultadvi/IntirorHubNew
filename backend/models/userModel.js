@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["  ", "MANAGER", "AGENT", "CLIENT"],
+      enum: ["ADMIN", "MANAGER", "AGENT", "CLIENT"],
       default: "ADMIN",
     },
     parentId: {
@@ -72,6 +72,11 @@ const UserSchema = new mongoose.Schema(
       type: Date,
       default: null,
       select: false,
+    },
+    allowedModules: {
+      type: [String],
+      default: ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
+      enum: ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
     },
   },
   {

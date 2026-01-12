@@ -1,6 +1,6 @@
 type FilterKey = "all" | "updates" | "photos" | "documents" | "milestones";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-// import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   MessageSquare,
   FileText,
@@ -74,7 +74,7 @@ const generateId = () =>
 const Feed: React.FC = () => {
   const { user, token } = useAuth();
   const { activeSite } = useSite();
-  // const location = useLocation();
+  const location = useLocation();
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newPost, setNewPost] = useState("");
@@ -96,6 +96,14 @@ const Feed: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const activeSiteId = activeSite?.id ?? null;
+
+  // Check for action=add query parameter to open form
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('action') === 'add') {
+      setShowAddForm(true);
+    }
+  }, [location.search]);
 
   // Load feed data when component mounts or active site changes
   useEffect(() => {
@@ -519,7 +527,8 @@ const isPostDisabled = !hasContent || isSubmitting;
   return (
 
     <div className="pb-20">
-
+      {/* Centered Container */}
+      <div className="max-w-2xl mx-auto px-4">
       {/* Header */}
 
       {/* Feed Filters */}
@@ -646,10 +655,10 @@ const isPostDisabled = !hasContent || isSubmitting;
 
               {/* Image Post */}
               {item.images && item.images.length > 0 && (
-                <div className="relative mb-4 rounded-2xl overflow-hidden">
+                <div className="relative mb-4 rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center min-h-[200px]">
                   <img
                     alt="Post"
-                    className="w-full h-56 object-cover"
+                    className="w-full max-h-[500px] object-contain"
                     src={item.images[imageIndex]}
                   />
                   {item.images.length > 1 && (
@@ -659,14 +668,14 @@ const isPostDisabled = !hasContent || isSubmitting;
                           const newIndex = imageIndex > 0 ? imageIndex - 1 : item.images!.length - 1;
                           setCurrentImageIndex({ ...currentImageIndex, [item.id]: newIndex });
                         }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
                       >
                         <ChevronDown className="w-5 h-5 text-slate-600 rotate-90" />
                       </button>
-                      <div className="absolute top-4 right-4 bg-slate-800/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                      <div className="absolute top-4 right-4 bg-slate-800/70 text-white px-3 py-1 rounded-full text-xs font-semibold z-10">
                         {imageIndex + 1}/{item.images.length}
                       </div>
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                         {item.images.map((_, idx) => (
                           <span
                             key={idx}
@@ -863,6 +872,8 @@ const isPostDisabled = !hasContent || isSubmitting;
           );
         })}
       </div>
+      </div>
+      {/* End Centered Container */}
 
       {/* Floating Add Button */}
 <button

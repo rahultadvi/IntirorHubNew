@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus,
   Download,
@@ -18,12 +19,15 @@ import {
   Minus,
   ChevronUp,
   ChevronDown,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import {  useAuth } from "../context/AuthContext";
 import { boqApi, libraryApi, materialApi, type MaterialDto } from "../services/api";
 // import libraryData from "../data/libraryData";
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 // import BoqLibrary from "../component/BoqLibrary";
 
 interface BOQItem {
@@ -34,7 +38,7 @@ interface BOQItem {
   rate: number;
   purchaseRate?: number | null;
   amount: number;
-  category: "furniture" | "services";
+  category: "Furniture" | "Finishes" | "Hardware" | "Electrical" | "Miscellaneous" | string;
   comments?: number;
   status?: 'pending' | 'approved' | 'rejected';
   bill?: string | null;
@@ -92,12 +96,30 @@ const BOQ: React.FC = () => {
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoomName, setEditedRoomName] = useState<string>("");
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
   const [editingPurchaseRate, setEditingPurchaseRate] = useState<Record<string, number | null>>({});
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, 'bill' | 'photo' | null>>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [lockedRooms, setLockedRooms] = useState<Set<string>>(new Set());
+  
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+  
   const { activeSite } = useSite();
+  const location = useLocation();
 
-  const [selectedCategory] = useState<"furniture" | "services" | "all">("all");
+  // Check for action=add query parameter to open modal
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('action') === 'add') {
+      setShowAddModal(true);
+    }
+  }, [location.search]);
+
+  const [selectedCategory, setSelectedCategory] = useState<"All" | "Furniture" | "Finishes" | "Hardware" | "Electrical" | "Miscellaneous">("All");
   const [selectedRoom, setSelectedRoom] = useState<string>("all");
   // const [boqItems, setBoqItems] = useState<any[]>([]);
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
@@ -110,7 +132,7 @@ const { user, token } = useAuth();
 // Material Used – search & category
 const [materialSearch, setMaterialSearch] = useState("");
 const [materialCategory, setMaterialCategory] = useState<
-  "All" | "Finishes" | "Hardware" | "Electrical" | "Electronics"
+  "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
 >("All");
 
 // 🔍 Library search & category (SAFE)
@@ -180,6 +202,7 @@ useEffect(() => {
     quantity: '',
     unit: 'Sq.ft',
     rate: '',
+    category: 'Furniture' as 'Furniture' | 'Finishes' | 'Hardware' | 'Electrical' | 'Miscellaneous',
     comments: '',
     referenceImage: null as File | null,
   });
@@ -230,7 +253,7 @@ useEffect(() => {
             rate: item.rate,
             purchaseRate: item.purchaseRate || null,
             amount: calculatedAmount, // Use calculated amount based on purchaseRate if available
-            category: 'furniture', // TODO: determine from item or add to backend
+            category: item.category || 'Furniture', // Use category from item, default to 'Furniture'
             comments: item.comments,
             status: item.status,
             bill: item.bill || null,
@@ -279,7 +302,7 @@ const refetchMaterials = () => {
 
 // Material form state
 const [materialForm, setMaterialForm] = useState({
-  category: "Finishes" as "Finishes" | "Hardware" | "Electrical" | "Electronics",
+  category: "Finishes" as "Furniture" | "Finishes" | "Hardware" | "Electrical",
   name: "",
   description: "",
   installedAt: "",
@@ -299,12 +322,18 @@ const [materialForm, setMaterialForm] = useState({
 
   try {
     const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
-    const { boqItems } = response as {
+    const { boqItems, lockedRooms } = response as {
       boqItems: Record<string, any[]>;
+      lockedRooms?: string[];
       stats: any;
     };
 
     setBoqItems(Object.values(boqItems || {}).flat());
+    
+    // Update locked rooms from API response
+    if (lockedRooms && Array.isArray(lockedRooms)) {
+      setLockedRooms(new Set(lockedRooms));
+    }
   } catch (error) {
     console.error("Failed to fetch BOQ items", error);
     setBoqItems([]);
@@ -341,15 +370,33 @@ const handleUpdateBOQItem = async (itemId: string, quantity?: number, purchaseRa
     const updateBody: { quantity?: number; purchaseRate?: number | null } = {};
     if (quantity !== undefined) updateBody.quantity = quantity;
     if (purchaseRate !== undefined) updateBody.purchaseRate = purchaseRate;
-    
+
     await boqApi.updateBOQItem(itemId, updateBody, token);
     await fetchBOQItems();
     setEditingPurchaseRate({});
   } catch (error) {
     console.error("Failed to update BOQ item", error);
-    alert("Failed to update BOQ item. Please try again.");
+    showToast("Failed to update BOQ item. Please try again.", 'error');
   } finally {
     setUpdatingItemId(null);
+  }
+};
+
+const handleDeleteBOQItem = async (itemId: string) => {
+  if (!token || !isAdmin) return;
+  
+  if (!window.confirm("Are you sure you want to delete this BOQ item? This action cannot be undone.")) {
+    return;
+  }
+
+  try {
+    await boqApi.deleteBOQItem(itemId, token);
+    await fetchBOQItems();
+    setExpandedItemId(null); // Close expanded view after deletion
+    showToast("BOQ item deleted successfully!");
+  } catch (error) {
+    console.error("Failed to delete BOQ item", error);
+    showToast("Failed to delete BOQ item. Please try again.", 'error');
   }
 };
 
@@ -366,7 +413,7 @@ const handleUploadBOQFile = async (itemId: string, file: File, type: 'bill' | 'p
     setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
   } catch (error) {
     console.error("Failed to upload file", error);
-    alert("Failed to upload file. Please try again.");
+    showToast("Failed to upload file. Please try again.", 'error');
     setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
   }
 };
@@ -386,12 +433,11 @@ const handleSubmitBOQItem = async (
 
   // ✅ Basic validation
   if (
-    !boqForm.roomName ||
     !boqForm.itemName ||
     !boqForm.quantity ||
     !boqForm.rate
   ) {
-    alert("Please fill all required fields");
+    showToast("Please fill all required fields", 'error');
     return;
   }
 
@@ -399,7 +445,14 @@ const handleSubmitBOQItem = async (
   const rate = parseFloat(boqForm.rate);
 
   if (isNaN(quantity) || isNaN(rate)) {
-    alert("Quantity and Rate must be valid numbers");
+    showToast("Quantity and Rate must be valid numbers", 'error');
+    return;
+  }
+
+  // Set default roomName if not set (use first available room)
+  const roomNameToUse = boqForm.roomName || (allRoomNames.length > 0 ? allRoomNames[0] : '');
+  if (!roomNameToUse) {
+    showToast("No rooms available. Please add a room first.", 'error');
     return;
   }
 
@@ -409,12 +462,13 @@ const handleSubmitBOQItem = async (
 
   // 📦 Base payload
   const payload: any = {
-    roomName: boqForm.roomName,
+    roomName: roomNameToUse,
     itemName: boqForm.itemName,
     quantity,
     unit: boqForm.unit,
     rate, // Base price
     purchaseRate: purchaseRate, // Purchased price = final price (used in calculation)
+    category: boqForm.category,
     comments: boqForm.comments,
     siteId: activeSite.id,
   };
@@ -446,6 +500,7 @@ const handleSubmitBOQItem = async (
       quantity: "",
       unit: "Sq.ft",
       rate: "",
+      category: "Furniture",
       comments: "",
       referenceImage: null,
     });
@@ -459,7 +514,7 @@ const handleSubmitBOQItem = async (
     }
   } catch (error) {
     console.error("Failed to add BOQ item", error);
-    alert("Failed to add BOQ item. Please try again.");
+    showToast("Failed to add BOQ item. Please try again.", 'error');
   }
 };
 
@@ -480,38 +535,14 @@ const handleSubmitBOQItem = async (
     setEditedRoomName("");
   };
 
-  // Generate a PDF by capturing the room DOM as an image using html2canvas
+  // Generate a PDF from HTML template using html2canvas (Payment/Invoice style)
   const generatePDFFromElement = async (room: Room) => {
     try {
       if (!room.items || room.items.length === 0) {
         throw new Error('No items to export');
       }
 
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPosition = margin;
-
-      // Header
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('BILL OF QUANTITIES', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-
-      // Site/Project Info
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Site Name: ${activeSite?.name || 'N/A'}`, margin, yPosition);
-      yPosition += 8;
-      pdf.text(`Room: ${room.name}`, margin, yPosition);
-      yPosition += 8;
-      pdf.text(`Generated Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`, margin, yPosition);
-      yPosition += 8;
-      pdf.text(`Total Items: ${room.items.length}`, margin, yPosition);
-      yPosition += 15;
-
-      // Summary by Category
+      // Calculate summary by category
       const categorySummary: Record<string, { count: number; totalBaseAmount: number; totalPurchaseAmount: number }> = {};
       room.items.forEach((item) => {
         const cat = item.category || 'Other';
@@ -526,229 +557,239 @@ const handleSubmitBOQItem = async (
         categorySummary[cat].totalPurchaseAmount += purchaseAmount;
       });
 
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Summary by Category', margin, yPosition);
-      yPosition += 8;
-
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      Object.entries(categorySummary).forEach(([category, summary]) => {
-        if (yPosition > pageHeight - 30) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
-        pdf.text(`${categoryDisplay}: ${summary.count} items`, margin + 5, yPosition);
-        yPosition += 6;
-        pdf.setFontSize(8);
-        pdf.text(`  Base Total: ${formatCurrency(summary.totalBaseAmount)}`, margin + 10, yPosition);
-        yPosition += 5;
-        pdf.text(`  Purchase Total: ${formatCurrency(summary.totalPurchaseAmount)}`, margin + 10, yPosition);
-        yPosition += 8;
-        pdf.setFontSize(9);
-      });
-
-      yPosition += 10;
-
-      // BOQ Items Details Table
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('BOQ Items Details', margin, yPosition);
-      yPosition += 10;
-
-      // Table Header
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, 'F');
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10);
-
-      // Define column positions with better spacing
-      const colPositions = {
-        sno: margin + 3,
-        item: margin + 12,
-        quantity: margin + 70,
-        unit: margin + 88,
-        basePrice: margin + 110,
-        purchasePrice: margin + 135,
-        baseAmount: margin + 160,
-        purchaseAmount: pageWidth - margin - 20
-      };
-
-      // Column widths for alignment
-      const colWidths = {
-        sno: 8,
-        item: 55,
-        quantity: 15,
-        unit: 20,
-        basePrice: 22,
-        purchasePrice: 22,
-        baseAmount: 25,
-        purchaseAmount: 25
-      };
-
-      pdf.text('S.No', colPositions.sno, yPosition + 2);
-      pdf.text('Item Description', colPositions.item, yPosition + 2);
-      pdf.text('Qty', colPositions.quantity, yPosition + 2);
-      pdf.text('Unit', colPositions.unit, yPosition + 2);
-      pdf.text('Base Price', colPositions.basePrice, yPosition + 2);
-      pdf.text('Purchase Price', colPositions.purchasePrice, yPosition + 2);
-      pdf.text('Base Amount', colPositions.baseAmount, yPosition + 2);
-      pdf.text('Purchase Amount', colPositions.purchaseAmount, yPosition + 2);
-      yPosition += 12;
-
-      // Table Content
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
-
       // Calculate totals
       let totalBaseAmount = 0;
       let totalPurchaseAmount = 0;
-
-      room.items.forEach((item, index) => {
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
-          pdf.addPage();
-          yPosition = margin;
-          
-          // Redraw header
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, 'F');
-          pdf.setLineWidth(0.5);
-          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10);
-          pdf.text('S.No', colPositions.sno, yPosition + 2);
-          pdf.text('Item Description', colPositions.item, yPosition + 2);
-          pdf.text('Qty', colPositions.quantity, yPosition + 2);
-          pdf.text('Unit', colPositions.unit, yPosition + 2);
-          pdf.text('Base Price', colPositions.basePrice, yPosition + 2);
-          pdf.text('Purchase Price', colPositions.purchasePrice, yPosition + 2);
-          pdf.text('Base Amount', colPositions.baseAmount, yPosition + 2);
-          pdf.text('Purchase Amount', colPositions.purchaseAmount, yPosition + 2);
-          yPosition += 12;
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(7);
-        }
-
-        // Calculate row height based on item name lines
-        const itemNameLines = pdf.splitTextToSize(item.name || 'N/A', colWidths.item);
-        const lineCount = Array.isArray(itemNameLines) ? itemNameLines.length : 1;
-        const rowHeight = Math.max(12, 8 + (lineCount - 1) * 4);
-        const centerY = yPosition + (rowHeight / 2) - 2;
-
-        const isEvenRow = index % 2 === 0;
-        if (isEvenRow) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight, 'F');
-        }
-
-        pdf.setLineWidth(0.3);
-        pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, rowHeight);
-
-        // Serial number (centered vertically)
-        pdf.text((index + 1).toString(), colPositions.sno, centerY);
-
-        // Item name (with word wrap, centered vertically)
-        const itemNameY = centerY - ((lineCount - 1) * 2);
-        if (Array.isArray(itemNameLines)) {
-          itemNameLines.forEach((line: string, lineIndex: number) => {
-            pdf.text(line, colPositions.item, itemNameY + (lineIndex * 4));
-          });
-        } else {
-          pdf.text(itemNameLines, colPositions.item, itemNameY);
-        }
-
-        // Quantity (centered)
-        const qtyText = item.quantity.toString();
-        const qtyX = colPositions.quantity + (colWidths.quantity / 2) - (pdf.getTextWidth(qtyText) / 2);
-        pdf.text(qtyText, qtyX, centerY);
-
-        // Unit (centered vertically)
-        pdf.text(formatUnit(item.unit), colPositions.unit, centerY);
-
-        // Base Price (right-aligned, centered vertically)
-        const basePriceText = formatCurrency(item.rate).replace('₹', '').trim();
-        const basePriceX = colPositions.basePrice + colWidths.basePrice - pdf.getTextWidth(basePriceText);
-        pdf.text(basePriceText, basePriceX, centerY);
-
-        // Purchase Price (right-aligned, centered vertically)
+      room.items.forEach((item) => {
+        totalBaseAmount += item.quantity * item.rate;
         const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
-        const purchasePriceText = formatCurrency(purchaseRate).replace('₹', '').trim();
-        const purchasePriceX = colPositions.purchasePrice + colWidths.purchasePrice - pdf.getTextWidth(purchasePriceText);
-        pdf.text(purchasePriceText, purchasePriceX, centerY);
-
-        // Base Amount (right-aligned, centered vertically)
-        const baseAmount = item.quantity * item.rate;
-        totalBaseAmount += baseAmount;
-        const baseAmountText = formatCurrency(baseAmount).replace('₹', '').trim();
-        const baseAmountX = colPositions.baseAmount + colWidths.baseAmount - pdf.getTextWidth(baseAmountText);
-        pdf.text(baseAmountText, baseAmountX, centerY);
-
-        // Purchase Amount (right-aligned, centered vertically)
-        const purchaseAmount = item.quantity * purchaseRate;
-        totalPurchaseAmount += purchaseAmount;
-        const purchaseAmountText = formatCurrency(purchaseAmount).replace('₹', '').trim();
-        const purchaseAmountX = colPositions.purchaseAmount + colWidths.purchaseAmount - pdf.getTextWidth(purchaseAmountText);
-        pdf.text(purchaseAmountText, purchaseAmountX, centerY);
-
-        yPosition += rowHeight;
+        totalPurchaseAmount += item.quantity * purchaseRate;
       });
 
-      // Total Amounts
-      yPosition += 10;
-      if (yPosition > pageHeight - 30) {
-        pdf.addPage();
-        yPosition = margin;
+      const generatedDate = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      });
+
+      const generatedDateTime = new Date().toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      // Create a hidden div for report rendering
+      const reportDiv = document.createElement('div');
+      reportDiv.style.position = 'absolute';
+      reportDiv.style.left = '-9999px';
+      reportDiv.style.width = '800px';
+      reportDiv.style.padding = '0';
+      reportDiv.style.backgroundColor = '#ffffff';
+      reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
+      // Generate item rows
+      const itemRows = room.items.map((item, index) => {
+        const baseAmount = item.quantity * item.rate;
+        const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
+        const purchaseAmount = item.quantity * purchaseRate;
+        const categoryDisplay = typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : (item.category || 'N/A');
+        
+        return `
+          <tr style="border-bottom: 1px solid #f3f4f6; ${index % 2 === 0 ? 'background-color: #fafafa;' : ''}">
+            <td style="padding: 14px 8px; text-align: center; font-size: 13px; color: #6b7280; font-weight: 500; vertical-align: top;">${index + 1}</td>
+            <td style="padding: 14px 8px; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">
+              <div style="font-weight: 600; margin-bottom: 4px; color: #111827;">${item.name || 'N/A'}</div>
+              <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
+                <span style="background-color: ${getCategoryColorHex(item.category)}; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
+              </div>
+            </td>
+            <td style="padding: 14px 8px; text-align: center; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">
+              <div style="font-weight: 600; margin-bottom: 2px;">${item.quantity}</div>
+              <div style="font-size: 11px; color: #6b7280;">${formatUnit(item.unit)}</div>
+            </td>
+            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(item.rate)}</td>
+            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(purchaseRate)}</td>
+            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(baseAmount)}</td>
+            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #059669; font-weight: 600; vertical-align: top;">${formatCurrency(purchaseAmount)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Generate category summary rows
+      const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
+        const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background-color: #f9fafb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="background-color: ${getCategoryColorHex(category)}; color: white; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600;">${categoryDisplay}</span>
+              <div style="font-weight: 600; color: #111827; font-size: 14px;">${summary.count} items</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 12px; color: #6b7280; margin-bottom: 2px;">Base: ${formatCurrency(summary.totalBaseAmount)}</div>
+              <div style="font-weight: 600; color: #059669; font-size: 14px;">Purchase: ${formatCurrency(summary.totalPurchaseAmount)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      reportDiv.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto; background: white;">
+          <!-- Header with Gradient -->
+          <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 40px 48px; color: white; border-radius: 12px 12px 0 0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+              <div>
+                <h2 style="font-size: 32px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.5px;">BILL OF QUANTITIES</h2>
+                <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 400;">Professional Interior Design BOQ</p>
+              </div>
+              <div style="text-align: right; background: rgba(255, 255, 255, 0.1); padding: 16px 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+                <div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">Document Date</div>
+                <div style="font-size: 16px; font-weight: 600;">${generatedDate}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Report Content -->
+          <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <!-- Project Info Section -->
+            <div style="margin-bottom: 32px; padding: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; border: 1px solid #e2e8f0;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Project / Site</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #0f172a;">${activeSite?.name || 'N/A'}</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Room / Area</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #0f172a;">${room.name}</div>
+                </div>
+              </div>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #cbd5e1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Total Items</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #0f172a;">${room.items.length}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Generated On</div>
+                    <div style="font-size: 13px; font-weight: 500; color: #475569;">${generatedDateTime}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Category Summary -->
+            <div style="margin-bottom: 40px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">Summary by Category</h3>
+              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                ${categoryRows}
+              </div>
+            </div>
+            
+            <!-- BOQ Items Table -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">Detailed Items</h3>
+              <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+                    <th style="padding: 16px 8px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">S.No</th>
+                    <th style="padding: 16px 8px; text-align: left; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Item Description</th>
+                    <th style="padding: 16px 8px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Quantity</th>
+                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Base Rate</th>
+                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Purchase Rate</th>
+                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Base Amount</th>
+                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Purchase Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemRows}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Total Amounts Section -->
+            <div style="margin-top: 40px;">
+              <div style="padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #86efac;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 2px solid #86efac;">
+                  <div style="font-size: 16px; font-weight: 600; color: #166534;">Total Base Amount:</div>
+                  <div style="font-size: 20px; font-weight: 700; color: #166534;">${formatCurrency(totalBaseAmount)}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="font-size: 20px; font-weight: 700; color: #166534;">Total Purchase Amount:</div>
+                  <div style="font-size: 32px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalPurchaseAmount)}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
+              <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
+                <p style="margin: 0 0 8px 0; font-weight: 500;">This is a computer-generated Bill of Quantities. No signature required.</p>
+                <p style="margin: 0;">Generated on ${generatedDateTime} by IntirorHub</p>
+              </div>
+              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #1e293b; font-weight: 700;">IntirorHub</span> - Professional Interior Design Management</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(reportDiv);
+
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Convert to PDF using html2canvas and jsPDF
+      const canvas = await html2canvas(reportDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: reportDiv.scrollWidth,
+        height: reportDiv.scrollHeight,
+      });
+
+      // Clean up
+      document.body.removeChild(reportDiv);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      // Calculate ratio to fit width
+      const ratio = pdfWidth / (imgWidth * 0.264583); // Convert pixels to mm (96 DPI)
+      const scaledWidth = pdfWidth;
+      const scaledHeight = (imgHeight * 0.264583) * ratio;
+      
+      const imgX = 0;
+      let imgY = 0;
+      let remainingHeight = scaledHeight;
+
+      // Add pages and split image across pages if needed
+      while (remainingHeight > 0) {
+        if (imgY < 0) {
+          pdf.addPage();
+        }
+        
+        pdf.addImage(imgData, 'PNG', imgX, imgY, scaledWidth, scaledHeight, undefined, 'FAST');
+        
+        if (remainingHeight <= pdfHeight) {
+          break;
+        }
+        
+        remainingHeight -= pdfHeight;
+        imgY -= pdfHeight;
       }
-
-      // Draw total line
-      pdf.setLineWidth(1);
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      
-      // Base Price Total (right-aligned)
-      const totalBaseLabel = 'TOTAL BASE AMOUNT:';
-      const totalBaseLabelX = colPositions.baseAmount - pdf.getTextWidth(totalBaseLabel) - 5;
-      pdf.text(totalBaseLabel, totalBaseLabelX, yPosition + 5);
-      const totalBaseText = formatCurrency(totalBaseAmount).replace('₹', '').trim();
-      const totalBaseX = colPositions.baseAmount + colWidths.baseAmount - pdf.getTextWidth(totalBaseText);
-      pdf.text(totalBaseText, totalBaseX, yPosition + 5);
-      
-      yPosition += 10;
-      
-      // Purchase Price Total (highlighted box)
-      pdf.setFontSize(12);
-      pdf.setFillColor(240, 255, 240);
-      const totalBoxHeight = 12;
-      pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, totalBoxHeight, 'F');
-      
-      const totalPurchaseLabel = 'TOTAL PURCHASE AMOUNT:';
-      const totalPurchaseLabelX = colPositions.purchaseAmount - pdf.getTextWidth(totalPurchaseLabel) - 5;
-      pdf.text(totalPurchaseLabel, totalPurchaseLabelX, yPosition + 5);
-      
-      const totalPurchaseText = formatCurrency(totalPurchaseAmount).replace('₹', '').trim();
-      const totalPurchaseX = colPositions.purchaseAmount + colWidths.purchaseAmount - pdf.getTextWidth(totalPurchaseText);
-      pdf.text(totalPurchaseText, totalPurchaseX, yPosition + 5);
-      
-      // Draw box around purchase total
-      pdf.setLineWidth(1.5);
-      pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, totalBoxHeight);
-
-      // Footer
-      const footerY = pageHeight - 20;
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(8);
-      pdf.text('Generated by IntirorHub - Professional Interior Design Management', pageWidth / 2, footerY, { align: 'center' });
 
       return pdf;
     } catch (error) {
       console.error('Error in generatePDFFromElement:', error);
-      throw error; // Re-throw to be caught by handleExportPDF
+      throw error;
     }
   };
 // Helper function to get static image based on category/tag
@@ -791,7 +832,7 @@ const filteredLibraryItems = useMemo(() => {
   const handleExportPDF = async (room: Room) => {
     try {
       if (!room.items || room.items.length === 0) {
-        alert('No items found in this room to export.');
+        showToast('No items found in this room to export.', 'error');
         return;
       }
 
@@ -800,11 +841,11 @@ const filteredLibraryItems = useMemo(() => {
       const projectName = activeSite?.name || 'Project';
       const filename = `${projectName}_${room.name}_BOQ_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(filename);
-      alert(`PDF downloaded successfully as: ${filename}`);
+      showToast(`PDF downloaded successfully as: ${filename}`);
     } catch (err) {
       console.error('Simple PDF export failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      alert(`Failed to generate PDF: ${errorMessage}`);
+      showToast(`Failed to generate PDF: ${errorMessage}`, 'error');
     }
   };
 
@@ -869,12 +910,38 @@ const filteredLibraryItems = useMemo(() => {
     : rooms.filter(room => room.id === selectedRoom);
 
   const filterItemsByCategory = (items: BOQItem[]) => {
-    if (selectedCategory === "all") return items;
-    return items.filter(item => item.category === selectedCategory);
+    if (selectedCategory === "All") return items;
+    return items.filter(item => {
+      // Normalize category for comparison (handle case differences)
+      const itemCategory = typeof item.category === 'string' ? item.category : '';
+      return itemCategory.toLowerCase() === selectedCategory.toLowerCase();
+    });
   };
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString("en-IN")}`;
+  };
+
+  const getCategoryColor = (category: string | undefined): string => {
+    if (!category) return 'bg-slate-400';
+    const normalizedCategory = category.toLowerCase();
+    if (normalizedCategory.includes('furniture')) return 'bg-blue-500';
+    if (normalizedCategory.includes('finishes')) return 'bg-emerald-500';
+    if (normalizedCategory.includes('hardware')) return 'bg-amber-500';
+    if (normalizedCategory.includes('electrical')) return 'bg-purple-500';
+    if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return 'bg-slate-500';
+    return 'bg-slate-400'; // Default color
+  };
+
+  const getCategoryColorHex = (category: string | undefined): string => {
+    if (!category) return '#94a3b8';
+    const normalizedCategory = category.toLowerCase();
+    if (normalizedCategory.includes('furniture')) return '#3b82f6';
+    if (normalizedCategory.includes('finishes')) return '#10b981';
+    if (normalizedCategory.includes('hardware')) return '#f59e0b';
+    if (normalizedCategory.includes('electrical')) return '#a855f7';
+    if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return '#64748b';
+    return '#94a3b8'; // Default color
   };
 
   const formatUnit = (unit: string) => {
@@ -891,37 +958,15 @@ const filteredLibraryItems = useMemo(() => {
     return unitMap[unit] || unit;
   };
 
-  // Generate PDF report for all materials
+  // Generate PDF report for all materials using HTML template
   const generateMaterialsPDF = async () => {
     try {
       if (!materials || materials.length === 0) {
-        alert('No materials found to export.');
+        showToast('No materials found to export.', 'error');
         return;
       }
 
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPosition = margin;
-
-      // Header
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('MATERIAL USED REPORT', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-
-      // Site/Project Info
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Site Name: ${activeSite?.name || 'N/A'}`, margin, yPosition);
-      yPosition += 8;
-      pdf.text(`Generated Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`, margin, yPosition);
-      yPosition += 8;
-      pdf.text(`Total Materials: ${materials.length}`, margin, yPosition);
-      yPosition += 15;
-
-      // Summary by Category
+      // Calculate summary by category
       const categorySummary: Record<string, { count: number; totalCost: number }> = {};
       materials.forEach((material) => {
         const cat = material.category || 'Other';
@@ -932,206 +977,180 @@ const filteredLibraryItems = useMemo(() => {
         categorySummary[cat].totalCost += material.cost;
       });
 
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Summary by Category', margin, yPosition);
-      yPosition += 8;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      Object.entries(categorySummary).forEach(([category, summary]) => {
-        if (yPosition > pageHeight - 30) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        pdf.text(`${category}: ${summary.count} items - Total: ${formatCurrency(summary.totalCost)}`, margin + 5, yPosition);
-        yPosition += 7;
+      const totalCost = materials.reduce((sum, m) => sum + (m.cost || 0), 0);
+      const generatedDate = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
       });
 
-      yPosition += 10;
+      // Create a hidden div for report rendering
+      const reportDiv = document.createElement('div');
+      reportDiv.style.position = 'absolute';
+      reportDiv.style.left = '-9999px';
+      reportDiv.style.width = '800px';
+      reportDiv.style.padding = '40px';
+      reportDiv.style.backgroundColor = '#ffffff';
+      reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-      // Materials Details Table
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Material Details', margin, yPosition);
-      yPosition += 10;
+      // Generate materials table rows
+      const materialsRows = materials.map((material, index) => {
+        const descriptionParts = material.description?.split("•") || [];
+        const brand = descriptionParts[0]?.trim() || "";
+        const model = descriptionParts[1]?.trim() || "";
+        const hasWarranty = !!(material.warranty?.duration || material.warranty?.model);
+        const warrantyInfo = hasWarranty 
+          ? `${material.warranty?.duration || ''}${material.warranty?.model ? ` • ${material.warranty.model}` : ''}`.trim()
+          : 'N/A';
 
-      // Table Header
-      pdf.setFontSize(9);
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, 'F');
-      pdf.setLineWidth(0.5);
-      pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10);
+        return `
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 12px 8px; text-align: center; font-size: 13px; color: #6b7280; font-weight: 500;">${index + 1}</td>
+            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">
+              <div style="font-weight: 600; margin-bottom: 4px;">${material.name || 'N/A'}</div>
+              ${brand || model ? `<div style="font-size: 11px; color: #6b7280;">${brand}${model ? ` • ${model}` : ''}</div>` : ''}
+            </td>
+            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">${material.category || 'N/A'}</td>
+            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">${material.installedAt || 'N/A'}</td>
+            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">
+              ${material.vendor?.name || 'N/A'}${material.vendor?.city ? `<br><span style="font-size: 11px; color: #6b7280;">${material.vendor.city}</span>` : ''}
+            </td>
+            <td style="padding: 12px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 600;">${formatCurrency(material.cost || 0)}</td>
+            <td style="padding: 12px 8px; font-size: 12px; color: #6b7280; font-weight: 400;">${warrantyInfo}</td>
+          </tr>
+        `;
+      }).join('');
 
-      const colPositions = {
-        sno: margin + 5,
-        name: margin + 20,
-        category: margin + 80,
-        installedAt: margin + 110,
-        vendor: margin + 150,
-        cost: pageWidth - margin - 30
-      };
+      // Generate category summary rows
+      const categoryRows = Object.entries(categorySummary).map(([category, summary]) => `
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+          <div style="font-weight: 600; color: #111827; font-size: 14px;">${category}</div>
+          <div style="font-weight: 600; color: #6b7280; font-size: 14px;">${summary.count} items</div>
+          <div style="font-weight: 600; color: #059669; font-size: 14px; text-align: right;">${formatCurrency(summary.totalCost)}</div>
+        </div>
+      `).join('');
 
-      pdf.text('S.No', colPositions.sno, yPosition + 2);
-      pdf.text('Material Name', colPositions.name, yPosition + 2);
-      pdf.text('Category', colPositions.category, yPosition + 2);
-      pdf.text('Installed At', colPositions.installedAt, yPosition + 2);
-      pdf.text('Vendor', colPositions.vendor, yPosition + 2);
-      pdf.text('Cost (₹)', colPositions.cost, yPosition + 2);
-      yPosition += 12;
-
-      // Table Content
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-
-      materials.forEach((material, index) => {
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
-          pdf.addPage();
-          yPosition = margin;
+      reportDiv.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
+          <!-- Header with Company Name -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
+            <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${activeSite?.name || 'Company Name'}</h2>
+            <p style="font-size: 14px; margin: 0; opacity: 0.95;">Material Used Report</p>
+          </div>
           
-          // Redraw header
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, 'F');
-          pdf.setLineWidth(0.5);
-          pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10);
-          pdf.text('S.No', colPositions.sno, yPosition + 2);
-          pdf.text('Material Name', colPositions.name, yPosition + 2);
-          pdf.text('Category', colPositions.category, yPosition + 2);
-          pdf.text('Installed At', colPositions.installedAt, yPosition + 2);
-          pdf.text('Vendor', colPositions.vendor, yPosition + 2);
-          pdf.text('Cost (₹)', colPositions.cost, yPosition + 2);
-          yPosition += 12;
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(8);
-        }
+          <!-- Report Content -->
+          <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <!-- Report Title -->
+            <div style="text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
+              <h1 style="font-size: 36px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: 1px;">MATERIAL USED REPORT</h1>
+              <p style="font-size: 16px; color: #6b7280; margin: 0;">Complete Material Inventory</p>
+            </div>
+            
+            <!-- Report Details -->
+            <div style="margin-bottom: 32px;">
+              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Site/Project:</div>
+                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${activeSite?.name || 'N/A'}</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Total Materials:</div>
+                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${materials.length}</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 16px 0;">
+                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Generated Date:</div>
+                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${generatedDate}</div>
+              </div>
+            </div>
 
-        const isEvenRow = index % 2 === 0;
-        if (isEvenRow) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, 15, 'F');
-        }
+            <!-- Category Summary -->
+            <div style="margin-bottom: 40px; padding: 24px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Summary by Category</h3>
+              ${categoryRows}
+              <div style="display: flex; justify-content: space-between; padding: 16px 0 0 0; margin-top: 16px; border-top: 2px solid #e5e7eb;">
+                <div style="font-weight: 700; color: #111827; font-size: 16px;">Total</div>
+                <div style="font-weight: 700; color: #059669; font-size: 16px; text-align: right;">${formatCurrency(totalCost)}</div>
+              </div>
+            </div>
+            
+            <!-- Materials Table -->
+            <div style="margin-bottom: 32px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Material Details</h3>
+              <table style="width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                  <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">S.No</th>
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Material Name</th>
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Category</th>
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Installed At</th>
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Vendor</th>
+                    <th style="padding: 14px 8px; text-align: right; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Cost</th>
+                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Warranty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${materialsRows}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Total Cost Section -->
+            <div style="margin-top: 40px; padding: 32px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #bae6fd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 20px; font-weight: 600; color: #0c4a6e;">Total Cost:</div>
+                <div style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalCost)}</div>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
+              <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
+                <p style="margin: 0 0 8px 0;">This is a computer-generated report. No signature required.</p>
+                <p style="margin: 0;">Generated on ${new Date().toLocaleString("en-IN")}</p>
+              </div>
+              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
 
-        pdf.setLineWidth(0.3);
-        pdf.rect(margin, yPosition - 3, pageWidth - 2 * margin, 15);
+      document.body.appendChild(reportDiv);
 
-        // Serial number
-        pdf.text((index + 1).toString(), colPositions.sno, yPosition + 4);
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Material name (with word wrap)
-        const nameLines = pdf.splitTextToSize(material.name || 'N/A', 50);
-        pdf.text(nameLines, colPositions.name, yPosition + 4);
-
-        // Category
-        pdf.text(material.category || 'N/A', colPositions.category, yPosition + 4);
-
-        // Installed At (with word wrap)
-        const installedAtLines = pdf.splitTextToSize(material.installedAt || 'N/A', 35);
-        pdf.text(installedAtLines, colPositions.installedAt, yPosition + 4);
-
-        // Vendor
-        const vendorText = material.vendor?.name || 'N/A';
-        pdf.text(pdf.splitTextToSize(vendorText, 30), colPositions.vendor, yPosition + 4);
-
-        // Cost (right-aligned)
-        const costText = formatCurrency(material.cost).replace('₹', '').trim();
-        const costWidth = pdf.getTextWidth(costText);
-        pdf.text(costText, colPositions.cost + 25 - costWidth, yPosition + 4);
-
-        yPosition += 15;
+      // Convert to PDF using html2canvas and jsPDF
+      const canvas = await html2canvas(reportDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
       });
 
-      // Total Cost
-      yPosition += 10;
-      if (yPosition > pageHeight - 20) {
-        pdf.addPage();
-        yPosition = margin;
-      }
+      // Clean up
+      document.body.removeChild(reportDiv);
 
-      pdf.setLineWidth(1);
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
 
-      const totalCost = materials.reduce((sum, m) => sum + m.cost, 0);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      pdf.text('TOTAL COST:', pageWidth - margin - 60, yPosition + 5);
-      pdf.text(formatCurrency(totalCost).replace('₹', ''), pageWidth - margin - 25, yPosition + 5);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
 
-      // Document Links Section
-      yPosition += 20;
-      if (yPosition > pageHeight - 50) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Document Links', margin, yPosition);
-      yPosition += 10;
-
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-
-      materials.forEach((material, index) => {
-        if (yPosition > pageHeight - 30) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-
-        const hasDocuments = material.invoice || material.photo || material.warrantyDoc;
-        if (hasDocuments) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${index + 1}. ${material.name}`, margin, yPosition);
-          yPosition += 6;
-          pdf.setFont('helvetica', 'normal');
-
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-          
-          if (material.invoice) {
-            const invoiceUrl = material.invoice.startsWith('http') 
-              ? material.invoice 
-              : `${baseUrl}${material.invoice}`;
-            pdf.text(`   Invoice: ${invoiceUrl}`, margin + 5, yPosition);
-            yPosition += 6;
-          }
-
-          if (material.photo) {
-            const photoUrl = material.photo.startsWith('http') 
-              ? material.photo 
-              : `${baseUrl}${material.photo}`;
-            pdf.text(`   Photo: ${photoUrl}`, margin + 5, yPosition);
-            yPosition += 6;
-          }
-
-          if (material.warrantyDoc) {
-            const warrantyUrl = material.warrantyDoc.startsWith('http') 
-              ? material.warrantyDoc 
-              : `${baseUrl}${material.warrantyDoc}`;
-            pdf.text(`   Warranty: ${warrantyUrl}`, margin + 5, yPosition);
-            yPosition += 6;
-          }
-
-          yPosition += 3;
-        }
-      });
-
-      // Footer
-      const footerY = pageHeight - 15;
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(8);
-      pdf.text('Generated by IntirorHub - Professional Interior Design Management', pageWidth / 2, footerY, { align: 'center' });
-
-      // Save PDF
-      const siteName = activeSite?.name || 'Project';
+      pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+      
+      const siteName = (activeSite?.name || 'Materials').replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const filename = `${siteName}_Materials_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(filename);
-      
-      alert(`PDF report downloaded successfully as: ${filename}`);
+
+      showToast(`PDF report downloaded successfully as: ${filename}`);
     } catch (error) {
       console.error('Error generating materials PDF:', error);
-      alert('Failed to generate PDF report. Please try again.');
+      showToast('Failed to generate PDF report. Please try again.', 'error');
     }
   };
 
@@ -1202,7 +1221,7 @@ const filteredLibraryItems = useMemo(() => {
       refetchMaterials();
     } catch (error: any) {
       console.error("Error adding material:", error);
-      alert(error.message || "Failed to add material");
+      showToast(error.message || "Failed to add material", 'error');
     }
   };
 
@@ -1242,7 +1261,7 @@ const filteredLibraryItems = useMemo(() => {
       refetchMaterials();
     } catch (error: any) {
       console.error("Error updating material:", error);
-      alert(error.message || "Failed to update material");
+      showToast(error.message || "Failed to update material", 'error');
     }
   };
 
@@ -1256,14 +1275,16 @@ const filteredLibraryItems = useMemo(() => {
       refetchMaterials();
     } catch (error) {
       console.error("Failed to delete material", error);
-      alert("Failed to delete material");
+      showToast("Failed to delete material", 'error');
     }
   };
 
   const handleEditMaterial = (material: MaterialDto) => {
     setEditingMaterial(material);
+    // Handle legacy "Electronics" category by mapping to "Electrical"
+    const category = (material.category as string) === "Electronics" ? "Electrical" : material.category;
     setMaterialForm({
-      category: material.category,
+      category: category as "Furniture" | "Finishes" | "Hardware" | "Electrical",
       name: material.name,
       description: material.description || "",
       installedAt: material.installedAt,
@@ -1286,9 +1307,11 @@ const filteredLibraryItems = useMemo(() => {
       const searchMatch =
         item.name?.toLowerCase().includes(search) ||
         item.vendor?.name?.toLowerCase().includes(search);
+      // Map legacy "Electronics" category to "Electrical" for filtering
+      const itemCategory = (item.category as string) === "Electronics" ? "Electrical" : item.category;
       const categoryMatch =
         materialCategory === "All" ||
-        item.category === materialCategory;
+        itemCategory === materialCategory;
       return searchMatch && categoryMatch;
     });
   }, [materials, materialSearch, materialCategory]);
@@ -1381,10 +1404,10 @@ const filteredLibraryItems = useMemo(() => {
 
             {/* CATEGORY PILLS */}
             <div className="flex gap-3 mb-4 overflow-x-auto no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-  {["All", "Furniture", "Finishes", "Hardware", "Electrical", "Electronics", "Services"].map((cat) => (
+  {(["All", "Furniture", "Finishes", "Hardware", "Electrical"] as const).map((cat) => (
     <button
       key={cat}
-      onClick={() => setLibraryCategory(cat as any)}
+      onClick={() => setLibraryCategory(cat)}
       className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition
         ${
           libraryCategory === cat
@@ -1463,7 +1486,7 @@ const filteredLibraryItems = useMemo(() => {
     try {
       const newRate = parseFloat(editingLibraryRateValue);
       if (isNaN(newRate) || newRate <= 0) {
-        alert("Please enter a valid rate");
+        showToast("Please enter a valid rate", 'error');
         return;
       }
 
@@ -1483,7 +1506,7 @@ const filteredLibraryItems = useMemo(() => {
       setEditingLibraryRate(null);
     } catch (error) {
       console.error("Failed to update rate", error);
-      alert("Failed to update rate. Please try again.");
+      showToast("Failed to update rate. Please try again.", 'error');
       setEditingLibraryRate(null);
     }
   };
@@ -1497,19 +1520,62 @@ const filteredLibraryItems = useMemo(() => {
     if (!token || !activeSite) return;
     
     try {
+      // Get category from library item - normalize to match BOQ category format
+      const getCategoryFromLibrary = (): "Furniture" | "Finishes" | "Hardware" | "Electrical" | "Miscellaneous" => {
+        const category = item.Category || "";
+        const tag = (item.tag || "").toUpperCase();
+        
+        // Check category first
+        if (category) {
+          const normalizedCategory = category.toLowerCase();
+          if (normalizedCategory.includes('furniture')) return "Furniture";
+          if (normalizedCategory.includes('finishes')) return "Finishes";
+          if (normalizedCategory.includes('hardware')) return "Hardware";
+          if (normalizedCategory.includes('electrical') || normalizedCategory.includes('electronics')) return "Electrical";
+          if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return "Miscellaneous";
+        }
+        
+        // Check tag for category hints
+        if (tag.includes("ELECTRICAL") || tag.includes("LIGHT") || tag.includes("ELECTRONIC")) return "Electrical";
+        if (tag.includes("FLOOR") || tag.includes("WALL") || tag.includes("CEILING") || tag.includes("PAINT") || tag.includes("LAMINATE")) return "Finishes";
+        if (tag.includes("HARDWARE") || tag.includes("HINGE") || tag.includes("HANDLE")) return "Hardware";
+        
+        // Default to Furniture if it's furniture-related items
+        if (tag.includes("BED") || tag.includes("WARDROBE") || tag.includes("TV") || tag.includes("UNIT") || 
+            tag.includes("TABLE") || tag.includes("SOFA") || tag.includes("CHAIR") || tag.includes("DESK")) {
+          return "Furniture";
+        }
+        
+        // Default to Furniture if no match
+        return "Furniture";
+      };
+
+      const category = getCategoryFromLibrary();
+
       const payload = {
         roomName: inputs.room,
         itemName: item.name,
         quantity: inputs.quantity,
         unit: inputs.unit,
         rate: displayRate || item.ratePerQty,
+        category: category,
         totalCost: totalAmount,
         comments: "",
         siteId: activeSite.id,
       };
 
       await boqApi.addBOQItem(payload, token);
-      fetchBOQItems();
+      
+      // Show success toast immediately after API call succeeds
+      showToast("Item added to BOQ successfully!");
+      
+      // Refresh BOQ items (non-blocking - errors won't prevent toast from showing)
+      try {
+        await fetchBOQItems();
+      } catch (fetchError) {
+        console.error("Failed to refresh BOQ items", fetchError);
+        // Don't show error toast - the item was added successfully
+      }
       
       // Reset inputs
       setLibraryItemInputs(prev => {
@@ -1517,11 +1583,9 @@ const filteredLibraryItems = useMemo(() => {
         delete newInputs[id];
         return newInputs;
       });
-      
-      alert("Item added to BOQ successfully!");
     } catch (error) {
       console.error("Failed to add to BOQ", error);
-      alert("Failed to add item to BOQ");
+      showToast("Failed to add item to BOQ", 'error');
     }
   };
 
@@ -1719,15 +1783,15 @@ const filteredLibraryItems = useMemo(() => {
             </div>
 
             {/* CATEGORY PILLS */}
-            <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {["All", "Finishes", "Hardware", "Electrical", "Electronics"].map((cat) => (
+            <div className="flex gap-3 mb-4 overflow-x-auto no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {(["All", "Furniture", "Finishes", "Hardware", "Electrical"] as const).map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => setMaterialCategory(cat as any)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  onClick={() => setMaterialCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
                     materialCategory === cat
-                      ? "bg-slate-800 text-white"
-                      : "bg-white border border-slate-200 text-slate-500"
+                      ? "bg-slate-900 text-white"
+                      : "bg-white border text-slate-600 hover:bg-slate-100"
                   }`}
                 >
                   {cat}
@@ -1824,7 +1888,7 @@ const filteredLibraryItems = useMemo(() => {
                           <EllipsisVertical className="w-5 h-5" />
                           {openMenuId === material._id && (
                             <div className="absolute right-0 top-8 z-10 bg-white border border-slate-200 rounded shadow-md min-w-[120px]">
-                              {canAddItems && (
+                              {/* {canAddItems && (
                                 <button
                                   onClick={() => {
                                     handleEditMaterial(material);
@@ -1835,7 +1899,7 @@ const filteredLibraryItems = useMemo(() => {
                                   <Pencil className="w-4 h-4" />
                                   Edit
                                 </button>
-                              )}
+                              )} */}
                               {isAdmin && (
                                 <button
                                   onClick={() => {
@@ -2034,14 +2098,26 @@ const filteredLibraryItems = useMemo(() => {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Installed At *</label>
-          <input
-            type="text"
+          <select
             className="w-full p-2 border rounded-lg text-sm"
-            placeholder="e.g., Kitchen, Base Cabinet Shutters"
             value={materialForm.installedAt}
             onChange={(e) => setMaterialForm({ ...materialForm, installedAt: e.target.value })}
             required
-          />
+          >
+            <option value="">Select a room</option>
+            {allRoomNames.length > 0 ? (
+              allRoomNames.map((roomName) => (
+                <option key={roomName} value={roomName}>
+                  {roomName}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No rooms available. Add rooms in BOQ first.</option>
+            )}
+          </select>
+          {allRoomNames.length === 0 && (
+            <p className="text-xs text-gray-500 mt-1">Please add rooms in the BOQ section first.</p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -2275,20 +2351,6 @@ const filteredLibraryItems = useMemo(() => {
                   </div>
                   <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-600">Room Name *</label>
-                      <select
-                        className="w-full mt-1 p-2 border rounded"
-                        value={boqForm.roomName}
-                        onChange={(e) => setBoqForm({ ...boqForm, roomName: e.target.value })}
-                        required
-                      >
-                        <option value="">Select Room</option>
-                        {allRoomNames.map((roomName) => (
-                          <option key={roomName} value={roomName}>{roomName}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
                       <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
                       <input
                         className="w-full mt-1 p-2 border rounded"
@@ -2297,6 +2359,21 @@ const filteredLibraryItems = useMemo(() => {
                         onChange={(e) => setBoqForm({ ...boqForm, itemName: e.target.value })}
                         required
                       />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Category *</label>
+                      <select
+                        className="w-full mt-1 p-2 border rounded"
+                        value={boqForm.category}
+                        onChange={(e) => setBoqForm({ ...boqForm, category: e.target.value as 'Furniture' | 'Finishes' | 'Hardware' | 'Electrical' | 'Miscellaneous' })}
+                        required
+                      >
+                        <option value="Furniture">Furniture</option>
+                        <option value="Finishes">Finishes</option>
+                        <option value="Hardware">Hardware</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Miscellaneous">Miscellaneous</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600">Quantity / Size *</label>
@@ -2309,28 +2386,30 @@ const filteredLibraryItems = useMemo(() => {
                         required
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-600">Unit *</label>
-                      <select
-                        className="w-full mt-1 p-2 border rounded"
-                        value={boqForm.unit}
-                        onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
-                      >
-                        <option>Sq.ft</option>
-                        <option>Rft</option>
-                        <option>Nos</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600">Purchased Price (₹) *</label>
-                      <input
-                        type="number"
-                        className="w-full mt-1 p-2 border rounded"
-                        placeholder="Enter purchased price per unit"
-                        value={boqForm.rate}
-                        onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600">Unit *</label>
+                        <select
+                          className="w-full mt-1 p-2 border rounded"
+                          value={boqForm.unit}
+                          onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
+                        >
+                          <option>Sq.ft</option>
+                          <option>Rft</option>
+                          <option>Nos</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600">Purchased Price (₹) *</label>
+                        <input
+                          type="number"
+                          className="w-full mt-1 p-2 border rounded"
+                          placeholder="Enter purchased price per unit"
+                          value={boqForm.rate}
+                          onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600">Total Cost (₹)</label>
@@ -2360,16 +2439,22 @@ const filteredLibraryItems = useMemo(() => {
                         onChange={(e) => setBoqForm({ ...boqForm, comments: e.target.value })}
                       />
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                      <button type="button" onClick={() => setShowAddModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                      <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add BOQ Item</button>
-                    <button
-  type="button"
-  onClick={() => handleSubmitBOQItem(undefined, true)}
-  className="w-full sm:w-auto px-4 py-2 rounded bg-white border border-indigo-600 text-indigo-600"
->
-  Save & Add Another
-</button>
+                    <div className="flex flex-col gap-2 mt-4">
+                      <div className="flex gap-2">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowAddModal(false)} 
+                          className="flex-1 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit" 
+                          className="flex-1 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors"
+                        >
+                          Add BOQ
+                        </button>
+                      </div>
                     </div>
                   </form>
                 </div>
@@ -2394,32 +2479,49 @@ const filteredLibraryItems = useMemo(() => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex flex-col">
-                      <h3 className="text-base font-semibold">Add New Room</h3>
-                      <span className="text-xs text-gray-500">Add a new room to the Bill of Quantities</span>
+                    <div className="flex flex-col text-left">
+                      <h3 className="text-base font-semibold text-left">Add New Room</h3>
+                      <span className="text-xs text-gray-500 text-left">Add a new room to the Bill of Quantities</span>
                     </div>
                     <button onClick={() => setShowAddRoomModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
                   </div>
                   <form onSubmit={(e) => { e.preventDefault(); handleAddRoom(); }} className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-600">Room Name *</label>
+                      <label className="block text-xs text-gray-600 text-left">Room Name *</label>
                       <input
                         type="text"
-                        className="w-full mt-1 p-2 border rounded"
+                        className="w-full mt-1 p-2 border rounded text-left"
                         placeholder="Enter room name (e.g., Bedroom, Kitchen)"
                         value={newRoomName}
                         onChange={(e) => setNewRoomName(e.target.value)}
                         required
                       />
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 mt-2">
-                      <button type="button" onClick={() => setShowAddRoomModal(false)} className="w-full sm:w-auto px-4 py-2 rounded bg-gray-100">Cancel</button>
-                      <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded bg-indigo-600 text-white">Add Room</button>
+                    <div className="flex flex-row items-center justify-end gap-2 mt-2">
+                      <button type="button" onClick={() => setShowAddRoomModal(false)} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+                      <button type="submit" className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white">Add Room</button>
                     </div>
                   </form>
                 </div>
               </div>
             )}
+
+            {/* Category Filter */}
+            <div className="flex gap-3 mb-4 overflow-x-auto no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {(["All", "Furniture", "Finishes", "Hardware", "Electrical", "Miscellaneous"] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
+                    selectedCategory === cat
+                      ? "bg-slate-900 text-white"
+                      : "bg-white border text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
             <div className="px-1 space-y-6">
               {filteredRooms.map((room) => {
@@ -2427,12 +2529,36 @@ const filteredLibraryItems = useMemo(() => {
                 // Show room even if no items
 
                 const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
+                const isRoomExpanded = expandedRooms.has(room.id);
+                
+                const toggleRoom = () => {
+                  setExpandedRooms(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(room.id)) {
+                      newSet.delete(room.id);
+                    } else {
+                      newSet.add(room.id);
+                    }
+                    return newSet;
+                  });
+                };
 
                 return (
                   <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-[2rem] px-2 py-5 mb-6 shadow-xl shadow-slate-200/50 relative overflow-hidden">
                     {/* Room Header */}
                     <div className="flex justify-between items-center mb-6">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <button
+                          onClick={toggleRoom}
+                          className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          title={isRoomExpanded ? "Collapse room" : "Expand room"}
+                        >
+                          {isRoomExpanded ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </button>
                         {editingRoomId === room.id ? (
                           <div className="flex items-center gap-2">
                             <input
@@ -2457,20 +2583,88 @@ const filteredLibraryItems = useMemo(() => {
                           </div>
                         ) : (
                           <>
-                            <h3 className="text-xl font-bold text-slate-800">{room.name}</h3>
-                            {isAdmin && (
-                              <button
-                                onClick={() => handleEditRoomName(room.id, room.name)}
-                                className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Edit room name"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
+                            <h3 className="text-xl font-bold text-slate-800 cursor-pointer" onClick={toggleRoom}>{room.name}</h3>
+                            {/* Show lock icon to all users when room is locked */}
+                            {lockedRooms.has(room.id) && (
+                              <div className="p-1.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked">
+                                <Lock className="w-4 h-4" />
+                              </div>
+                            )}
+                            {/* Show unlock button only to admins when room is unlocked */}
+                            {isAdmin && !lockedRooms.has(room.id) && (
+                              <>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!token || !activeSite) return;
+                                    
+                                    try {
+                                      await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                      setLockedRooms(prev => {
+                                        const newSet = new Set(prev);
+                                        newSet.add(room.id);
+                                        return newSet;
+                                      });
+                                      showToast("Room locked");
+                                    } catch (error) {
+                                      console.error("Failed to lock room", error);
+                                      showToast("Failed to lock room", 'error');
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                  title="Lock room"
+                                >
+                                  <Unlock className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditRoomName(room.id, room.name)}
+                                  className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit room name"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            {/* Show unlock button to admins when room is locked */}
+                            {isAdmin && lockedRooms.has(room.id) && (
+                              <>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!token || !activeSite) return;
+                                    
+                                    try {
+                                      await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                      setLockedRooms(prev => {
+                                        const newSet = new Set(prev);
+                                        newSet.delete(room.id);
+                                        return newSet;
+                                      });
+                                      showToast("Room unlocked");
+                                    } catch (error) {
+                                      console.error("Failed to unlock room", error);
+                                      showToast("Failed to unlock room", 'error');
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                  title="Unlock room"
+                                >
+                                  <Unlock className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditRoomName(room.id, room.name)}
+                                  className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Edit room name"
+                                  disabled={lockedRooms.has(room.id)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              </>
                             )}
                           </>
                         )}
                       </div>
-                      {canAddItems && (
+                      {canAddItems && !lockedRooms.has(room.id) && (
                         <button
                           onClick={() => {
                             setBoqForm({ ...boqForm, roomName: room.name });
@@ -2484,11 +2678,11 @@ const filteredLibraryItems = useMemo(() => {
                       )}
                     </div>
 
-                    {filteredItems.length > 0 ? (
+                    {isRoomExpanded && filteredItems.length > 0 ? (
                       <>
                         {/* Table Header */}
                         <div className="flex text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">
-                          <div className="w-[45%]">Item Name</div>
+                          <div className="w-[45%] text-left">Item Name</div>
                           <div className="w-[25%] text-center">Quantity</div>
                           <div className="w-[30%] text-right">Rate</div>
                         </div>
@@ -2504,12 +2698,36 @@ const filteredLibraryItems = useMemo(() => {
                                   className={`relative flex items-center pl-2 py-2 cursor-pointer transition-all duration-200 rounded-xl pr-1 mb-4 ${isExpanded ? 'bg-slate-50/80' : 'hover:bg-slate-50'}`}
                                   onClick={() => setExpandedItemId(isExpanded ? null : item.id.toString())}
                                 >
-                                  {/* Left border indicator */}
-                                  <div className={`absolute left-1 top-2 bottom-2 w-1 rounded-full ${item.category === "furniture" ? "bg-blue-500" : "bg-amber-500"}`} />
+                                  {/* Left border indicator - Category based color */}
+                                  <div className={`absolute left-1 top-2 bottom-2 w-1 rounded-full ${getCategoryColor(item.category)}`} />
                                   
                                   {/* Item Name */}
-                                  <div className="w-[45%] pr-2 pl-2">
-                                    <span className="text-[15px] font-medium leading-snug block transition-colors text-slate-900 font-bold">{item.name}</span>
+                                  <div className="w-[45%] pr-2 pl-2 text-left">
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[15px] font-medium leading-snug block transition-colors text-slate-900 font-bold text-left">{item.name}</span>
+                                        {/* Attachment Indicators */}
+                                        {(item.bill || item.photo) && (
+                                          <div className="flex items-center gap-1 flex-shrink-0">
+                                            {item.bill && (
+                                              <div title="Bill attached" className="flex items-center">
+                                                <FileText className="w-3 h-3 text-blue-500" />
+                                              </div>
+                                            )}
+                                            {item.photo && (
+                                              <div title="Photo attached" className="flex items-center">
+                                                <Image className="w-3 h-3 text-emerald-500" />
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {item.category && (
+                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block w-fit ${getCategoryColor(item.category)} text-white`}>
+                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {/* Quantity */}
@@ -2539,6 +2757,20 @@ const filteredLibraryItems = useMemo(() => {
                                 {/* Expanded Content */}
                                 {isExpanded && (
                                   <div className="pb-2 animate-in fade-in slide-in-from-top-4 duration-300 ease-out">
+                                    {/* Category Display */}
+                                    {item.category && (
+                                      <div className="mb-4 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">CATEGORY</div>
+                                        <span className={`text-sm font-semibold px-3 py-1.5 rounded-full inline-block ${getCategoryColor(item.category)} text-white`}>
+                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
+                                        </span>
+
+                                        <span className={`text-sm font-semibold px-3 py-1.5 rounded-full inline-block ${getCategoryColor(item.category)} text-white`}>
+                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
                                     {/* Base Price and Purchased Price */}
                                     <div className="flex gap-3 mb-6">
                                       <div className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
@@ -2548,7 +2780,7 @@ const filteredLibraryItems = useMemo(() => {
                                       <div className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm relative">
                                         <div className="absolute top-4 right-4 w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                                         <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">PURCHASED PRICE</div>
-                                        {isAdmin ? (
+                                        {isAdmin && !lockedRooms.has(room.id) ? (
                                           <div className="relative">
                                             <input
                                               type="number"
@@ -2611,7 +2843,7 @@ const filteredLibraryItems = useMemo(() => {
                                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{formatUnit(item.unit)}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          {isAdmin ? (
+                                          {isAdmin && !lockedRooms.has(room.id) ? (
                                             <>
                                               <button 
                                                 className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2660,7 +2892,7 @@ const filteredLibraryItems = useMemo(() => {
                                       <div className="flex gap-2">
                                         {item.bill ? (
                                           <a
-                                            href={item.bill.startsWith('http') ? item.bill : `${import.meta.env.BACKEND_URL || import.meta.env.VITE_API_BASE_URL || ''}${item.bill}`}
+                                            href={item.bill.startsWith('http') ? item.bill : `${import.meta.env.BACKEND_URL || ''}${item.bill}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition-colors"
@@ -2670,7 +2902,7 @@ const filteredLibraryItems = useMemo(() => {
                                             Bill
                                           </a>
                                         ) : (
-                                          isAdmin && (
+                                          isAdmin && !lockedRooms.has(room.id) && (
                                             <label className="flex-1 py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                               <input
                                                 type="file"
@@ -2695,7 +2927,7 @@ const filteredLibraryItems = useMemo(() => {
                                         )}
                                         {item.photo ? (
                                           <a
-                                            href={item.photo.startsWith('http') ? item.photo : `${import.meta.env.BACKEND_URL || import.meta.env.VITE_API_BASE_URL || ''}${item.photo}`}
+                                            href={item.photo.startsWith('http') ? item.photo : `${import.meta.env.BACKEND_URL || ''}${item.photo}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 py-2 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-indigo-100 transition-colors"
@@ -2705,7 +2937,7 @@ const filteredLibraryItems = useMemo(() => {
                                             Photo
                                           </a>
                                         ) : (
-                                          isAdmin && (
+                                          isAdmin && !lockedRooms.has(room.id) && (
                                             <label className="flex-1 py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                               <input
                                                 type="file"
@@ -2730,6 +2962,23 @@ const filteredLibraryItems = useMemo(() => {
                                         )}
                                       </div>
                                     </div>
+
+                                    {/* Delete Button (Admin Only) */}
+                                    {isAdmin && (
+                                      <div className="mb-4 flex justify-end">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteBOQItem(item.id.toString());
+                                          }}
+                                          className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors"
+                                          title="Delete this item"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          Delete Item
+                                        </button>
+                                      </div>
+                                    )}
 
                                     {/* Collapse Button */}
                                     <div className="flex justify-center">
@@ -2779,7 +3028,7 @@ const filteredLibraryItems = useMemo(() => {
                           </button>
                         </div>
                       </>
-                    ) : (
+                    ) : isRoomExpanded && (
                       <div className="text-center py-8 text-slate-500">
                         <p className="text-sm">No items added to this room yet.</p>
                         <p className="text-xs mt-1">Click "Add Item" to get started.</p>
@@ -2794,6 +3043,19 @@ const filteredLibraryItems = useMemo(() => {
 
 
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className={`px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium ${
+            toast.type === 'success' 
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {toast.message}
+          </div>
+        </div>
+      )}
     </>
 
   );

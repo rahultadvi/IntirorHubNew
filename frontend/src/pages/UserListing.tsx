@@ -1,15 +1,54 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRelatedUsers } from "../component/useRelatedUsers";
-import { Mail, User, Trash2 } from "lucide-react";
+import { Mail, User, Trash2, Settings } from "lucide-react";
 import { userApi } from "../services/api";
 
 const UserListing: React.FC = () => {
   const { token, user: currentUser } = useAuth();
   const { users, loading, error, refetch } = useRelatedUsers(token ?? undefined);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
 
   const isAdmin = currentUser?.role === "ADMIN";
+
+  const allModules = [
+    { value: 'home', label: 'Home' },
+    { value: 'payments', label: 'Payments' },
+    { value: 'boq', label: 'BOQ' },
+    { value: 'expenses', label: 'Expenses' },
+    { value: 'feed', label: 'Feed' },
+    { value: 'invite', label: 'Invite' },
+    { value: 'manage-sites', label: 'Manage Sites' },
+    { value: 'users', label: 'Users' },
+  ];
+
+  const openEditPermissions = (user: any) => {
+    setEditingPermissions(user.id);
+    setSelectedModules(user.allowedModules || allModules.map(m => m.value));
+  };
+
+  const toggleModule = (module: string) => {
+    setSelectedModules((prev) =>
+      prev.includes(module)
+        ? prev.filter((m) => m !== module)
+        : [...prev, module]
+    );
+  };
+
+  const handleSavePermissions = async (userId: string) => {
+    if (!token) return;
+    try {
+      await userApi.updateUserPermissions(userId, { allowedModules: selectedModules }, token);
+      setEditingPermissions(null);
+      setSelectedModules([]);
+      refetch();
+      alert('Permissions updated successfully');
+    } catch (err: any) {
+      alert(err?.message || 'Failed to update permissions');
+    }
+  };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!token) return;
@@ -110,16 +149,25 @@ const UserListing: React.FC = () => {
                     })}
                   </p>
 
-                  {/* Delete Button (Admin only) */}
+                  {/* Edit Permissions & Delete Button (Admin only) */}
                   {isAdmin && user.id !== currentUser?._id && (
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.name)}
-                      disabled={deletingUserId === user.id}
-                      className="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deletingUserId === user.id ? "Deleting..." : "Delete User"}
-                    </button>
+                    <div className="mt-4 flex flex-col gap-2 w-full">
+                      <button
+                        onClick={() => openEditPermissions(user)}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Edit Permissions
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.name)}
+                        disabled={deletingUserId === user.id}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingUserId === user.id ? "Deleting..." : "Delete User"}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -127,6 +175,74 @@ const UserListing: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Permissions Modal */}
+      {editingPermissions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Edit Module Permissions</h2>
+                <button
+                  onClick={() => {
+                    setEditingPermissions(null);
+                    setSelectedModules([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Select the modules this user can access:
+                </p>
+                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                  {allModules.map((module) => (
+                    <label
+                      key={module.value}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedModules.includes(module.value)}
+                        onChange={() => toggleModule(module.value)}
+                        className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {module.label}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setEditingPermissions(null);
+                    setSelectedModules([]);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSavePermissions(editingPermissions)}
+                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                >
+                  Save Permissions
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

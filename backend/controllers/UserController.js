@@ -171,7 +171,7 @@ export const inviteUser = async (req, res) => {
       return res.status(403).json({ message: "Only admins can invite teammates" });
     }
 
-    const { email, name, role, phone, siteIds } = req.body;
+    const { email, name, role, phone, siteIds, allowedModules } = req.body;
     if (!email || !role) {
       return res.status(400).json({ message: "Email and role are required" });
     }
@@ -195,6 +195,7 @@ export const inviteUser = async (req, res) => {
         existing.password = hashedPassword;
         existing.isDeleted = false;
         existing.siteAccess = siteIds && Array.isArray(siteIds) ? siteIds : [];
+        existing.allowedModules = allowedModules && Array.isArray(allowedModules) && allowedModules.length > 0 ? allowedModules : undefined;
         existing.isVerified = true;
         existing.parentId = req.user._id;
         
@@ -238,6 +239,7 @@ export const inviteUser = async (req, res) => {
       role: normalizedRole,
       parentId: req.user._id,
       siteAccess: siteIds && Array.isArray(siteIds) ? siteIds : [],
+      allowedModules: allowedModules && Array.isArray(allowedModules) && allowedModules.length > 0 ? allowedModules : undefined,
       isVerified: true,
     });
 
@@ -270,7 +272,7 @@ export const listCompanyUsers = async (req, res) => {
 
     const members = await userModel
       .find({ companyName: req.user.companyName, isDeleted: { $ne: true } })
-      .select("name email role companyName createdAt siteAccess");
+      .select("name email role companyName createdAt siteAccess allowedModules");
 
     const payload = members.map((member) => ({
       id: member._id,
@@ -283,6 +285,7 @@ export const listCompanyUsers = async (req, res) => {
       joinedAt: member.createdAt,
       siteAccessCount: member.siteAccess ? member.siteAccess.length ?? 0 : 0,
       siteAccess: member.siteAccess ? member.siteAccess.map((id) => id.toString()) : [],
+      allowedModules: member.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
     }));
 
     return res.status(200).json({ users: payload });
@@ -296,7 +299,7 @@ export const listCompanyUsers = async (req, res) => {
 export const listRelatedUsers = async (req, res) => {
   try {
     const companyName = req.user.companyName;
-    const members = await userModel.find({ companyName }).select("name email role companyName createdAt siteAccess");
+    const members = await userModel.find({ companyName }).select("name email role companyName createdAt siteAccess allowedModules");
 
     const payload = members.map((member) => ({
       id: member._id,
@@ -308,6 +311,7 @@ export const listRelatedUsers = async (req, res) => {
       )}`,
       joinedAt: member.createdAt,
       siteAccessCount: member.siteAccess ? member.siteAccess.length ?? 0 : 0,
+      allowedModules: member.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
     }));
 
     return res.status(200).json({ users: payload });
@@ -334,7 +338,7 @@ export const updateUserSiteAccess = async (req, res) => {
       userId,
       { siteAccess: siteIds },
       { new: true }
-    ).select('name email role companyName createdAt siteAccess');
+    ).select('name email role companyName createdAt siteAccess allowedModules');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -348,11 +352,58 @@ export const updateUserSiteAccess = async (req, res) => {
         email: user.email,
         role: user.role,
         siteAccess: user.siteAccess ? user.siteAccess.map((id) => id.toString()) : [],
+        allowedModules: user.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
       },
     });
   } catch (error) {
     console.error('updateUserSiteAccess error', error);
     return res.status(500).json({ message: 'Unable to update user site access' });
+  }
+};
+
+export const updateUserPermissions = async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can update user permissions' });
+    }
+
+    const { userId } = req.params;
+    const { allowedModules } = req.body;
+
+    if (!Array.isArray(allowedModules)) {
+      return res.status(400).json({ message: 'allowedModules must be an array' });
+    }
+
+    const validModules = ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'];
+    const invalidModules = allowedModules.filter(m => !validModules.includes(m));
+    if (invalidModules.length > 0) {
+      return res.status(400).json({ message: `Invalid modules: ${invalidModules.join(', ')}` });
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { allowedModules: allowedModules.length > 0 ? allowedModules : undefined },
+      { new: true }
+    ).select('name email role companyName createdAt siteAccess allowedModules');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({
+      message: 'User permissions updated',
+      user: {
+        id: user._id,
+        name: user.name || user.email,
+        email: user.email,
+        role: user.role,
+        siteAccess: user.siteAccess ? user.siteAccess.map((id) => id.toString()) : [],
+        allowedModules: user.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
+      },
+    });
+  } catch (error) {
+    console.error('updateUserPermissions error', error);
+    return res.status(500).json({ message: 'Unable to update user permissions' });
   }
 };
 
@@ -621,7 +672,7 @@ export const deleteUser = async (req, res) => {
     }
 
     // Mark user as deleted instead of actually deleting
-    await userModel.findByIdAndUpdate(userId, { isDeleted: true });
+    await userModel.deleteOne({ _id: userId });
 
     return res.status(200).json({ message: 'User deleted successfully', userId });
   } catch (error) {
@@ -646,4 +697,5 @@ export default {
   getCompanySites,
   toggleCompanyPayment,
   deleteUser,
+  updateUserPermissions,
 };

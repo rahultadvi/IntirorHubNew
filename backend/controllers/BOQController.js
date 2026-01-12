@@ -1,4 +1,5 @@
 import BOQItem from '../models/boqModel.js';
+import BOQRoomLock from '../models/boqRoomLockModel.js';
 // import Library from '../models/libraryModel.js';
 import Site from '../models/siteModel.js';
 import User from '../models/userModel.js';
@@ -13,7 +14,7 @@ try { fs.mkdirSync(REFERENCE_IMAGE_FOLDER, { recursive: true }); } catch (e) {}
 
 export const addBOQItem = async (req, res) => {
   try {
-    const { roomName, itemName, quantity, unit, rate, purchaseRate, comments, siteId, referenceImageBase64, referenceImageFilename } = req.body;
+    const { roomName, itemName, quantity, unit, rate, purchaseRate, comments, siteId, referenceImageBase64, referenceImageFilename, category } = req.body;
 
     const site = await Site.findById(siteId);
     if (!site) return res.status(404).json({ message: 'Site not found' });
@@ -39,7 +40,8 @@ export const addBOQItem = async (req, res) => {
       siteId,
       status: ['MANAGER', 'AGENT'].includes(req.user.role) ? 'pending' : 'approved',
       createdBy: req.user._id,
-      companyName: req.user.companyName
+      companyName: req.user.companyName,
+      category
     });
 
     // Handle file upload or base64 image
@@ -411,5 +413,78 @@ export const getLibraryItemsByCategory = async (req, res) => {
   } catch (error) {
     console.error('Error fetching library items by category', error);
     res.status(500).json({ message: 'Error fetching items', error: error.message });
+  }
+};
+
+// Lock a BOQ room (Admin only)
+export const lockBOQRoom = async (req, res) => {
+  try {
+    const { siteId, roomName } = req.body;
+
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can lock rooms' });
+    }
+
+    const site = await Site.findById(siteId);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    const hasAccess = site.companyName === req.user.companyName ||
+                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
+    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+
+    // Check if room is already locked
+    const existingLock = await BOQRoomLock.findOne({ siteId, roomName });
+    if (existingLock) {
+      return res.json({ message: 'Room is already locked', locked: true });
+    }
+
+    // Create lock
+    const roomLock = new BOQRoomLock({
+      siteId,
+      roomName,
+      companyName: req.user.companyName,
+      lockedBy: req.user._id
+    });
+
+    await roomLock.save();
+
+    res.json({ message: 'Room locked successfully', locked: true });
+  } catch (error) {
+    console.error('Error locking BOQ room', error);
+    if (error.code === 11000) {
+      // Duplicate key error
+      return res.json({ message: 'Room is already locked', locked: true });
+    }
+    res.status(500).json({ message: 'Error locking room', error: error.message });
+  }
+};
+
+// Unlock a BOQ room (Admin only)
+export const unlockBOQRoom = async (req, res) => {
+  try {
+    const { siteId, roomName } = req.body;
+
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can unlock rooms' });
+    }
+
+    const site = await Site.findById(siteId);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    const hasAccess = site.companyName === req.user.companyName ||
+                      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
+    if (!hasAccess) return res.status(403).json({ message: 'You do not have access to this site' });
+
+    // Remove lock
+    const result = await BOQRoomLock.deleteOne({ siteId, roomName });
+
+    if (result.deletedCount === 0) {
+      return res.json({ message: 'Room was not locked', locked: false });
+    }
+
+    res.json({ message: 'Room unlocked successfully', locked: false });
+  } catch (error) {
+    console.error('Error unlocking BOQ room', error);
+    res.status(500).json({ message: 'Error unlocking room', error: error.message });
   }
 };

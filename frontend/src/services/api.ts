@@ -92,6 +92,7 @@ export interface CompanyUserDto {
   role: UserRole;
   avatar: string;
   joinedAt?: string;
+  allowedModules?: string[];
 }
 
 export interface PaymentDto {
@@ -102,6 +103,7 @@ export interface PaymentDto {
   dueDate: string;
   status: 'paid' | 'due' | 'overdue';
   paidDate?: string;
+  paymentMethod?: 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT';
   siteId: string;
   createdBy: {
     _id: string;
@@ -268,6 +270,7 @@ export const authApi = {
       role: Exclude<UserRole, "ADMIN">;
       phone?: string;
       siteIds?: string[];
+      allowedModules?: string[];
     },
     token: string
   ) =>
@@ -342,8 +345,22 @@ export const userApi = {
   ) =>
     request<{
       message: string;
-      user: { id: string; name: string; email: string; role: string; siteAccess: string[] };
+      user: { id: string; name: string; email: string; role: string; siteAccess: string[]; allowedModules?: string[] };
     }>(`/users/${userId}/site-access`, {
+      method: "PUT",
+      body,
+      token,
+    }),
+
+  updateUserPermissions: (
+    userId: string,
+    body: { allowedModules: string[] },
+    token: string
+  ) =>
+    request<{
+      message: string;
+      user: { id: string; name: string; email: string; role: string; siteAccess: string[]; allowedModules: string[] };
+    }>(`/users/${userId}/permissions`, {
       method: "PUT",
       body,
       token,
@@ -531,12 +548,13 @@ export const paymentApi = {
       token,
     }),
 
-  markAsPaid: (paymentId: string, token: string) =>
+  markAsPaid: (paymentId: string, paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT', token: string) =>
     request<{
       message: string;
       payment: PaymentDto;
     }>(`/payments/${paymentId}/paid`, {
       method: "PUT",
+      body: { paymentMethod },
       token,
     }),
 
@@ -768,6 +786,12 @@ export const boqApi = {
 
   deleteBOQItem: (boqId: string, token: string) =>
     request<{ message: string }>(`/boq/${boqId}`, { method: 'DELETE', token }),
+
+  lockBOQRoom: (body: { siteId: string; roomName: string }, token: string) =>
+    request<{ message: string; locked: boolean }>('/boq/room/lock', { method: 'POST', body, token }),
+
+  unlockBOQRoom: (body: { siteId: string; roomName: string }, token: string) =>
+    request<{ message: string; locked: boolean }>('/boq/room/unlock', { method: 'POST', body, token }),
 };
 
 export const materialApi = {
@@ -824,7 +848,7 @@ export const materialApi = {
 
 export interface MaterialDto {
   _id: string;
-  category: "Finishes" | "Hardware" | "Electrical" | "Electronics";
+  category: "Furniture" | "Finishes" | "Hardware" | "Electrical";
   name: string;
   description?: string;
   installedAt: string;

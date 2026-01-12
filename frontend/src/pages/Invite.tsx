@@ -12,6 +12,7 @@ import {
   Plus,
   X,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
@@ -24,6 +25,7 @@ interface CompanyUser {
   avatar: string;
   siteAccessCount?: number;
   siteAccess?: string[];
+  allowedModules?: string[];
 }
 
 const roles: Array<{
@@ -47,6 +49,7 @@ const Invite: React.FC = () => {
     role: roles[0].value,
   });
   const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const [selectedModules, setSelectedModules] = useState<string[]>(['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -96,6 +99,7 @@ const Invite: React.FC = () => {
           avatar: u.avatar,
           siteAccessCount: (u as any).siteAccessCount ?? 0,
           siteAccess: (u as any).siteAccess ?? [],
+          allowedModules: (u as any).allowedModules ?? allModules.map(m => m.value),
         }));
         setProjectUsers(users);
       } catch (err) {
@@ -123,11 +127,34 @@ const Invite: React.FC = () => {
     );
   };
 
+  const toggleModule = (module: string) => {
+    setSelectedModules((prev) =>
+      prev.includes(module)
+        ? prev.filter((m) => m !== module)
+        : [...prev, module]
+    );
+  };
+
+  const allModules = [
+    { value: 'home', label: 'Home' },
+    { value: 'payments', label: 'Payments' },
+    { value: 'boq', label: 'BOQ' },
+    { value: 'expenses', label: 'Expenses' },
+    { value: 'feed', label: 'Feed' },
+    { value: 'invite', label: 'Invite' },
+    { value: 'manage-sites', label: 'Manage Sites' },
+    { value: 'users', label: 'Users' },
+  ];
+
   // Admin: edit existing user's site access
   const [editingUser, setEditingUser] = useState<CompanyUser | null>(null);
   const [editingSites, setEditingSites] = useState<string[]>([]);
   const [deletingUser, setDeletingUser] = useState<CompanyUser | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Admin: edit existing user's module permissions
+  const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
+  const [editingModules, setEditingModules] = useState<string[]>([]);
 
   const openEditSites = (member: CompanyUser) => {
     setEditingUser(member);
@@ -169,6 +196,39 @@ const Invite: React.FC = () => {
     }
   };
 
+  const openEditPermissions = (member: CompanyUser) => {
+    setEditingPermissions(member.id);
+    setEditingModules(member.allowedModules || allModules.map(m => m.value));
+  };
+
+  const toggleEditingModule = (module: string) => {
+    setEditingModules((prev) =>
+      prev.includes(module)
+        ? prev.filter((m) => m !== module)
+        : [...prev, module]
+    );
+  };
+
+  const handleSavePermissions = async () => {
+    if (!editingPermissions || !token) return;
+    try {
+      await userApi.updateUserPermissions(editingPermissions, { allowedModules: editingModules }, token);
+      setProjectUsers((prev) =>
+        prev.map((p) =>
+          p.id === editingPermissions
+            ? { ...p, allowedModules: [...editingModules] }
+            : p
+        )
+      );
+      setEditingPermissions(null);
+      setEditingModules([]);
+      setSuccess('Permissions updated successfully');
+    } catch (err: any) {
+      console.error("update permissions error", err);
+      setError(err?.message || 'Failed to update permissions');
+    }
+  };
+
   const handleDeleteUser = async () => {
     if (!deletingUser || !token) return;
     
@@ -206,6 +266,7 @@ const Invite: React.FC = () => {
           phone: formData.phone.trim() || undefined,
           role: formData.role,
           siteIds: selectedSites,
+          allowedModules: selectedModules.length > 0 ? selectedModules : undefined,
         },
         token
       );
@@ -215,6 +276,7 @@ const Invite: React.FC = () => {
       );
       setFormData({ email: "", name: "", phone: "", role: roles[0].value });
       setSelectedSites([]);
+      setSelectedModules(['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users']);
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Unable to send invite";
@@ -372,6 +434,35 @@ const Invite: React.FC = () => {
               </div>
             </label>
 
+            <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
+              Module Access (Select allowed modules)
+              <div className="rounded-xl border border-gray-200 bg-white p-4 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  {allModules.map((module) => (
+                    <label
+                      key={module.value}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedModules.includes(module.value)}
+                        onChange={() => toggleModule(module.value)}
+                        className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {module.label}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Default: All modules are allowed. Uncheck modules to restrict access.
+              </p>
+            </label>
+
             <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <Shield className="mt-0.5 h-4 w-4 text-black" />
               <p>
@@ -477,19 +568,29 @@ const Invite: React.FC = () => {
         {member.email}
       </p>
 
-      {/* Role badge and Manage button row */}
-      <div className="flex items-center justify-between mt-auto">
+      {/* Role badge and Manage buttons row */}
+      <div className="flex items-center justify-between mt-auto gap-2">
         <span className="inline-flex items-center rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
           {member.role}
         </span>
         {user?.role === "ADMIN" && (
-          <button
-            type="button"
-            onClick={() => openEditSites(member)}
-            className="rounded-md bg-white px-3 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            Manage sites
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openEditPermissions(member)}
+              className="rounded-md bg-white px-2 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-1"
+              title="Edit permissions"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openEditSites(member)}
+              className="rounded-md bg-white px-3 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              Manage sites
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -546,6 +647,73 @@ const Invite: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* Edit Permissions Modal */}
+        {editingPermissions && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">Edit Module Permissions</h2>
+                  <button
+                    onClick={() => {
+                      setEditingPermissions(null);
+                      setEditingModules([]);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Select the modules this user can access:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                    {allModules.map((module) => (
+                      <label
+                        key={module.value}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editingModules.includes(module.value)}
+                          onChange={() => toggleEditingModule(module.value)}
+                          className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            {module.label}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setEditingPermissions(null);
+                      setEditingModules([]);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSavePermissions}
+                    className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  >
+                    Save Permissions
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Delete User Confirmation Modal */}
         {deletingUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
