@@ -5,7 +5,7 @@ import {
   MessageSquare,
   Image,
   FileText,
-  ThumbsUp,
+  Heart,
   Clock,
   MapPin,
   Loader2,
@@ -180,8 +180,8 @@ const FeedDetail: React.FC = () => {
 
           {/* Actions */}
           <div className="mt-6 flex items-center gap-6 border-t border-gray-100 pt-6">
-            <button className="flex items-center gap-2 text-gray-500 transition hover:text-black">
-              <ThumbsUp className="h-5 w-5" />
+            <button className="flex items-center gap-2 text-rose-500 transition hover:text-rose-600">
+              <Heart className="h-5 w-5 fill-current" />
               <span className="text-sm font-medium">{feedItem.likes} Likes</span>
             </button>
             <button className="flex items-center gap-2 text-gray-500 transition hover:text-black">

@@ -90,8 +90,8 @@ const CreateSiteModal: React.FC<CreateSiteModalProps> = ({ isOpen, onClose, onCr
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Create new site</h2>
-            <p className="text-sm text-gray-500">Add a workspace for a new client or property</p>
+            <h2 className="text-lg font-semibold text-gray-900">Create New Site/ Project</h2>
+            <p className="text-sm text-gray-500">Add a new project to manage BOQ and site details</p>
           </div>
           <button
             type="button"

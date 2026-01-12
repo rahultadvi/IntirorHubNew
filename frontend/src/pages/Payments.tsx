@@ -9,6 +9,7 @@ import {
   Loader2,
   Trash2,
   MoreVertical,
+  Share2,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
@@ -193,6 +194,146 @@ const Payments: React.FC = () => {
     }
   };
 
+  // Helper function to generate PDF blob
+  const generatePDFBlob = async (payment: PaymentDto): Promise<Blob> => {
+    // Create a hidden div for receipt rendering
+    const receiptDiv = document.createElement('div');
+    receiptDiv.style.position = 'absolute';
+    receiptDiv.style.left = '-9999px';
+    receiptDiv.style.width = '800px';
+    receiptDiv.style.padding = '40px';
+    receiptDiv.style.backgroundColor = '#ffffff';
+    receiptDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+    
+    // Use stored payment method or default to 'Bank Transfer'
+    const receiptPaymentMethod = payment.paymentMethod || 'Bank Transfer';
+    
+    const siteName = activeSite?.name || 'N/A';
+    const companyName = user?.companyName || '';
+    const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+    
+    receiptDiv.innerHTML = `
+      <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
+        <!-- Header with Company Name -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
+          <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${siteByCompany}</h2>
+          <p style="font-size: 14px; margin: 0; opacity: 0.95;">Payment Receipt</p>
+        </div>
+        
+        <!-- Receipt Content -->
+        <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <!-- Receipt Title -->
+          <div style="text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
+            <h1 style="font-size: 36px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: 1px;">PAYMENT RECEIPT</h1>
+            <p style="font-size: 16px; color: #6b7280; margin: 0;">Official Payment Confirmation</p>
+          </div>
+          
+          <!-- Receipt Details -->
+          <div style="margin-bottom: 32px;">
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Receipt Number:</div>
+              <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; letter-spacing: 0.5px;">#${payment._id.slice(-8).toUpperCase()}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Title:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${payment.title || 'N/A'}</div>
+            </div>
+            ${payment.description ? `
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Description:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right; max-width: 60%;">${payment.description}</div>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Site/Project:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${activeSite?.name || 'N/A'}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Due Date:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date(payment.dueDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric"
+              })}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Made By:</div>
+              <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; padding: 4px 12px;  border-radius: 6px; display: inline-block;">
+                ${receiptPaymentMethod}
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Status:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">
+                <span style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; color: ${payment.status === 'paid' ? '#059669' : '#d97706'};">
+                  ${payment.status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 16px 0;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Generated Date:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date().toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric"
+              })}</div>
+            </div>
+          </div>
+          
+          <!-- Amount Section -->
+          <div style="margin-top: 40px; padding: 32px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #bae6fd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-size: 20px; font-weight: 600; color: #0c4a6e;">Amount ${payment.status === 'paid' ? 'Paid' : 'Due'}:</div>
+              <div style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(payment.amount)}</div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
+            <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
+              <p style="margin: 0 0 8px 0;">This is a computer-generated receipt. No signature required.</p>
+              <p style="margin: 0;">Generated on ${new Date().toLocaleString("en-IN")}</p>
+            </div>
+            <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
+              <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(receiptDiv);
+    
+    // Wait for rendering
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Convert to PDF using html2canvas and jsPDF
+    const canvas = await html2canvas(receiptDiv, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
+    
+    // Clean up
+    document.body.removeChild(receiptDiv);
+    
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    
+    pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+    
+    // Return PDF as blob
+    return pdf.output('blob');
+  };
+
   const handleDownloadInvoice = async (paymentId: string) => {
     if (!token) return;
     
@@ -203,141 +344,105 @@ const Payments: React.FC = () => {
     }
 
     try {
-      // Create a hidden div for receipt rendering
-      const receiptDiv = document.createElement('div');
-      receiptDiv.style.position = 'absolute';
-      receiptDiv.style.left = '-9999px';
-      receiptDiv.style.width = '800px';
-      receiptDiv.style.padding = '40px';
-      receiptDiv.style.backgroundColor = '#ffffff';
-      receiptDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-      
-      // Use stored payment method or default to 'Bank Transfer'
-      const receiptPaymentMethod = payment.paymentMethod || 'Bank Transfer';
-      
-      receiptDiv.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
-          <!-- Header with Company Name -->
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
-            <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${activeSite?.name || 'Company Name'}</h2>
-            <p style="font-size: 14px; margin: 0; opacity: 0.95;">Payment Receipt</p>
-          </div>
-          
-          <!-- Receipt Content -->
-          <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-            <!-- Receipt Title -->
-            <div style="text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
-              <h1 style="font-size: 36px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: 1px;">PAYMENT RECEIPT</h1>
-              <p style="font-size: 16px; color: #6b7280; margin: 0;">Official Payment Confirmation</p>
-            </div>
-            
-            <!-- Receipt Details -->
-            <div style="margin-bottom: 32px;">
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Receipt Number:</div>
-                <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; letter-spacing: 0.5px;">#${payment._id.slice(-8).toUpperCase()}</div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Title:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${payment.title || 'N/A'}</div>
-              </div>
-              ${payment.description ? `
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Description:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right; max-width: 60%;">${payment.description}</div>
-              </div>
-              ` : ''}
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Site/Project:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${activeSite?.name || 'N/A'}</div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Due Date:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date(payment.dueDate).toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric"
-                })}</div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Made By:</div>
-                <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; padding: 4px 12px; background: #f3f4f6; border-radius: 6px; display: inline-block;">
-                  ${receiptPaymentMethod}
-                </div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Status:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">
-                  <span style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; background: ${payment.status === 'paid' ? '#d1fae5' : '#fef3c7'}; color: ${payment.status === 'paid' ? '#059669' : '#d97706'};">
-                    ${payment.status.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Generated Date:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date().toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric"
-                })}</div>
-              </div>
-            </div>
-            
-            <!-- Amount Section -->
-            <div style="margin-top: 40px; padding: 32px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #bae6fd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 20px; font-weight: 600; color: #0c4a6e;">Amount ${payment.status === 'paid' ? 'Paid' : 'Due'}:</div>
-                <div style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(payment.amount)}</div>
-              </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
-              <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
-                <p style="margin: 0 0 8px 0;">This is a computer-generated receipt. No signature required.</p>
-                <p style="margin: 0;">Generated on ${new Date().toLocaleString("en-IN")}</p>
-              </div>
-              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
-                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(receiptDiv);
-      
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Convert to PDF using html2canvas and jsPDF
-      const canvas = await html2canvas(receiptDiv, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      // Clean up
-      document.body.removeChild(receiptDiv);
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      
-      pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
-      pdf.save(`Payment_Receipt_${payment.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
+      const pdfBlob = await generatePDFBlob(payment);
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Payment_Receipt_${payment.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
       showToast("Receipt downloaded successfully", "success");
     } catch (error) {
       console.error("Error generating receipt:", error);
       showToast("Failed to generate receipt", "error");
+    }
+  };
+
+  const handleShareInvoice = async (paymentId: string) => {
+    if (!token) return;
+    
+    const payment = payments.find(p => p._id === paymentId);
+    if (!payment) {
+      showToast("Payment not found", "error");
+      return;
+    }
+
+    try {
+      const pdfBlob = await generatePDFBlob(payment);
+      const fileName = `Payment_Receipt_${payment.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      
+      // Check if Web Share API is available (mobile browsers)
+      if (navigator.share) {
+        try {
+          // Try sharing with file (works on mobile)
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Payment Receipt - ${payment.title}`,
+              text: `Payment Receipt for ${payment.title} - ${formatCurrency(payment.amount)}`
+            });
+            showToast("Receipt shared successfully", "success");
+            return;
+          }
+        } catch (shareError) {
+          // If file sharing fails, try text-only sharing
+          console.log("File sharing not supported, trying text share");
+        }
+        
+        // Fallback: Share text with download link
+        try {
+          const message = `Payment Receipt for ${payment.title}\nAmount: ${formatCurrency(payment.amount)}\nStatus: ${payment.status.toUpperCase()}\n\nPlease download the PDF receipt.`;
+          await navigator.share({
+            title: `Payment Receipt - ${payment.title}`,
+            text: message
+          });
+          // Also trigger download
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+          showToast("Receipt shared. PDF downloaded.", "success");
+          return;
+        } catch (textShareError) {
+          console.log("Text sharing also failed");
+        }
+      }
+      
+      // Fallback for desktop: Open WhatsApp Web with message and download PDF
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const message = `Payment Receipt for ${payment.title}\nAmount: ${formatCurrency(payment.amount)}\nStatus: ${payment.status.toUpperCase()}\n\nPlease download the attached PDF receipt.`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      
+      // Open WhatsApp in new tab
+      window.open(whatsappUrl, '_blank');
+      
+      // Also trigger download
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up after a delay
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+      
+      showToast("Opening WhatsApp... PDF downloaded. Attach it manually.", "info");
+    } catch (error) {
+      console.error("Error sharing receipt:", error);
+      // If share fails, fallback to download
+      if (error instanceof Error && error.name !== 'AbortError') {
+        showToast("Sharing not supported. Downloading instead...", "info");
+        handleDownloadInvoice(paymentId);
+      }
     }
   };
 
@@ -406,8 +511,17 @@ const Payments: React.FC = () => {
   const receivedAmount = payments
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
-  const dueAmount = payments
-    .filter((p) => p.status === "due" || p.status === "overdue")
+  // Calculate overdue amount - only payments where due date has passed
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+  const overdueAmount = payments
+    .filter((p) => {
+      const dueDate = new Date(p.dueDate);
+      dueDate.setHours(0, 0, 0, 0); // Reset time to start of day
+      const isPastDue = dueDate < today;
+      const isUnpaid = p.status === "due" || p.status === "overdue";
+      return isUnpaid && isPastDue;
+    })
     .reduce((sum, p) => sum + p.amount, 0);
   const pendingAmount = Math.max(0, contractValue - receivedAmount);
   const rawPercent = contractValue > 0 ? Math.round((receivedAmount / contractValue) * 100) : 0;
@@ -460,8 +574,8 @@ const Payments: React.FC = () => {
             <p className="text-xl font-bold text-amber-600">{formatCurrency(pendingAmount)}</p>
           </div>
           <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-slate-100">
-            <p className="text-[10px] font-semibold tracking-wider text-rose-500 mb-2">DUE AMOUNT</p>
-            <p className="text-xl font-bold text-rose-600">{formatCurrency(dueAmount)}</p>
+            <p className="text-[10px] font-semibold tracking-wider text-rose-500 mb-2">OVERDUE</p>
+            <p className="text-xl font-bold text-rose-600">{formatCurrency(overdueAmount)}</p>
           </div>
         </div>
 
@@ -613,13 +727,22 @@ const Payments: React.FC = () => {
               </p>
 
               {payment.status === "paid" ? (
-                <button
-                  onClick={() => handleDownloadInvoice(payment._id)}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
-                >
-                  <Download className="w-5 h-5" />
-                  Download Invoice
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDownloadInvoice(payment._id)}
+                    className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download
+                  </button>
+                  <button
+                    onClick={() => handleShareInvoice(payment._id)}
+                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-200 transition-all"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    Share
+                  </button>
+                </div>
               ) : (
                 <div className="flex gap-3">
                   {isAdmin && (
@@ -648,13 +771,22 @@ const Payments: React.FC = () => {
                     </button>
                   )}
                   {!canManagePayments && (
-                    <button
-                      onClick={() => handleDownloadInvoice(payment._id)}
-                      className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
-                    >
-                      <Download className="w-5 h-5" />
-                      Download Invoice
-                    </button>
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => handleDownloadInvoice(payment._id)}
+                        className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download
+                      </button>
+                      <button
+                        onClick={() => handleShareInvoice(payment._id)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-200 transition-all"
+                      >
+                        <Share2 className="w-5 h-5" />
+                        Share
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

@@ -26,7 +26,7 @@ const Header: React.FC = () => {
   const [isSiteMenuOpen, setIsSiteMenuOpen] = useState(false);
   const siteMenuRef = useRef<HTMLDivElement | null>(null);
   const { user, logout } = useAuth();
-  const { sites, activeSite, setActiveSite, openCreateSite } = useSite();
+  const { sites, activeSite, setActiveSite } = useSite();
   const isAdmin = user?.role === "ADMIN";
 
   const navLinks = useMemo(
@@ -311,7 +311,7 @@ const Header: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsSiteMenuOpen(false);
-                    openCreateSite();
+                    navigate("/home/manage-sites");
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >

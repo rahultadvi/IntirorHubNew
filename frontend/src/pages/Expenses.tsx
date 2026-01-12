@@ -540,13 +540,15 @@ const Expenses: React.FC = () => {
                     )}
 
                     {expense.invoice?.path ? (
-                      <button
-                        onClick={() => expenseApi.downloadInvoice(expense._id, token || '')}
+                      <a 
+                        href={`${import.meta.env.VITE_BACKEND_URL}/${expense.invoice?.path}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
                         className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors"
                       >
                         <FileText className="w-3 h-3" />
                         View Invoice
-                      </button>
+                      </a>
                     ) : (
                       user && user.role !== 'CLIENT' && (
                         <label className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 flex items-center gap-1 hover:bg-slate-200 transition-colors cursor-pointer">

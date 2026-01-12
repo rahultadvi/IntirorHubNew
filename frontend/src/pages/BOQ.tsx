@@ -589,30 +589,31 @@ const handleSubmitBOQItem = async (
       reportDiv.style.backgroundColor = '#ffffff';
       reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-      // Generate item rows
+      // Generate item rows with proper table formatting
       const itemRows = room.items.map((item, index) => {
         const baseAmount = item.quantity * item.rate;
         const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
         const purchaseAmount = item.quantity * purchaseRate;
         const categoryDisplay = typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : (item.category || 'N/A');
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
         
         return `
-          <tr style="border-bottom: 1px solid #f3f4f6; ${index % 2 === 0 ? 'background-color: #fafafa;' : ''}">
-            <td style="padding: 14px 8px; text-align: center; font-size: 13px; color: #6b7280; font-weight: 500; vertical-align: top;">${index + 1}</td>
-            <td style="padding: 14px 8px; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">
-              <div style="font-weight: 600; margin-bottom: 4px; color: #111827;">${item.name || 'N/A'}</div>
-              <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
-                <span style="background-color: ${getCategoryColorHex(item.category)}; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
+          <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
+            <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
+            <td style="padding: 12px 10px; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; min-width: 200px;">
+              <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4;">${(item.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">
+                <span style="background-color: ${getCategoryColorHex(item.category)}; color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
               </div>
             </td>
-            <td style="padding: 14px 8px; text-align: center; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">
+            <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
               <div style="font-weight: 600; margin-bottom: 2px;">${item.quantity}</div>
-              <div style="font-size: 11px; color: #6b7280;">${formatUnit(item.unit)}</div>
+              <div style="font-size: 10px; color: #6b7280;">${formatUnit(item.unit)}</div>
             </td>
-            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(item.rate)}</td>
-            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(purchaseRate)}</td>
-            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 500; vertical-align: top;">${formatCurrency(baseAmount)}</td>
-            <td style="padding: 14px 8px; text-align: right; font-size: 13px; color: #059669; font-weight: 600; vertical-align: top;">${formatCurrency(purchaseAmount)}</td>
+            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(item.rate)}</td>
+            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(purchaseRate)}</td>
+            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 110px; white-space: nowrap;">${formatCurrency(baseAmount)}</td>
+            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #059669; font-weight: 600; vertical-align: middle; width: 120px; white-space: nowrap;">${formatCurrency(purchaseAmount)}</td>
           </tr>
         `;
       }).join('');
@@ -634,6 +635,10 @@ const handleSubmitBOQItem = async (
         `;
       }).join('');
 
+      const siteName = activeSite?.name || 'N/A';
+      const companyName = user?.companyName || '';
+      const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+
       reportDiv.innerHTML = `
         <div style="max-width: 800px; margin: 0 auto; background: white;">
           <!-- Header with Gradient -->
@@ -641,7 +646,7 @@ const handleSubmitBOQItem = async (
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
               <div>
                 <h2 style="font-size: 32px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.5px;">BILL OF QUANTITIES</h2>
-                <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 400;">Professional Interior Design BOQ</p>
+                <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 400;">${siteByCompany}</p>
               </div>
               <div style="text-align: right; background: rgba(255, 255, 255, 0.1); padding: 16px 20px; border-radius: 12px; backdrop-filter: blur(10px);">
                 <div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">Document Date</div>
@@ -689,22 +694,24 @@ const handleSubmitBOQItem = async (
             <!-- BOQ Items Table -->
             <div style="margin-bottom: 32px;">
               <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">Detailed Items</h3>
-              <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-                <thead>
-                  <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
-                    <th style="padding: 16px 8px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">S.No</th>
-                    <th style="padding: 16px 8px; text-align: left; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Item Description</th>
-                    <th style="padding: 16px 8px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Quantity</th>
-                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Base Rate</th>
-                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Purchase Rate</th>
-                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Base Amount</th>
-                    <th style="padding: 16px 8px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Purchase Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${itemRows}
-                </tbody>
-              </table>
+              <div style="overflow-x: visible; border: 2px solid #e5e7eb; border-radius: 12px; background: white;">
+                <table style="width: 100%; border-collapse: collapse; background: white; table-layout: fixed;">
+                  <thead>
+                    <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+                      <th style="padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">S.No</th>
+                      <th style="padding: 14px 10px; text-align: left; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); min-width: 200px;">Item Description</th>
+                      <th style="padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Quantity</th>
+                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Base Rate</th>
+                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Purchase Rate</th>
+                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 110px;">Base Amount</th>
+                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; width: 120px;">Purchase Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemRows}
+                  </tbody>
+                </table>
+              </div>
             </div>
             
             <!-- Total Amounts Section -->
@@ -984,6 +991,10 @@ const filteredLibraryItems = useMemo(() => {
         year: "numeric"
       });
 
+      const siteName = activeSite?.name || 'N/A';
+      const companyName = user?.companyName || '';
+      const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+
       // Create a hidden div for report rendering
       const reportDiv = document.createElement('div');
       reportDiv.style.position = 'absolute';
@@ -1034,7 +1045,7 @@ const filteredLibraryItems = useMemo(() => {
         <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
           <!-- Header with Company Name -->
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
-            <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${activeSite?.name || 'Company Name'}</h2>
+            <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${siteByCompany}</h2>
             <p style="font-size: 14px; margin: 0; opacity: 0.95;">Material Used Report</p>
           </div>
           
@@ -1143,8 +1154,8 @@ const filteredLibraryItems = useMemo(() => {
 
       pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
       
-      const siteName = (activeSite?.name || 'Materials').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const filename = `${siteName}_Materials_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      const filenameSiteName = (activeSite?.name || 'Materials').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const filename = `${filenameSiteName}_Materials_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(filename);
 
       showToast(`PDF report downloaded successfully as: ${filename}`);
@@ -1972,7 +1983,7 @@ const filteredLibraryItems = useMemo(() => {
                       <div className="flex gap-2">
                         {material.invoice ? (
                           <a
-                            href={material.invoice.startsWith('http') ? material.invoice : `${import.meta.env.BACKEND_URL}${material.invoice}`}
+                            href={import.meta.env.VITE_BACKEND_URL + "/" + material.invoice}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition-colors"
@@ -1992,7 +2003,7 @@ const filteredLibraryItems = useMemo(() => {
 
                         {material.photo ? (
                           <a
-                            href={material.photo.startsWith('http') ? material.photo : `${import.meta.env.BACKEND_URL}${material.photo}`}
+                            href={import.meta.env.VITE_BACKEND_URL + "/" + material.photo}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 py-2 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-indigo-100 transition-colors"
@@ -2012,7 +2023,7 @@ const filteredLibraryItems = useMemo(() => {
 
                         {material.warrantyDoc ? (
                           <a
-                            href={material.warrantyDoc.startsWith('http') ? material.warrantyDoc : `${import.meta.env.BACKEND_URL}${material.warrantyDoc}`}
+                            href={import.meta.env.VITE_BACKEND_URL + "/" + material.warrantyDoc}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 py-2 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-emerald-100 transition-colors"
@@ -2583,84 +2594,87 @@ const filteredLibraryItems = useMemo(() => {
                           </div>
                         ) : (
                           <>
-                            <h3 className="text-xl font-bold text-slate-800 cursor-pointer" onClick={toggleRoom}>{room.name}</h3>
-                            {/* Show lock icon to all users when room is locked */}
-                            {lockedRooms.has(room.id) && (
-                              <div className="p-1.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked">
-                                <Lock className="w-4 h-4" />
-                              </div>
-                            )}
-                            {/* Show unlock button only to admins when room is unlocked */}
-                            {isAdmin && !lockedRooms.has(room.id) && (
-                              <>
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!token || !activeSite) return;
-                                    
-                                    try {
-                                      await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
-                                      setLockedRooms(prev => {
-                                        const newSet = new Set(prev);
-                                        newSet.add(room.id);
-                                        return newSet;
-                                      });
-                                      showToast("Room locked");
-                                    } catch (error) {
-                                      console.error("Failed to lock room", error);
-                                      showToast("Failed to lock room", 'error');
-                                    }
-                                  }}
-                                  className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                  title="Lock room"
-                                >
-                                  <Unlock className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleEditRoomName(room.id, room.name)}
-                                  className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Edit room name"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                            {/* Show unlock button to admins when room is locked */}
-                            {isAdmin && lockedRooms.has(room.id) && (
-                              <>
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!token || !activeSite) return;
-                                    
-                                    try {
-                                      await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
-                                      setLockedRooms(prev => {
-                                        const newSet = new Set(prev);
-                                        newSet.delete(room.id);
-                                        return newSet;
-                                      });
-                                      showToast("Room unlocked");
-                                    } catch (error) {
-                                      console.error("Failed to unlock room", error);
-                                      showToast("Failed to unlock room", 'error');
-                                    }
-                                  }}
-                                  className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                  title="Unlock room"
-                                >
-                                  <Unlock className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleEditRoomName(room.id, room.name)}
-                                  className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="Edit room name"
-                                  disabled={lockedRooms.has(room.id)}
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xl font-bold text-slate-800 cursor-pointer" onClick={toggleRoom}>{room.name}</h3>
+                              {/* Show lock icon to ALL users (including CLIENT, AGENT, MANAGER, ADMIN) when room is locked - NO ROLE CHECK */}
+                              {lockedRooms.has(room.id) && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked - No items can be added or edited">
+                                  <Lock className="w-4 h-4" />
+                                  <span className="text-xs font-semibold">Locked</span>
+                                </div>
+                              )}
+                              {/* Show admin-only buttons when room is unlocked */}
+                              {isAdmin && !lockedRooms.has(room.id) && (
+                                <>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!token || !activeSite) return;
+                                      
+                                      try {
+                                        await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                        setLockedRooms(prev => {
+                                          const newSet = new Set(prev);
+                                          newSet.add(room.id);
+                                          return newSet;
+                                        });
+                                        showToast("Room locked");
+                                      } catch (error) {
+                                        console.error("Failed to lock room", error);
+                                        showToast("Failed to lock room", 'error');
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                    title="Lock room"
+                                  >
+                                    <Unlock className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditRoomName(room.id, room.name)}
+                                    className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Edit room name"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                              {/* Show admin-only unlock button when room is locked */}
+                              {isAdmin && lockedRooms.has(room.id) && (
+                                <>
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!token || !activeSite) return;
+                                      
+                                      try {
+                                        await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                        setLockedRooms(prev => {
+                                          const newSet = new Set(prev);
+                                          newSet.delete(room.id);
+                                          return newSet;
+                                        });
+                                        showToast("Room unlocked");
+                                      } catch (error) {
+                                        console.error("Failed to unlock room", error);
+                                        showToast("Failed to unlock room", 'error');
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                    title="Unlock room"
+                                  >
+                                    <Unlock className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditRoomName(room.id, room.name)}
+                                    className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Edit room name"
+                                    disabled={lockedRooms.has(room.id)}
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </>
                         )}
                       </div>
@@ -2722,11 +2736,6 @@ const filteredLibraryItems = useMemo(() => {
                                           </div>
                                         )}
                                       </div>
-                                      {item.category && (
-                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block w-fit ${getCategoryColor(item.category)} text-white`}>
-                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
-                                        </span>
-                                      )}
                                     </div>
                                   </div>
 
@@ -2757,19 +2766,7 @@ const filteredLibraryItems = useMemo(() => {
                                 {/* Expanded Content */}
                                 {isExpanded && (
                                   <div className="pb-2 animate-in fade-in slide-in-from-top-4 duration-300 ease-out">
-                                    {/* Category Display */}
-                                    {item.category && (
-                                      <div className="mb-4 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">CATEGORY</div>
-                                        <span className={`text-sm font-semibold px-3 py-1.5 rounded-full inline-block ${getCategoryColor(item.category)} text-white`}>
-                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
-                                        </span>
-
-                                        <span className={`text-sm font-semibold px-3 py-1.5 rounded-full inline-block ${getCategoryColor(item.category)} text-white`}>
-                                          {typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.category}
-                                        </span>
-                                      </div>
-                                    )}
+                                
                                     
                                     {/* Base Price and Purchased Price */}
                                     <div className="flex gap-3 mb-6">
@@ -2779,7 +2776,7 @@ const filteredLibraryItems = useMemo(() => {
                                       </div>
                                       <div className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm relative">
                                         <div className="absolute top-4 right-4 w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">PURCHASED PRICE</div>
+                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 text-center">PURCHASED PRICE</div>
                                         {isAdmin && !lockedRooms.has(room.id) ? (
                                           <div className="relative">
                                             <input
@@ -2816,7 +2813,7 @@ const filteredLibraryItems = useMemo(() => {
                                                 }
                                               }}
                                               placeholder="Enter purchased price"
-                                              className="text-xl font-bold text-slate-800 w-full bg-transparent border-none outline-none focus:bg-slate-50 rounded px-2 -ml-2"
+                                              className="text-xl font-bold text-slate-800 w-full bg-transparent border-none outline-none focus:bg-slate-50 rounded px-2 -ml-2 text-center"
                                               disabled={updatingItemId === item.id.toString()}
                                               min="0"
                                               step="0.01"
@@ -2828,7 +2825,7 @@ const filteredLibraryItems = useMemo(() => {
                                             )}
                                           </div>
                                         ) : (
-                                          <div className="text-xl font-bold text-slate-800">
+                                          <div className="text-xl font-bold text-slate-800 text-center">
                                             {item.purchaseRate !== null && item.purchaseRate !== undefined ? formatCurrency(item.purchaseRate).replace('₹', '') : formatCurrency(item.rate).replace('₹', '')}
                                           </div>
                                         )}
@@ -2892,7 +2889,7 @@ const filteredLibraryItems = useMemo(() => {
                                       <div className="flex gap-2">
                                         {item.bill ? (
                                           <a
-                                            href={item.bill.startsWith('http') ? item.bill : `${import.meta.env.BACKEND_URL || ''}${item.bill}`}
+                                            href={import.meta.env.VITE_BACKEND_URL + "/" + item.bill}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-blue-100 transition-colors"
@@ -2927,7 +2924,7 @@ const filteredLibraryItems = useMemo(() => {
                                         )}
                                         {item.photo ? (
                                           <a
-                                            href={item.photo.startsWith('http') ? item.photo : `${import.meta.env.BACKEND_URL || ''}${item.photo}`}
+                                            href={import.meta.env.VITE_BACKEND_URL + "/" + item.photo}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 py-2 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-indigo-100 transition-colors"

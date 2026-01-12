@@ -775,7 +775,7 @@ const isPostDisabled = !hasContent || isSubmitting;
                     className={`flex items-center gap-1 transition-colors ${likedMap[item.id] ? "text-rose-500" : "text-slate-500 hover:text-rose-500"
                       }`}
                   >
-                    <Heart className="w-6 h-6" />
+                    <Heart className={`w-6 h-6 ${likedMap[item.id] ? "fill-current" : ""}`} />
                   </button>
                   <button
                     onClick={() => setOpenCommentFor((s) => ({ ...s, [item.id]: !s[item.id] }))}
