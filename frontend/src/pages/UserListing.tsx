@@ -5,7 +5,7 @@ import { Mail, User, Trash2, Settings } from "lucide-react";
 import { userApi } from "../services/api";
 
 const UserListing: React.FC = () => {
-  const { token, user: currentUser } = useAuth();
+  const { token, user: currentUser, refresh } = useAuth();
   const { users, loading, error, refetch } = useRelatedUsers(token ?? undefined);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
@@ -25,9 +25,10 @@ const UserListing: React.FC = () => {
   ];
 
   const openEditPermissions = (user: any) => {
-    setEditingPermissions(user.id);
-    setSelectedModules(user.allowedModules || allModules.map(m => m.value));
-  };
+  setEditingPermissions(user._id);   // ✅ sahi
+  setSelectedModules(user.allowedModules || allModules.map(m => m.value));
+};
+
 
   const toggleModule = (module: string) => {
     setSelectedModules((prev) =>
@@ -37,18 +38,34 @@ const UserListing: React.FC = () => {
     );
   };
 
-  const handleSavePermissions = async (userId: string) => {
-    if (!token) return;
-    try {
-      await userApi.updateUserPermissions(userId, { allowedModules: selectedModules }, token);
-      setEditingPermissions(null);
-      setSelectedModules([]);
-      refetch();
-      alert('Permissions updated successfully');
-    } catch (err: any) {
-      alert(err?.message || 'Failed to update permissions');
+const handleSavePermissions = async (userId: string) => {
+  if (!token) return;
+
+  try {
+    await userApi.updateUserPermissions(
+      userId,
+      { allowedModules: selectedModules },
+      token
+    );
+
+    // list refresh
+    await refetch();
+
+    // agar current logged-in user ki permissions update hui ho
+    if (currentUser?._id === userId) {
+      await refresh();
     }
-  };
+
+    setEditingPermissions(null);
+    setSelectedModules([]);
+    alert("Permissions updated successfully");
+  } catch (err: any) {
+    alert(err?.message || "Failed to update permissions");
+  }
+};
+
+
+
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!token) return;

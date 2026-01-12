@@ -17,6 +17,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
 
+
+
 interface CompanyUser {
   id: string;
   name: string;
@@ -40,7 +42,7 @@ const roles: Array<{
 
 const Invite: React.FC = () => {
   const navigate = useNavigate();
-  const { token, user, loading: authLoading } = useAuth();
+  const { token, user, loading: authLoading, refresh } = useAuth();
   const { sites } = useSite();
   const [formData, setFormData] = useState({
     email: "",
@@ -171,7 +173,7 @@ const Invite: React.FC = () => {
 
   const saveEditingSites = async () => {
     if (!editingUser || !token) return;
-    try {
+    try { 
       await userApi.updateUserSiteAccess(
         editingUser.id,
         { siteIds: editingSites },
@@ -220,6 +222,9 @@ const Invite: React.FC = () => {
             : p
         )
       );
+
+      await refresh();
+
       setEditingPermissions(null);
       setEditingModules([]);
       setSuccess('Permissions updated successfully');

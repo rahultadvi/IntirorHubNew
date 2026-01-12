@@ -43,6 +43,7 @@ export interface AuthUser {
   createdAt?: string;
   updatedAt?: string;
   companyPaymentDue?: boolean;
+   allowedModules: string[]; 
 }
 
 export interface SiteDto {
