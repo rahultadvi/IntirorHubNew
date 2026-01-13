@@ -603,7 +603,7 @@ const handleSubmitBOQItem = async (
             <td style="padding: 12px 10px; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; min-width: 200px;">
               <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4;">${(item.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
               <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">
-                <span style="background-color: ${getCategoryColorHex(item.category)}; color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
+                <span style="color: #111827; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
               </div>
             </td>
             <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
@@ -622,9 +622,9 @@ const handleSubmitBOQItem = async (
       const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
         const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
         return `
-          <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background-color: #f9fafb;">
+          <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="background-color: ${getCategoryColorHex(category)}; color: white; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600;">${categoryDisplay}</span>
+              <span style="color: #111827; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600;">${categoryDisplay}</span>
               <div style="font-weight: 600; color: #111827; font-size: 14px;">${summary.count} items</div>
             </div>
             <div style="text-align: right;">
@@ -658,7 +658,7 @@ const handleSubmitBOQItem = async (
           <!-- Report Content -->
           <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
             <!-- Project Info Section -->
-            <div style="margin-bottom: 32px; padding: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; border: 1px solid #e2e8f0;">
+            <div style="margin-bottom: 32px; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
                 <div>
                   <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Project / Site</div>
@@ -732,10 +732,10 @@ const handleSubmitBOQItem = async (
             <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
               <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
                 <p style="margin: 0 0 8px 0; font-weight: 500;">This is a computer-generated Bill of Quantities. No signature required.</p>
-                <p style="margin: 0;">Generated on ${generatedDateTime} by IntirorHub</p>
+                <p style="margin: 0;">Generated on ${generatedDateTime} by SiteZero</p>
               </div>
               <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
-                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #1e293b; font-weight: 700;">IntirorHub</span> - Professional Interior Design Management</p>
+                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #1e293b; font-weight: 700;">SiteZero</span> - Professional Interior Design Management</p>
               </div>
             </div>
           </div>
@@ -940,16 +940,6 @@ const filteredLibraryItems = useMemo(() => {
     return 'bg-slate-400'; // Default color
   };
 
-  const getCategoryColorHex = (category: string | undefined): string => {
-    if (!category) return '#94a3b8';
-    const normalizedCategory = category.toLowerCase();
-    if (normalizedCategory.includes('furniture')) return '#3b82f6';
-    if (normalizedCategory.includes('finishes')) return '#10b981';
-    if (normalizedCategory.includes('hardware')) return '#f59e0b';
-    if (normalizedCategory.includes('electrical')) return '#a855f7';
-    if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return '#64748b';
-    return '#94a3b8'; // Default color
-  };
 
   const formatUnit = (unit: string) => {
     const unitMap: { [key: string]: string } = {
