@@ -9,7 +9,6 @@ interface AuthContextValue {
   setSession: (token: string, user: AuthUser) => void;
   refresh: () => Promise<void>;
   logout: () => void;
-   updateProfile: (data: { name: string; phone: string }) => Promise<void>;///updateProfile function ka type define kiya hai
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -155,25 +154,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-//////////////////////////////////////////////////////////
-const updateProfile = async (data: { name: string; phone: string }) => {
-  if (!token) return;
-
-  try {
-    const res = await authApi.updateProfile(token, data);
-    // maan lo backend se: { user: updatedUser } aata hai
-
-    const updatedUser = res.user;
-
-    setUser(updatedUser);
-    persistUser(updatedUser);   // localStorage update
-  } catch (error) {
-    console.error("Profile update failed", error);
-    throw error;
-  }
-};
-//////////////////////////////////////////////////////////
-
   const logout = () => {
     clearSession();
   };
@@ -186,7 +166,6 @@ const updateProfile = async (data: { name: string; phone: string }) => {
       setSession,
       refresh,
       logout,
-      updateProfile,  // yahan humne context me updateProfile function add kiya hai 
     }),
     [user, token, loading]
   );

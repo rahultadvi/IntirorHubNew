@@ -1,6 +1,6 @@
 import { Router } from "express";
 import AuthMiddleware from "../middleware/auth.js";
-import { getProfile, inviteUser, listCompanyUsers, loginUser, registerAdmin, resendOtp, verifyOtp, listRelatedUsers, updateUserSiteAccess, updateUserPermissions, forgotPassword, resetPassword, listAllCompanyAdmins, getCompanyUsersByName, getCompanySites, toggleCompanyPayment, deleteUser, updateProfile } from "../controllers/UserController.js";
+import { getProfile, inviteUser, listCompanyUsers, loginUser, registerAdmin, resendOtp, verifyOtp, listRelatedUsers, updateUserSiteAccess, updateUserPermissions, forgotPassword, resetPassword, listAllCompanyAdmins, getCompanyUsersByName, getCompanySites, toggleCompanyPayment, deleteUser } from "../controllers/UserController.js";
 
 const userRouter = Router();
 
@@ -11,7 +11,6 @@ userRouter.post("/auth/login", loginUser);
 userRouter.post("/auth/forgot-password", forgotPassword);
 userRouter.post("/auth/reset-password", resetPassword);
 userRouter.get("/auth/me", AuthMiddleware, getProfile);
-userRouter.put("/users/update-profile", AuthMiddleware, updateProfile); 
 userRouter.get("/users", AuthMiddleware, listCompanyUsers);
 // Admin endpoints
 userRouter.get("/admin/companies", AuthMiddleware, listAllCompanyAdmins);
