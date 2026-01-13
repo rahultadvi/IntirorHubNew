@@ -21,6 +21,7 @@ import Adminpanel from "./pages/Adminpanel";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
 import AccessDenied from "./pages/AccessDenied";
+import Profile from "./pages/Profile";
 
 // LoadingScreen removed
 
@@ -78,14 +79,14 @@ const ProtectedRoute = ({ children, module }: ProtectedRouteProps) => {
   }
 
   // Agar module diya hai aur user ke paas wo module nahi hai
- if (module && !user?.allowedModules?.includes(module)) {
-  return <Navigate to="/home/access-denied" replace />;
-}
+  if (module && !user?.allowedModules?.includes(module)) {
+    return <Navigate to="/home/access-denied" replace />;
+  }
 
 
   return children;
 };
- 
+
 const AdminRoute = ({ children }: { children: ReactElement }) => {
   const { token, user } = useAuth();
 
@@ -113,142 +114,151 @@ function App() {
 
   return (
 
-<AuthProvider>
-  <SiteProvider>
-    <Router>
-      <Routes>
-        {/* ROOT */}
-        <Route path="/" element={<RootRedirect />} />
+    <AuthProvider>
+      <SiteProvider>
+        <Router>
+          <Routes>
+            {/* ROOT */}
+            <Route path="/" element={<RootRedirect />} />
 
-        {/* PUBLIC ROUTES */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicRoute>
-              <Signup />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/admin-signup"
-          element={
-            <PublicRoute>
-              <AdminSignup />
-            </PublicRoute>
-          }
-        />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/reset-password/*" element={<ResetPassword />} />
-        {/* MAIN PROTECTED LAYOUT */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          {/* HOME */}
-          <Route
-            index
-            element={
-              <ProtectedRoute module="home">
-                <Home />
-              </ProtectedRoute>
-            }
-          />
-          {/* MODULE ROUTES */}
-          <Route
-            path="payments"
-            element={
-              <ProtectedRoute module="payments">
-                <Payments />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="boq"
-            element={
-              <ProtectedRoute module="boq">
-                <BOQ />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses"
-            element={
-              <ProtectedRoute module="expenses">
-                <Expenses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="feed"
-            element={
-              <ProtectedRoute module="feed">
-                <Feed />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="feed/:id"
-            element={
-              <ProtectedRoute module="feed">
-                <FeedDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="manage-sites"
-            element={
-              <ProtectedRoute module="manage-sites">
-                <ManageSites />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="users"
-            element={
-              <ProtectedRoute module="users">
-                <UserListing />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="invite"
-            element={
-              <AdminRoute>
-                <Invite />
-              </AdminRoute>
-            }
-          />
-          {/* ACCESS DENIED – INSIDE LAYOUT */}
-          <Route path="access-denied" element={<AccessDenied />} />
-        </Route>
-        {/* ADMIN PANEL */}
-        <Route
-          path="/adminpanel"
-          element={
-            <AdminRoute>
-              <Adminpanel />
-            </AdminRoute>
-          }
-        />
-        {/* CATCH ALL */}
-        <Route path="*" element={<ResetPasswordCatch />} />
-      </Routes>
-    </Router>
-  </SiteProvider>
-</AuthProvider>
+            {/* PUBLIC ROUTES */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <PublicRoute>
+                  <Signup />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/admin-signup"
+              element={
+                <PublicRoute>
+                  <AdminSignup />
+                </PublicRoute>
+              }
+            />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password/*" element={<ResetPassword />} />
+            {/* MAIN PROTECTED LAYOUT */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              {/* HOME */}
+              <Route
+                index
+                element={
+                  <ProtectedRoute module="home">
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              {/* MODULE ROUTES */}
+              <Route
+                path="payments"
+                element={
+                  <ProtectedRoute module="payments">
+                    <Payments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="boq"
+                element={
+                  <ProtectedRoute module="boq">
+                    <BOQ />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="expenses"
+                element={
+                  <ProtectedRoute module="expenses">
+                    <Expenses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="feed"
+                element={
+                  <ProtectedRoute module="feed">
+                    <Feed />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="feed/:id"
+                element={
+                  <ProtectedRoute module="feed">
+                    <FeedDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="manage-sites"
+                element={
+                  <ProtectedRoute module="manage-sites">
+                    <ManageSites />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute module="users">
+                    <UserListing />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="invite"
+                element={
+                  <AdminRoute>
+                    <Invite />
+                  </AdminRoute>
+                }
+              />
+              {/* ACCESS DENIED – INSIDE LAYOUT */}
+              <Route path="access-denied" element={<AccessDenied />} />
+            </Route>
+            {/* ADMIN PANEL */}
+            <Route
+              path="/adminpanel"
+              element={
+                <AdminRoute>
+                  <Adminpanel />
+                </AdminRoute>
+              }
+            />
+            {/* CATCH ALL */}
+            <Route path="*" element={<ResetPasswordCatch />} />
+          </Routes>
+        </Router>
+      </SiteProvider>
+    </AuthProvider>
   );
 }
 

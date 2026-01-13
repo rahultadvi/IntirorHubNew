@@ -53,6 +53,7 @@ const MainLayout = () => {
 
     const isHomePage = location.pathname === '/' || location.pathname === '/home';
     const isBOQ = location.pathname === '/home/boq' || location.pathname === '/boq';
+const isInvitePage = location.pathname.startsWith("/home/invite");
 
     const isAdmin = (user?.role ?? '').toString().toUpperCase() === 'ADMIN';
     const isClient = (user?.role ?? '').toString().toUpperCase() === 'CLIENT';
@@ -188,33 +189,36 @@ const MainLayout = () => {
     </main>
 
     {/* Floating Add Button – fixed */}
-    {user && !isHomePage && !isBOQ && !isClient && (
-      <button
-        onClick={() => {
-          const p = location.pathname;
+   const isInvitePage = location.pathname.startsWith("/home/invite");
 
-          if (p.startsWith('/home/payments')) {
-            if (hasAccess("payments")) navigate('/home/payments?openAdd=1');
-            else showToast('You do not have permission to add payments');
-          } 
-          else if (p.startsWith('/home/expenses')) {
-            if (hasAccess("expenses")) {
-              navigate('/home/expenses?openAdd=1');
-              setTimeout(() => window.dispatchEvent(new Event('open-add-expense')), 150);
-            } else showToast('You do not have permission to add expenses');
-          }
-          else if (p.startsWith('/home/feed')) {
-            if (hasAccess("feed")) {
-              navigate('/home/feed?openAdd=1');
-              setTimeout(() => window.dispatchEvent(new Event('open-add-feed')), 150);
-            } else showToast('You do not have permission to add feed');
-          }
-        }}
-        className="fixed bottom-24 right-5 z-50 p-4 bg-gray-800 text-white rounded-full shadow-xl"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
-    )}
+{user && !isHomePage && !isBOQ && !isClient && !isInvitePage && (
+  <button
+    onClick={() => {
+      const p = location.pathname;
+
+      if (p.startsWith('/home/payments')) {
+        if (hasAccess("payments")) navigate('/home/payments?openAdd=1');
+        else showToast('You do not have permission to add payments');
+      } 
+      else if (p.startsWith('/home/expenses')) {
+        if (hasAccess("expenses")) {
+          navigate('/home/expenses?openAdd=1');
+          setTimeout(() => window.dispatchEvent(new Event('open-add-expense')), 150);
+        } else showToast('You do not have permission to add expenses');
+      }
+      else if (p.startsWith('/home/feed')) {
+        if (hasAccess("feed")) {
+          navigate('/home/feed?openAdd=1');
+          setTimeout(() => window.dispatchEvent(new Event('open-add-feed')), 150);
+        } else showToast('You do not have permission to add feed');
+      }
+    }}
+    className="fixed bottom-24 right-5 z-50 p-4 bg-gray-800 text-white rounded-full shadow-xl"
+  >
+    <Plus className="h-6 w-6" />
+  </button>
+)}
+
 
     {/* FOOTER / BOTTOM NAV – always same */}
     <nav className="hidden lg:flex fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">

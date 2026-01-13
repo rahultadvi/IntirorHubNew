@@ -310,7 +310,21 @@ export const authApi = {
       method: "POST",
       body,
     }),
+      updateProfile: (
+    token: string,
+    data: { name: string; phone: string }
+  ) =>
+    request<{
+      user: AuthUser;
+      message?: string;
+    }>("/users/update-profile", {
+      method: "PUT",
+      body: data,
+      token,
+    }),
 };
+
+
 
 export const userApi = {
   inviteUser: (

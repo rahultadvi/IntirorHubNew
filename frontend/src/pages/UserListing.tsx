@@ -19,9 +19,9 @@ const UserListing: React.FC = () => {
     { value: 'boq', label: 'BOQ' },
     { value: 'expenses', label: 'Expenses' },
     { value: 'feed', label: 'Feed' },
-    { value: 'invite', label: 'Invite' },
+    // { value: 'invite', label: 'Invite' },
     { value: 'manage-sites', label: 'Manage Sites' },
-    { value: 'users', label: 'Users' },
+    // { value: 'users', label: 'Users' },
   ];
 
   const openEditPermissions = (user: any) => {
