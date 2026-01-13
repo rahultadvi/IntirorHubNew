@@ -16,7 +16,7 @@ router.get('/site/:siteId', auth, ExpenseController.getExpensesBySite);
 router.post(
   '/:expenseId/upload-invoice',
   auth,
-  uploadSingleFile('invoices'), // 👈 MULTER HERE
+  uploadSingleFile('invoices', 'invoice'), // 👈 MULTER HERE - field name: 'invoice'
   ExpenseController.uploadInvoice
 );
 

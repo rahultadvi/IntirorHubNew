@@ -141,12 +141,12 @@ export const uploadFeedFiles = (folder = "feed-files") =>
   ]);
 
 // Single file
-export const uploadSingleFile = (folder = "files") =>
+export const uploadSingleFile = (folder = "files", fieldName = "file") =>
   multer({
     storage: storage(folder),
     fileFilter: feedFileFilter,
     limits: { fileSize: SIZE_LIMITS.attachment },
-  }).single("file");
+  }).single(fieldName);
 
 // Material files (invoice, photo, warrantyDoc)
 export const uploadMaterialFiles = (folder = "materials") =>

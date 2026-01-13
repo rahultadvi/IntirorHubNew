@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
-import { expenseApi, feedApi } from "../services/api";
+import { expenseApi, feedApi, boqApi, paymentApi } from "../services/api";
+import type { PaymentDto } from "../services/api";
 
 interface FeedItem {
   id: string;
@@ -36,23 +37,41 @@ const Home: React.FC = () => {
   const { token } = useAuth();
   const [recentFeeds, setRecentFeeds] = useState<FeedItem[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentDto[]>([]);
+  const [boqStats, setBoqStats] = useState<{ total: number; approved: number; pending: number; totalCost?: number }>({
+    total: 0,
+    approved: 0,
+    pending: 0,
+  });
 
   // Budget calculations
   const totalBudget = activeSite?.contractValue ?? 0;
   const usedApproved = expenses
     .filter((e) => e.status === 'approved')
     .reduce((s, it) => s + (it.amount || 0), 0);
-  const usedPaid = expenses
-    .filter((e) => e.status === 'approved' && e.paymentStatus === 'paid')
-    .reduce((s, it) => s + (it.amount || 0), 0);
   const usedAmount = usedApproved;
   const remainingAmount = Math.max(0, totalBudget - usedAmount);
-  const dueAmount = expenses
-    .filter((e) => e.paymentStatus === 'due')
-    .reduce((s, it) => s + (it.amount || 0), 0);
+  
+  // Payment calculations - RECEIVED and OVER DUE from payments
+  const receivedAmount = payments
+    .filter((p) => p.status === "paid")
+    .reduce((sum, p) => sum + p.amount, 0);
+  
+  // Calculate overdue amount - payments where due date has passed and not paid
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+  const overdueAmount = payments
+    .filter((p) => {
+      const dueDate = new Date(p.dueDate);
+      dueDate.setHours(0, 0, 0, 0); // Reset time to start of day
+      const isPastDue = dueDate < today;
+      const isUnpaid = p.status === "due" || p.status === "overdue";
+      return isUnpaid && isPastDue;
+    })
+    .reduce((sum, p) => sum + p.amount, 0);
   
   // Calculate payment progress percentage
-  const paymentProgress = totalBudget > 0 ? Math.round((usedPaid / totalBudget) * 100) : 0;
+  const paymentProgress = totalBudget > 0 ? Math.round((receivedAmount / totalBudget) * 100) : 0;
   
   // Calculate expense health (budget usage percentage)
   const expenseHealthPercent = totalBudget > 0 ? Math.round((usedAmount / totalBudget) * 100) : 0;
@@ -61,12 +80,6 @@ const Home: React.FC = () => {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   const [startDateDisplay, setStartDateDisplay] = useState<string | null>(null);
   const [targetDateDisplay, setTargetDateDisplay] = useState<string | null>(null);
-
-  const [boqStats] = useState<{ total: number; approved: number; pending: number; totalCost?: number }>({
-    total: 0,
-    approved: 0,
-    pending: 0,
-  });
 
   useEffect(() => {
     const loadRecentFeeds = async () => {
@@ -113,6 +126,49 @@ const Home: React.FC = () => {
     };
 
     fetchExpenses();
+  }, [activeSite, token]);
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      if (!token || !activeSite?.id) {
+        setPayments([]);
+        return;
+      }
+      try {
+        const res = await paymentApi.getPaymentsBySite(activeSite.id, token);
+        setPayments(res.payments || []);
+      } catch (err) {
+        console.error('Failed to load payments for dashboard', err);
+        setPayments([]);
+      }
+    };
+
+    fetchPayments();
+  }, [activeSite, token]);
+
+  useEffect(() => {
+    const fetchBOQStats = async () => {
+      if (!token || !activeSite?.id) {
+        setBoqStats({ total: 0, approved: 0, pending: 0 });
+        return;
+      }
+      try {
+        const res = await boqApi.getBOQItemsBySite(activeSite.id, token);
+        if (res.stats) {
+          setBoqStats({
+            total: res.stats.total || 0,
+            approved: res.stats.approved || 0,
+            pending: res.stats.pending || 0,
+            totalCost: res.stats.totalCost || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load BOQ stats for dashboard', err);
+        setBoqStats({ total: 0, approved: 0, pending: 0 });
+      }
+    };
+
+    fetchBOQStats();
   }, [activeSite, token]);
 
   // Compute days remaining using site metadata saved in localStorage or activeSite fields
@@ -355,7 +411,7 @@ const Home: React.FC = () => {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold tracking-wider text-emerald-600 leading-tight mb-0.5">RECEIVED</p>
               <p className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent leading-tight">
-                {formatCurrency(usedPaid)}
+                {formatCurrency(receivedAmount)}
               </p>
             </div>
           </div>
@@ -363,13 +419,13 @@ const Home: React.FC = () => {
         
         <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2.5 shadow-lg border border-slate-100/50 group">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
-              <Clock className="w-4 h-4 text-amber-600" />
+            <div className="w-10 h-10 bg-gradient-to-br from-rose-100 to-red-100 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+              <Clock className="w-4 h-4 text-rose-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold tracking-wider text-amber-600 leading-tight mb-0.5">DUE<br/>AMOUNT</p>
+              <p className="text-xs font-bold tracking-wider text-rose-600 leading-tight mb-0.5">OVER<br/>DUE</p>
               <p className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent leading-tight">
-                {formatCurrency(dueAmount)}
+                {formatCurrency(overdueAmount)}
               </p>
             </div>
           </div>

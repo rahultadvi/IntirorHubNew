@@ -118,11 +118,22 @@ const Feed: React.FC = () => {
 
       try {
         const response = await feedApi.listFeed(activeSiteId, token);
-        setFeedItems(response.items || []);
+        const items = response.items || [];
+        setFeedItems(items);
+        
+        // Initialize likedMap from API response
+        const initialLikedMap: Record<string, boolean> = {};
+        items.forEach((item: any) => {
+          if (item.liked !== undefined) {
+            initialLikedMap[item.id] = Boolean(item.liked);
+          }
+        });
+        setLikedMap(initialLikedMap);
       } catch (err) {
         console.error("Failed to load feed:", err);
         setError("Failed to load feed. Please try again.");
         setFeedItems([]);
+        setLikedMap({});
       } finally {
         setLoading(false);
       }

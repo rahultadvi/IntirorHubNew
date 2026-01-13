@@ -41,9 +41,9 @@ export const addMaterial = async (req, res) => {
     }
 
     // Handle file uploads
-    const invoice = req.files?.invoice ? `/uploads/materials/${req.files.invoice[0].filename}` : req.body.invoice;
-    const photo = req.files?.photo ? `/uploads/materials/${req.files.photo[0].filename}` : req.body.photo;
-    const warrantyDoc = req.files?.warrantyDoc ? `/uploads/materials/${req.files.warrantyDoc[0].filename}` : req.body.warrantyDoc;
+    const invoice = req.files?.invoice ? req.files.invoice[0].path : null;
+    const photo = req.files?.photo ? req.files.photo[0].path : null;
+    const warrantyDoc = req.files?.warrantyDoc ? req.files.warrantyDoc[0].path : null;
 
     const material = await Material.create({
       category,
@@ -138,13 +138,13 @@ export const updateMaterial = async (req, res) => {
 
     // Handle file uploads
     if (req.files?.invoice) {
-      material.invoice = `/uploads/materials/${req.files.invoice[0].filename}`;
+      material.invoice = req.files.invoice[0].path;
     }
     if (req.files?.photo) {
-      material.photo = `/uploads/materials/${req.files.photo[0].filename}`;
+      material.photo = req.files.photo[0].path;
     }
     if (req.files?.warrantyDoc) {
-      material.warrantyDoc = `/uploads/materials/${req.files.warrantyDoc[0].filename}`;
+      material.warrantyDoc = req.files.warrantyDoc[0].path;
     }
 
     // Update fields

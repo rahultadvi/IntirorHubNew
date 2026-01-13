@@ -451,6 +451,16 @@ const Payments: React.FC = () => {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
+  // Helper function to check if a payment is overdue
+  const isPaymentOverdue = (payment: PaymentDto): boolean => {
+    if (payment.status === "paid") return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(payment.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  };
+
   const showToast = (message: string, type: "info" | "success" | "error" = "info") => {
     try {
       const containerId = "site-zero-toast-container";
@@ -709,6 +719,11 @@ const Payments: React.FC = () => {
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">
                       <CheckCircle2 className="w-3 h-3" />
                       PAID
+                    </span>
+                  ) : isPaymentOverdue(payment) ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 bg-rose-50 px-2 py-1 rounded-full">
+                      <Clock className="w-3 h-3" />
+                      OVERDUE
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-500 bg-amber-50 px-2 py-1 rounded-full">

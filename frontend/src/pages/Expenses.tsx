@@ -9,7 +9,6 @@ import {
   Filter,
   MoreVertical,
   Check,
-  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
@@ -33,12 +32,6 @@ const Expenses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [minAmount, setMinAmount] = useState<number | ''>('');
-  const [maxAmount, setMaxAmount] = useState<number | ''>('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -63,12 +56,7 @@ const Expenses: React.FC = () => {
 
   const buildParams = () => {
     const params: Record<string, string> = {};
-    if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
     if (selectedCategory && selectedCategory !== 'all') params.category = selectedCategory;
-    if (minAmount !== '') params.minAmount = String(minAmount);
-    if (maxAmount !== '') params.maxAmount = String(maxAmount);
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
     return params;
   };
 
@@ -138,7 +126,7 @@ const Expenses: React.FC = () => {
 
   useEffect(() => {
     fetchExpenses();
-  }, [token, activeSite, selectedCategory, statusFilter, minAmount, maxAmount, startDate, endDate]);
+  }, [token, activeSite, selectedCategory]);
 
   useEffect(() => {
     try {
@@ -173,26 +161,12 @@ const Expenses: React.FC = () => {
     const matchesSearch = expense.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    
+    // Also filter by category on frontend as fallback (backend should handle this, but this ensures it works)
+    const matchesCategory = selectedCategory === 'all' || expense.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
   });
-
-  const resetFilters = () => {
-    setStartDate('');
-    setEndDate('');
-    setMinAmount('');
-    setMaxAmount('');
-    setStatusFilter('all');
-    setSelectedCategory('all');
-  };
-
-  const activeFiltersCount = [
-    statusFilter !== 'all',
-    selectedCategory !== 'all',
-    minAmount !== '',
-    maxAmount !== '',
-    startDate !== '',
-    endDate !== ''
-  ].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden pb-6">
@@ -252,27 +226,8 @@ const Expenses: React.FC = () => {
             ))}
           </div> */}
 
-          {/* Category Dropdown */}
-          <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex items-center justify-between">
-            <span className="font-medium text-slate-700">{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="appearance-none bg-transparent border-none outline-none text-slate-700 font-medium cursor-pointer"
-            >
-              <option value="all">All Categories</option>
-              <option value="Material">Material</option>
-              <option value="Labour">Labour</option>
-              <option value="Electrical">Electrical</option>
-              <option value="Equipment">Equipment</option>
-              <option value="Transport">Transport</option>
-              <option value="Misc">Miscellaneous</option>
-            </select>
-            <ChevronDown className="w-5 h-5 text-slate-400 pointer-events-none" />
-          </div>
-
-          {/* Search Bar */}
-          <div className="bg-white relative rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex items-center gap-3">
+          {/* Search Bar with Category Filter */}
+          <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex items-center gap-3">
             <Search className="w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -281,94 +236,30 @@ const Expenses: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
             />
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-1 rounded absolute right-0 ${showFilters || activeFiltersCount > 0 ? 'text-indigo-600' : 'text-slate-400'
-                }`}
-            >
-              <Filter className="w-5 h-5" />
-              {activeFiltersCount > 0 && (
-                <span className="absolute -top-1 -right-2 bg-indigo-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">{activeFiltersCount}</span>
-              )}
-            </button>
-          </div>
-
-          {/* Filters Panel */}
-          {showFilters && (
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-sm text-gray-900">Advanced Filters</h3>
-                <button onClick={() => setShowFilters(false)} className="text-gray-400">
-                  <X className="h-4 w-4" />
-                </button>
+            {/* Category Filter */}
+            <div className="relative flex items-center cursor-pointer">
+              <div className="relative">
+                <Filter className={`w-5 h-5 ${selectedCategory !== 'all' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                {selectedCategory !== 'all' && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-600 rounded-full border-2 border-white"></span>
+                )}
               </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Min Amount</label>
-                  <input
-                    type="number"
-                    placeholder="₹0"
-                    value={minAmount === '' ? '' : String(minAmount)}
-                    onChange={(e) => setMinAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Max Amount</label>
-                  <input
-                    type="number"
-                    placeholder="₹999999"
-                    value={maxAmount === '' ? '' : String(maxAmount)}
-                    onChange={(e) => setMaxAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Start Date</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={resetFilters}
-                className="w-full py-2 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                title={selectedCategory === 'all' ? 'All Categories' : selectedCategory}
               >
-                Reset Filters
-              </button>
+                <option value="all">All Categories</option>
+                <option value="Material">Material</option>
+                <option value="Labour">Labour</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Equipment">Equipment</option>
+                <option value="Transport">Transport</option>
+                <option value="Misc">Miscellaneous</option>
+              </select>
             </div>
-          )}
+          </div>
 
           {/* Add Expense Button
           <button

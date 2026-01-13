@@ -57,7 +57,7 @@ export const addExpense = async (req, res) => {
       fs.copyFileSync(req.file.path, filePath);
 
       expense.invoice = {
-        path: `/api/expenses/invoice-file/${safeName}`,
+        path: `uploads/invoices/${safeName}`,
         filename: req.file.originalname
       };
     }
@@ -71,7 +71,7 @@ export const addExpense = async (req, res) => {
       fs.writeFileSync(filePath, buffer);
 
       expense.invoice = {
-        path: `/api/expenses/invoice-file/${safeName}`,
+        path: `uploads/invoices/${safeName}`,
         filename: invoiceFilename
       };
     }
@@ -93,6 +93,7 @@ export const addExpense = async (req, res) => {
 export const getExpensesBySite = async (req, res) => {
   try {
     const { siteId } = req.params;
+    const { category, status, minAmount, maxAmount, startDate, endDate } = req.query;
 
     const site = await Site.findById(siteId);
     if (!site) return res.status(404).json({ message: 'Site not found' });
@@ -105,7 +106,38 @@ export const getExpensesBySite = async (req, res) => {
     if (!hasAccess)
       return res.status(403).json({ message: 'You do not have access to this site' });
 
-    const expenses = await Expense.find({ siteId })
+    // Build query filter
+    const query = { siteId };
+    
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+    
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    
+    if (minAmount || maxAmount) {
+      query.amount = {};
+      if (minAmount) {
+        query.amount.$gte = Number(minAmount);
+      }
+      if (maxAmount) {
+        query.amount.$lte = Number(maxAmount);
+      }
+    }
+    
+    if (startDate || endDate) {
+      query.dueDate = {};
+      if (startDate) {
+        query.dueDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.dueDate.$lte = new Date(endDate);
+      }
+    }
+
+    const expenses = await Expense.find(query)
       .populate('createdBy', 'name email role')
       .sort({ dueDate: -1 });
 
@@ -146,7 +178,7 @@ export const uploadInvoice = async (req, res) => {
     fs.copyFileSync(req.file.path, filePath);
 
     expense.invoice = {
-      path: `/api/expenses/invoice-file/${safeName}`,
+      path: `uploads/invoices/${safeName}`,
       filename: req.file.originalname
     };
 

@@ -57,7 +57,7 @@ export const addBOQItem = async (req, res) => {
       const safeName = `${Date.now()}-${referenceImageFilename}`.replace(/\s+/g, '_');
       const filePath = path.join(REFERENCE_IMAGE_FOLDER, safeName);
       fs.writeFileSync(filePath, buffer);
-      boqItem.referenceImage = { path: `/uploads/boq-images/${safeName}`, filename: referenceImageFilename };
+      boqItem.referenceImage = { path: `uploads/boq-images/${safeName}`, filename: referenceImageFilename };
     }
 
     await boqItem.save();
@@ -147,10 +147,10 @@ export const updateBOQItem = async (req, res) => {
 
     // Handle file uploads for bill and photo
     if (req.files?.bill) {
-      boqItem.bill = process.env.BACKEND_URL + `/uploads/boq/${req.files.bill[0].filename}`;
+      boqItem.bill = `uploads/boq/${req.files.bill[0].filename}`;
     }
     if (req.files?.photo) {
-      boqItem.photo = process.env.BACKEND_URL + `/uploads/boq/${req.files.photo[0].filename}`;
+      boqItem.photo =  `uploads/boq/${req.files.photo[0].filename}`;
     }
 
     // Recalculate totalCost using purchaseRate if available, otherwise use rate (base price)
