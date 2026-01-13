@@ -165,6 +165,34 @@ export const getProfile = async (req, res) => {
   }
 };
 
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const userId = req.user._id; // AuthMiddleware se milta hai
+
+    // Only name & phone update karenge
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { name, phone },
+      { new: true, runValidators: true }
+    ).select("-password -otp -otpExpiresAt");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("updateProfile error", error);
+    return res.status(500).json({ message: "Unable to update profile" });
+  }
+};
+
+
 export const inviteUser = async (req, res) => {
   try {
     if (req.user.role !== "ADMIN") {
@@ -311,7 +339,7 @@ export const listRelatedUsers = async (req, res) => {
       )}`,
       joinedAt: member.createdAt,
       siteAccessCount: member.siteAccess ? member.siteAccess.length ?? 0 : 0,
-      allowedModules: member.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed', 'invite', 'manage-sites', 'users'],
+      allowedModules: member.allowedModules || ['home', 'payments', 'boq', 'expenses', 'feed','manage-sites'],
     }));
 
     return res.status(200).json({ users: payload });
