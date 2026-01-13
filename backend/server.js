@@ -32,6 +32,19 @@ const app = express();
 const PORT = process.env.PORT;
 
 
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", // Vite
+      "http://localhost:3000"  // React (agar ho)
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+  })
+);
+
+
 
 
 app.use(express.json({ limit: "50mb" }));

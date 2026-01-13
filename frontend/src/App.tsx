@@ -20,6 +20,8 @@ import AdminSignup from "./pages/AdminSignup";
 import Adminpanel from "./pages/Adminpanel";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
+import AccessDenied from "./pages/AccessDenied";
+import Profile from "./pages/Profile";
 
 // LoadingScreen removed
 
@@ -47,14 +49,40 @@ const RootRedirect = () => {
   return <Landing />;
 };
 
-const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-  const { token } = useAuth();
+// const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+//   const { token } = useAuth();
 
-  // Removed loading screen
+//   // Removed loading screen
+
+//   if (!token) {
+//     return <Navigate to="/login" replace />;
+//   }
+
+//   return children;
+// };
+
+interface ProtectedRouteProps {
+  children: ReactElement;
+  module?: string;   // optional, kyunki /home layout me module nahi hota
+}
+
+const ProtectedRoute = ({ children, module }: ProtectedRouteProps) => {
+  const { token, user } = useAuth();
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
+
+  // Admin ko sab modules allowed
+  if (user?.role === "ADMIN") {
+    return children;
+  }
+
+  // Agar module diya hai aur user ke paas wo module nahi hai
+  if (module && !user?.allowedModules?.includes(module)) {
+    return <Navigate to="/home/access-denied" replace />;
+  }
+
 
   return children;
 };
@@ -85,30 +113,33 @@ function App() {
   };
 
   return (
+
     <AuthProvider>
       <SiteProvider>
         <Router>
           <Routes>
+            {/* ROOT */}
             <Route path="/" element={<RootRedirect />} />
-            
-            <Route 
-              path="/login" 
+
+            {/* PUBLIC ROUTES */}
+            <Route
+              path="/login"
               element={
                 <PublicRoute>
                   <Login />
                 </PublicRoute>
-              } 
+              }
             />
-            <Route 
-              path="/signup" 
+            <Route
+              path="/signup"
               element={
                 <PublicRoute>
                   <Signup />
                 </PublicRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin-signup" 
+            <Route
+              path="/admin-signup"
               element={
                 <PublicRoute>
                   <AdminSignup />
@@ -117,9 +148,8 @@ function App() {
             />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            {/* catch any variants like unexpected trailing segments */}
             <Route path="/reset-password/*" element={<ResetPassword />} />
-
+            {/* MAIN PROTECTED LAYOUT */}
             <Route
               path="/home"
               element={
@@ -128,14 +158,81 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Home />} />
-              <Route path="payments" element={<Payments />} />
-              <Route path="boq" element={<BOQ />} />
-              <Route path="expenses" element={<Expenses />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="feed/:id" element={<FeedDetail />} />
-              <Route path="manage-sites" element={<ManageSites />} />
-              <Route path="users" element={<UserListing />} />
+              {/* HOME */}
+              <Route
+                index
+                element={
+                  <ProtectedRoute module="home">
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              {/* MODULE ROUTES */}
+              <Route
+                path="payments"
+                element={
+                  <ProtectedRoute module="payments">
+                    <Payments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="boq"
+                element={
+                  <ProtectedRoute module="boq">
+                    <BOQ />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="expenses"
+                element={
+                  <ProtectedRoute module="expenses">
+                    <Expenses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="feed"
+                element={
+                  <ProtectedRoute module="feed">
+                    <Feed />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="feed/:id"
+                element={
+                  <ProtectedRoute module="feed">
+                    <FeedDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="manage-sites"
+                element={
+                  <ProtectedRoute module="manage-sites">
+                    <ManageSites />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute module="users">
+                    <UserListing />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="invite"
                 element={
@@ -144,7 +241,10 @@ function App() {
                   </AdminRoute>
                 }
               />
+              {/* ACCESS DENIED – INSIDE LAYOUT */}
+              <Route path="access-denied" element={<AccessDenied />} />
             </Route>
+            {/* ADMIN PANEL */}
             <Route
               path="/adminpanel"
               element={
@@ -153,7 +253,7 @@ function App() {
                 </AdminRoute>
               }
             />
-            {/* catch-all: render reset-password when pathname begins with it, otherwise redirect home */}
+            {/* CATCH ALL */}
             <Route path="*" element={<ResetPasswordCatch />} />
           </Routes>
         </Router>
