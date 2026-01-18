@@ -125,8 +125,11 @@ const UserListing: React.FC = () => {
                   />
                   
                   {/* Name */}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {user.name}
+                  <h3 
+                    className="text-lg font-semibold text-gray-900 mb-1 cursor-default"
+                    title={user.name}
+                  >
+                    {user.name.length > 12 ? `${user.name.substring(0, 12)}...` : user.name}
                   </h3>
                   
                   {/* Email */}

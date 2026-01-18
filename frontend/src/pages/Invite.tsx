@@ -540,8 +540,11 @@ const Invite: React.FC = () => {
             className="h-12 w-12 flex-shrink-0 rounded-full"
           />
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-semibold text-gray-900">
-              {member.name}
+            <p 
+              className="text-sm font-semibold text-gray-900 cursor-default"
+              title={member.name}
+            >
+              {member.name.length > 12 ? `${member.name.substring(0, 12)}...` : member.name}
             </p>
             {user?.role === "ADMIN" && (
               <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
