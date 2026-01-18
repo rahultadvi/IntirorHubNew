@@ -32,7 +32,9 @@ interface CompanyRow {
 }
 
 const Adminpanel: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user, uploadCompanyLogo, loading } = useAuth();
+  
+
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<CompanyRow[]>([]);
   // loading state removed
@@ -114,29 +116,66 @@ const Adminpanel: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-lg shadow-md">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">Admin Panel</h1>
-                <p className="text-sm text-slate-500">Manage companies and access</p>
-              </div>
-            </div>
-            <button 
-              onClick={fetchCompanies}
-              // disabled removed
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
+     <div className="bg-white border-b border-slate-200 shadow-sm">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="flex items-center justify-between">
+
+      {/* Left */}
+      <div className="flex items-center gap-3">
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-lg shadow-md">
+          <Building2 className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Admin Panel</h1>
+          <p className="text-sm text-slate-500">Manage companies and access</p>
         </div>
       </div>
+
+      {/* Right */}
+      <div className="flex items-center gap-4">
+
+        {/* Company Logo */}
+        <img
+          src={user?.companyLogo || "/default-logo.png"}
+          alt="Company Logo"
+          className="w-10 h-10 rounded-full object-cover border border-slate-300"
+        />
+
+        {/* Change Logo Button (Only Admin) */}
+        {user?.role === "ADMIN" && (
+          <label className="cursor-pointer bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded text-sm">
+            {loading ? "Uploading..." : "Change Logo"}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                await uploadCompanyLogo(file);
+                alert("Company logo updated!");
+              }}
+            />
+          </label>
+        )}
+
+        {/* Refresh Button */}
+        <button 
+          onClick={fetchCompanies}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+      
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 const adminPhone = import.meta.env.VITE_ADMIN_PHONE || "8320354644";
 import Header from "../component/Header/Header";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, FileText, TrendingUp, Rss, Plus, UserPlus } from "lucide-react";
+import { Home, CreditCard, FileText, TrendingUp, Rss, Plus, UserPlus, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const MainLayout = () => {
@@ -16,6 +16,7 @@ const MainLayout = () => {
         { path: "/home/boq", icon: FileText, label: "BOQ" },
         { path: "/home/expenses", icon: TrendingUp, label: "Expenses" },
         { path: "/home/feed", icon: Rss, label: "Feed" },
+         { path: "/home/profile", icon: User, label: "Profile" },
     ];
 
     const isActive = (path: string) => {
