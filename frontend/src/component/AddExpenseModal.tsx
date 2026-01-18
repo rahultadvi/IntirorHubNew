@@ -8,16 +8,30 @@ interface Props {
   onCreated: () => void;
   token: string | null;
   siteId: string;
+  budgetAllocation?: {
+    categories: { [key: string]: number };
+    emergencyReserve: number;
+    profitMargin: number;
+  } | null;
+  existingExpenses?: Array<{
+    _id: string;
+    category: string;
+    amount: number;
+    status: string;
+    paymentStatus: string;
+  }>;
 }
 
 const categories = ['Material', 'Labour', 'Electrical', 'Equipment', 'Transport', 'Misc'];
 
-const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, siteId }) => {
+const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, siteId, budgetAllocation, existingExpenses = [] }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(categories[0]);
   const [amount, setAmount] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState('');
+  const [paymentType, setPaymentType] = useState<'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT' | 'Cheque' | 'Credit Card' | ''>('');
+  const [vendorName, setVendorName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +41,33 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
     e.preventDefault();
     if (!token) return alert('Not authenticated');
     if (!title || amount === '' || !dueDate) return alert('Please fill title, amount and due date');
+    
+    // Validate budget allocation if budget is allocated
+    if (budgetAllocation && budgetAllocation.categories) {
+      const categoryBudget = budgetAllocation.categories[category] || 0;
+      if (categoryBudget > 0) {
+        // Calculate total spent in this category (approved expenses)
+        const totalSpentInCategory = existingExpenses
+          .filter(e => e.category === category && e.status === 'approved')
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+        
+        // Check if adding this expense would exceed the allocated budget
+        const newTotal = totalSpentInCategory + Number(amount);
+        if (newTotal > categoryBudget) {
+          const remaining = categoryBudget - totalSpentInCategory;
+          alert(
+            `Cannot add expense! This would exceed the allocated budget for ${category}.\n\n` +
+            `Allocated Budget: ₹${categoryBudget.toLocaleString('en-IN')}\n` +
+            `Already Spent: ₹${totalSpentInCategory.toLocaleString('en-IN')}\n` +
+            `Remaining: ₹${Math.max(0, remaining).toLocaleString('en-IN')}\n` +
+            `This Expense: ₹${Number(amount).toLocaleString('en-IN')}\n\n` +
+            `Please reduce the amount or contact admin to increase the budget allocation.`
+          );
+          return;
+        }
+      }
+    }
+    
     setLoading(true);
     try {
       let invoiceBase64: string | undefined;
@@ -44,13 +85,31 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
         }
       }
 
-      const body: any = { title, description, category, amount: Number(amount), dueDate, siteId };
+      const body: any = { 
+        title, 
+        description, 
+        category, 
+        amount: Number(amount), 
+        dueDate, 
+        siteId,
+        paymentType: paymentType || null,
+        vendorName: vendorName || ''
+      };
       if (invoiceBase64 && invoiceFilename) {
         body.invoiceBase64 = invoiceBase64;
         body.invoiceFilename = invoiceFilename;
       }
 
       await expenseApi.addExpense(body, token);
+      // Reset form fields
+      setTitle('');
+      setDescription('');
+      setCategory(categories[0]);
+      setAmount('');
+      setDueDate('');
+      setPaymentType('');
+      setVendorName('');
+      setFile(null);
       onCreated();
       onClose();
     } catch (err) {
@@ -97,6 +156,17 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full mt-1 p-2 border rounded" rows={3} placeholder="Optional details" />
           </div>
 
+          {/* Vendor Name and Category in one line */}
+          <div>
+            <label className="block text-xs text-gray-600">Vendor Name</label>
+            <input 
+              value={vendorName} 
+              onChange={(e) => setVendorName(e.target.value)} 
+              className="w-full mt-1 p-2 border rounded" 
+              placeholder="Enter vendor name"
+            />
+          </div>
+
           <div>
             <label className="block text-xs text-gray-600">Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mt-1 p-2 border rounded">
@@ -104,6 +174,7 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
             </select>
           </div>
 
+          {/* Amount and Invoice in one line */}
           <div>
             <label className="block text-xs text-gray-600">Amount</label>
             <div className="mt-1 flex items-center">
@@ -112,17 +183,35 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600">Due Date</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full mt-1 p-2 border rounded" />
-          </div>
-
-          <div>
             <label className="block text-xs text-gray-600">Invoice (optional)</label>
             <div className="mt-1 flex items-center gap-2">
               <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="hidden" id="expense-invoice" />
-              <label htmlFor="expense-invoice" className="inline-block px-3 py-2 rounded border text-sm cursor-pointer">Choose file</label>
-              <span className="text-xs text-gray-500 truncate">{file ? file.name : 'No file selected'}</span>
+              <label htmlFor="expense-invoice" className="inline-block px-3 py-2 rounded border text-sm cursor-pointer whitespace-nowrap">Choose file</label>
+              <span className="text-xs text-gray-500 truncate">{file ? file.name : 'No file'}</span>
             </div>
+          </div>
+
+          {/* Payment Type and Due Date in one line */}
+          <div>
+            <label className="block text-xs text-gray-600">Payment Type</label>
+            <select 
+              value={paymentType} 
+              onChange={(e) => setPaymentType(e.target.value as 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT' | 'Cheque' | 'Credit Card' | '')} 
+              className="w-full mt-1 p-2 border rounded"
+            >
+              <option value="">Select Payment Type</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="UPI">UPI</option>
+              <option value="NEFT">NEFT</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Credit Card">Credit Card</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-600">Due Date</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full mt-1 p-2 border rounded" />
           </div>
 
           <div className="sm:col-span-2 flex flex-row items-center justify-end gap-2 mt-2">

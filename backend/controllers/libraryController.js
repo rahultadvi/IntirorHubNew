@@ -66,6 +66,65 @@ export const addLibraryItem = async (req, res) => {
 };
 
 /**
+ * ✅ BULK ADD LIBRARY ITEMS
+ * POST /library/bulk
+ */
+export const bulkAddLibraryItems = async (req, res) => {
+  try {
+    const { items } = req.body;
+    const companyName = req.user.companyName;
+
+    // 🔒 Validation
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        message: "Items array is required and must not be empty",
+      });
+    }
+
+    // Validate each item
+    const validItems = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.name || item.qty == null || item.baseRate == null || item.ratePerQty == null) {
+        continue; // Skip invalid items
+      }
+
+      validItems.push({
+        companyName: companyName,
+        name: item.name.trim(),
+        qty: Number(item.qty),
+        baseRate: Number(item.baseRate),
+        ratePerQty: Number(item.ratePerQty),
+        description: item.description || "",
+        Category: item.Category || "",
+        tag: item.tag || "",
+      });
+    }
+
+    if (validItems.length === 0) {
+      return res.status(400).json({
+        message: "No valid items to import",
+      });
+    }
+
+    // Bulk insert
+    const result = await Library.insertMany(validItems);
+
+    res.status(201).json({
+      message: `Successfully imported ${result.length} library item(s)`,
+      count: result.length,
+      items: result,
+    });
+  } catch (error) {
+    console.error("Bulk Add Library Items Error:", error);
+    res.status(500).json({
+      message: "Failed to bulk import library items",
+      error: error.message,
+    });
+  }
+};
+
+/**
  * ✅ GET ALL LIBRARY ITEMS (Company wise)
  * GET /library
  * If company has no data, bulk insert from libraryData.json
@@ -92,7 +151,7 @@ export const getLibraryItems = async (req, res) => {
     const existingCount = await Library.countDocuments({ companyName });
 
     // If no data exists for this company, bulk insert from libraryData.json
-    if (existingCount === 0) {
+    if (existingCount === 0 && false) {
       console.log(`No library data found for company: ${companyName}. Bulk inserting...`);
       
       const libraryData = loadLibraryData();

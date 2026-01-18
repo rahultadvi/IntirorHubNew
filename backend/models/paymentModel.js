@@ -27,6 +27,11 @@ const paymentSchema = new mongoose.Schema({
   paidDate: {
     type: Date
   },
+  paymentMethod: {
+    type: String,
+    enum: ['Cash', 'Bank Transfer', 'UPI', 'NEFT'],
+    default: null
+  },
   siteId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Site',

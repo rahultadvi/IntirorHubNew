@@ -1,0 +1,95 @@
+name,category,qty,ratePerQty,description,tag
+Single Bed – Box Storage,Furniture,1,18,000,₹18
+Single Bed – Upholstered,Furniture,1,24,000,₹24
+Queen Bed – Box Storage,Furniture,1,28,000,₹28
+Queen Bed – Upholstered,Furniture,1,38,000,₹38
+King Bed – Box Storage,Furniture,1,35,000,₹35
+King Bed – Upholstered,Furniture,1,48,000,₹48
+Bunk Bed,Furniture,1,42,000,₹42
+Drawer unit,Furniture,1,10,000,₹10
+Wardrobe – Hinged,Furniture,1,1,450,₹1
+Wardrobe – Sliding,Furniture,1,1,750,₹1
+Wardrobe – PU Finish,Furniture,1,2,200,₹2
+Wardrobe – Glass Shutter,Furniture,1,2,500,₹2
+Loft Storage,Furniture,1,1,100,₹1
+TV Unit – Basic,Furniture,1,7,500,₹7
+TV Unit – Storage,Furniture,1,9,500,₹9
+TV Unit – Wall Hung,Furniture,1,12,000,₹12
+TV Unit – PU Finish,Furniture,1,16,000,₹16
+TV Unit – Panel + Unit,Furniture,1,22,000,₹22
+Wall Panel – Laminate,Finishes,1,850,₹850 / Sq.ft,MDF base
+Wall Panel – PU Finish,Finishes,1,1,600,₹1
+Wall Panel – Deco Paint,Finishes,1,1,100,₹1
+MDF Grooved Panel,Finishes,1,950,₹950 / Sq.ft,CNC grooves
+Fluted Panel,Finishes,1,1,450,₹1
+PU Finish (Furniture),Finishes,1,650,₹650 / Sq.ft,Spray paint
+Main Safety Door,Hardware,1,38,000,₹38
+Wooden Flush Door,Hardware,1,9,500,₹9
+Veneer Door,Hardware,1,14,000,₹14
+Digital Door Lock,Hardware,1,22,000,₹22
+Door Lock – Standard,Hardware,1,2,200,₹2
+Shoe Rack – Basic,Furniture,1,12,000,₹12
+Shoe Rack – Seating,Furniture,1,18,000,₹18
+Shoe Rack – Full Height,Furniture,1,22,000,₹22
+Modular Switchboard,Electrical,1,1,600,₹1
+LED Panel Light,Electrical,1,850,₹850 / Nos,Ceiling
+Strip Light,Electrical,1,120,₹120 / Rft,Cove
+Ceiling Fan,Electrical,1,4,000,₹4
+Exhaust Fan,Electrical,1,2,500,₹2
+Geyser – 15L,Electrical,1,8,500,₹8
+Split AC – 1T,Electrical,1,32,000,₹32
+Split AC – 1.5T,Electrical,1,38,000,₹38
+Split AC – 2T,Electrical,1,48,000,₹48
+Refrigerator – Single Door,Electrical,1,18,000,₹18
+Refrigerator – Double Door,Electrical,1,32,000,₹32
+Refrigerator – Side by Side,Electrical,1,65,000,₹65
+Chimney,Electrical,1,18,000,₹18
+Hob – 3 Burner,Electrical,1,12,000,₹12
+Hob – 4 Burner,Electrical,1,16,000,₹16
+Built-in Oven,Electrical,1,28,000,₹28
+Wall Hung WC,Hardware,1,22,000,₹22
+Wash Basin,Hardware,1,6,500,₹6
+Shower Set,Hardware,1,5,500,₹5
+Vanity Unit,Hardware,1,14,000,₹14
+Mirror with Light,Hardware,1,6,000,₹6
+Towel Rod,Hardware,1,850,₹850 / Nos,SS
+Soap Dispenser,Hardware,1,650,₹650 / Nos,Wall mount
+Carpentry Work,Furniture,1,280,₹280 / Sq.ft,Furniture
+Electrical Work,Furniture,1,450,₹450 / Point,Wiring
+Plumbing Work,Furniture,1,500,₹500 / Point,Sanitary
+Painting Work,Furniture,1,15,₹15 / Sq.ft,Roller
+Installation Charges,Furniture,1,120,₹120 / Sq.ft,Modular
+Gypsum False Ceiling – Plain,Furniture,1,110,₹110 / Sq.ft,Single-level ceiling
+Gypsum False Ceiling – Design,Furniture,1,160,₹160 / Sq.ft,Cut-outs & shapes
+Gypsum False Ceiling – Double Height,Furniture,1,220,₹220 / Sq.ft,Living area
+POP False Ceiling,Furniture,1,140,₹140 / Sq.ft,Traditional
+Wooden False Ceiling,Furniture,1,320,₹320 / Sq.ft,Veneer / laminate
+PVC False Ceiling,Furniture,1,95,₹95 / Sq.ft,Budget option
+Metal Grid Ceiling,Furniture,1,180,₹180 / Sq.ft,Commercial
+Cove Ceiling (Gypsum),Furniture,1,180,₹180 / Rft,Indirect lighting
+Ceiling Cornice / Moulding,Furniture,1,120,₹120 / Rft,POP detail
+Downlight (LED),Electrical,1,650,₹650 / Nos,Cut-out light
+COB Light,Electrical,1,1,200,₹1
+Profile Light,Electrical,1,950,₹950 / Rft,Linear
+Strip Light (Cove),Electrical,1,120,₹120 / Rft,Warm/white
+Vitrified Tile – Basic,Finishes,1,95,₹95 / Sq.ft,Living/bedroom
+Vitrified Tile – Premium,Finishes,1,140,₹140 / Sq.ft,Large format
+Ceramic Tile – Bathroom,Finishes,1,85,₹85 / Sq.ft,Anti-skid
+Parking Tile,Finishes,1,75,₹75 / Sq.ft,Heavy duty
+Marble – Makrana White,Finishes,1,450,₹450 / Sq.ft,Polished
+Marble – Italian,Finishes,1,950,₹950 / Sq.ft,Premium
+Granite Flooring,Finishes,1,320,₹320 / Sq.ft,Durable
+Kota Stone,Finishes,1,120,₹120 / Sq.ft,Budget stone
+Wooden Flooring (Laminate),Finishes,1,320,₹320 / Sq.ft,Click lock
+Engineered Wood Flooring,Finishes,1,550,₹550 / Sq.ft,Premium
+Vinyl Flooring,Finishes,1,180,₹180 / Sq.ft,Waterproof
+SPC Flooring,Finishes,1,260,₹260 / Sq.ft,Rigid core
+Tile Skirting,Finishes,1,85,₹85 / Rft,Matching tile
+Marble Skirting,Finishes,1,180,₹180 / Rft,Stone
+Wooden Skirting,Finishes,1,220,₹220 / Rft,MDF
+PVC Skirting,Finishes,1,95,₹95 / Rft,Waterproof
+Aluminium Skirting,Finishes,1,260,₹260 / Rft,Premium
+Tile Laying Labour,Finishes,1,45,₹45 / Sq.ft,Adhesive method
+Marble Installation Labour,Finishes,1,85,₹85 / Sq.ft,Polishing included
+Wooden Flooring Installation,Finishes,1,60,₹60 / Sq.ft,Click system
+Floor Levelling (Screed),Finishes,1,35,₹35 / Sq.ft,Surface prep

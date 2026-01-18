@@ -15,6 +15,8 @@ import {
   Play,
   Pause,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Zap,
   Image,
   FileCode,
@@ -266,6 +268,7 @@ const isPostDisabled = !hasContent || isSubmitting;
   // Comments state: simple local comments store per feed item
   const [openCommentFor, setOpenCommentFor] = useState<Record<string, boolean>>({});
   const [commentsMap, setCommentsMap] = useState<Record<string, Array<{ id: string; user: string; text: string; timestamp: string }>>>({});
+  const [expandedContent, setExpandedContent] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
 
@@ -539,7 +542,7 @@ const isPostDisabled = !hasContent || isSubmitting;
 
     <div className="pb-20">
       {/* Centered Container */}
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-md mx-auto px-4">
       {/* Header */}
 
       {/* Feed Filters */}
@@ -630,8 +633,8 @@ const isPostDisabled = !hasContent || isSubmitting;
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-800">{item.user.name}</h4>
-                    <p className="text-sm text-slate-500">{item.user.role}</p>
+                    <h4 className="font-bold text-slate-800 text-left">{item.user.name.length > 12 ? `${item.user.name.substring(0, 12)}...` : item.user.name}</h4>
+                    <p className="text-sm text-slate-500 text-left">{item.user.role}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -666,37 +669,55 @@ const isPostDisabled = !hasContent || isSubmitting;
 
               {/* Image Post */}
               {item.images && item.images.length > 0 && (
-                <div className="relative mb-4 rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center min-h-[200px]">
-                  <img
-                    alt="Post"
-                    className="w-full max-h-[500px] object-contain"
-                    src={item.images[imageIndex]}
-                  />
-                  {item.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => {
-                          const newIndex = imageIndex > 0 ? imageIndex - 1 : item.images!.length - 1;
-                          setCurrentImageIndex({ ...currentImageIndex, [item.id]: newIndex });
-                        }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
-                      >
-                        <ChevronDown className="w-5 h-5 text-slate-600 rotate-90" />
-                      </button>
-                      <div className="absolute top-4 right-4 bg-slate-800/70 text-white px-3 py-1 rounded-full text-xs font-semibold z-10">
-                        {imageIndex + 1}/{item.images.length}
-                      </div>
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                        {item.images.map((_, idx) => (
-                          <span
-                            key={idx}
-                            className={`w-2 h-2 rounded-full transition-colors ${idx === imageIndex ? "bg-white" : "bg-white/50"
-                              }`}
-                          ></span>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                <div className="relative mb-4 rounded-xl overflow-hidden bg-slate-50">
+                  {/* 1:1 Aspect Ratio Container - Instagram style */}
+                  <div className="relative w-full aspect-square flex items-center justify-center">
+                    <img
+                      alt="Post"
+                      className="w-full h-full object-contain"
+                      src={item.images[imageIndex]}
+                    />
+                    {item.images.length > 1 && (
+                      <>
+                        {/* Left Arrow Button */}
+                        <button
+                          onClick={() => {
+                            const newIndex = imageIndex > 0 ? imageIndex - 1 : item.images!.length - 1;
+                            setCurrentImageIndex({ ...currentImageIndex, [item.id]: newIndex });
+                          }}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
+                          aria-label="Previous image"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-slate-600" />
+                        </button>
+                        {/* Right Arrow Button */}
+                        <button
+                          onClick={() => {
+                            const newIndex = imageIndex < item.images!.length - 1 ? imageIndex + 1 : 0;
+                            setCurrentImageIndex({ ...currentImageIndex, [item.id]: newIndex });
+                          }}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight className="w-5 h-5 text-slate-600" />
+                        </button>
+                        {/* Image Counter */}
+                        <div className="absolute top-4 right-4 bg-slate-800/70 text-white px-3 py-1 rounded-full text-xs font-semibold z-10">
+                          {imageIndex + 1}/{item.images.length}
+                        </div>
+                        {/* Dots Indicator */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                          {item.images.map((_, idx) => (
+                            <span
+                              key={idx}
+                              className={`w-2 h-2 rounded-full transition-colors ${idx === imageIndex ? "bg-white" : "bg-white/50"
+                                }`}
+                            ></span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -810,12 +831,23 @@ const isPostDisabled = !hasContent || isSubmitting;
               </div>
 
               {/* Like Count */}
-              <p className="font-semibold text-slate-800 mb-2">{item.likes || 0} likes</p>
+              <p className="font-semibold text-slate-800 mb-2 text-left">{item.likes || 0} likes</p>
+              
 
               {/* Content */}
-              <p className="text-slate-700 mb-3">
-                <span className="font-semibold">{item.user.name}</span> {item.content}
-              </p>
+              <div className="mb-3 text-left">
+                <p className={`text-slate-700 ${!expandedContent[item.id] ? 'line-clamp-2' : ''}`}>
+                  {item.content}
+                </p>
+                {item.content && item.content.length > 100 && (
+                  <button
+                    onClick={() => setExpandedContent(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium mt-1"
+                  >
+                    {expandedContent[item.id] ? 'less' : 'more'}
+                  </button>
+                )}
+              </div>
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-3">

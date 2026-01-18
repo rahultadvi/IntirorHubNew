@@ -1,4 +1,5 @@
 import Site from "../models/siteModel.js";
+import mongoose from "mongoose";
 
 const sanitizeSite = (siteDoc) => {
   const site = siteDoc.toObject({ getters: true });
@@ -13,6 +14,20 @@ const sanitizeSite = (siteDoc) => {
     startDate: site.startDate,
     expectedCompletionDate: site.expectedCompletionDate,
     createdAt: site.createdAt,
+    budgetAllocation: site.budgetAllocation || {
+      categories: {
+        Material: 0,
+        Labour: 0,
+        Electrical: 0,
+        Equipment: 0,
+        Transport: 0,
+        Miscellaneous: 0,
+      },
+      emergencyReserve: 0,
+      profitMargin: 0,
+      emergencyReserveLocked: true,
+      profitMarginLocked: true,
+    },
   };
 };
 
@@ -150,6 +165,132 @@ export const updateSite = async (req, res) => {
   } catch (error) {
     console.error("updateSite error", error);
     return res.status(500).json({ message: "Unable to update site" });
+  }
+};
+
+// Save or update budget allocation
+export const saveBudgetAllocation = async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Only admin can save budget allocation" });
+    }
+
+    const { siteId } = req.params;
+    const { categories, emergencyReserve, profitMargin, emergencyReserveLocked, profitMarginLocked } = req.body;
+
+    if (!siteId || !mongoose.Types.ObjectId.isValid(siteId)) {
+      return res.status(400).json({ message: "Invalid site ID" });
+    }
+
+    const site = await Site.findById(siteId);
+    if (!site) {
+      return res.status(404).json({ message: "Site not found" });
+    }
+
+    // Check if user has access to this site
+    if (site.userId.toString() !== req.user._id.toString() && 
+        (!req.user.parentId || site.userId.toString() !== req.user.parentId.toString())) {
+      return res.status(403).json({ message: "Access denied to this site" });
+    }
+
+    // Update budget allocation
+    const updateData = {};
+    if (categories) {
+      updateData["budgetAllocation.categories"] = {
+        Material: Number(categories.Material) || 0,
+        Labour: Number(categories.Labour) || 0,
+        Electrical: Number(categories.Electrical) || 0,
+        Equipment: Number(categories.Equipment) || 0,
+        Transport: Number(categories.Transport) || 0,
+        Miscellaneous: Number(categories.Miscellaneous) || 0,
+      };
+    }
+    if (emergencyReserve !== undefined) {
+      updateData["budgetAllocation.emergencyReserve"] = Number(emergencyReserve) || 0;
+    }
+    if (profitMargin !== undefined) {
+      updateData["budgetAllocation.profitMargin"] = Number(profitMargin) || 0;
+    }
+    if (emergencyReserveLocked !== undefined) {
+      updateData["budgetAllocation.emergencyReserveLocked"] = Boolean(emergencyReserveLocked);
+    }
+    if (profitMarginLocked !== undefined) {
+      updateData["budgetAllocation.profitMarginLocked"] = Boolean(profitMarginLocked);
+    }
+
+    const updatedSite = await Site.findByIdAndUpdate(
+      siteId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Budget allocation saved successfully",
+      budgetAllocation: updatedSite.budgetAllocation || {
+        categories: {
+          Material: 0,
+          Labour: 0,
+          Electrical: 0,
+          Equipment: 0,
+          Transport: 0,
+          Miscellaneous: 0,
+        },
+        emergencyReserve: 0,
+        profitMargin: 0,
+        emergencyReserveLocked: true,
+        profitMarginLocked: true,
+      },
+    });
+  } catch (error) {
+    console.error("saveBudgetAllocation error", error);
+    return res.status(500).json({ message: "Unable to save budget allocation" });
+  }
+};
+
+// Get budget allocation (All users can read for validation, but only admin can modify)
+export const getBudgetAllocation = async (req, res) => {
+  try {
+    const { siteId } = req.params;
+
+    if (!siteId || !mongoose.Types.ObjectId.isValid(siteId)) {
+      return res.status(400).json({ message: "Invalid site ID" });
+    }
+
+    const site = await Site.findById(siteId);
+    if (!site) {
+      return res.status(404).json({ message: "Site not found" });
+    }
+
+    // Check if user has access to this site
+    const userId = req.user._id;
+    const parentId = req.user.parentId;
+    
+    let hasAccess = site.userId.toString() === userId.toString() || 
+                    (parentId && site.userId.toString() === parentId.toString());
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: "Access denied to this site" });
+    }
+
+    const budgetAllocation = site.budgetAllocation || {
+      categories: {
+        Material: 0,
+        Labour: 0,
+        Electrical: 0,
+        Equipment: 0,
+        Transport: 0,
+        Miscellaneous: 0,
+      },
+      emergencyReserve: 0,
+      profitMargin: 0,
+      emergencyReserveLocked: true,
+      profitMarginLocked: true,
+    };
+
+    return res.status(200).json({ budgetAllocation });
+  } catch (error) {
+    console.error("getBudgetAllocation error", error);
+    return res.status(500).json({ message: "Unable to fetch budget allocation" });
   }
 };
 

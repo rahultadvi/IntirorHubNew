@@ -1,0 +1,95 @@
+name,category,qty,ratePerQty,description,tag
+Single Bed – Box Storage,Furniture,Furniture,18,000,₹18
+Single Bed – Upholstered,Furniture,Furniture,24,000,₹24
+Queen Bed – Box Storage,Furniture,Furniture,28,000,₹28
+Queen Bed – Upholstered,Furniture,Furniture,38,000,₹38
+King Bed – Box Storage,Furniture,Furniture,35,000,₹35
+King Bed – Upholstered,Furniture,Furniture,48,000,₹48
+Bunk Bed,Furniture,Furniture,42,000,₹42
+Drawer unit,Furniture,Furniture,10,000,₹10
+Wardrobe – Hinged,Furniture,Furniture,1,450,₹1
+Wardrobe – Sliding,Furniture,Furniture,1,750,₹1
+Wardrobe – PU Finish,Furniture,Furniture,2,200,₹2
+Wardrobe – Glass Shutter,Furniture,Furniture,2,500,₹2
+Loft Storage,Furniture,Furniture,1,100,₹1
+TV Unit – Basic,Furniture,Furniture,7,500,₹7
+TV Unit – Storage,Furniture,Furniture,9,500,₹9
+TV Unit – Wall Hung,Furniture,Furniture,12,000,₹12
+TV Unit – PU Finish,Furniture,Furniture,16,000,₹16
+TV Unit – Panel + Unit,Furniture,Furniture,22,000,₹22
+Wall Panel – Laminate,Furniture,Finishes,850,₹850 / Sq.ft,MDF base
+Wall Panel – PU Finish,Furniture,Finishes,1,600,₹1
+Wall Panel – Deco Paint,Furniture,Finishes,1,100,₹1
+MDF Grooved Panel,Furniture,Finishes,950,₹950 / Sq.ft,CNC grooves
+Fluted Panel,Furniture,Finishes,1,450,₹1
+PU Finish (Furniture),Furniture,Finishes,650,₹650 / Sq.ft,Spray paint
+Main Safety Door,Furniture,Hardware,38,000,₹38
+Wooden Flush Door,Furniture,Hardware,9,500,₹9
+Veneer Door,Furniture,Hardware,14,000,₹14
+Digital Door Lock,Furniture,Hardware,22,000,₹22
+Door Lock – Standard,Furniture,Hardware,2,200,₹2
+Shoe Rack – Basic,Furniture,Furniture,12,000,₹12
+Shoe Rack – Seating,Furniture,Furniture,18,000,₹18
+Shoe Rack – Full Height,Furniture,Furniture,22,000,₹22
+Modular Switchboard,Furniture,Electrical,1,600,₹1
+LED Panel Light,Finishes,Electrical,850,₹850 / Nos,Ceiling
+Strip Light,Furniture,Electrical,120,₹120 / Rft,Cove
+Ceiling Fan,Furniture,Electrical,4,000,₹4
+Exhaust Fan,Furniture,Electrical,2,500,₹2
+Geyser – 15L,Furniture,Electrical,8,500,₹8
+Split AC – 1T,Furniture,Electrical,32,000,₹32
+Split AC – 1.5T,Furniture,Electrical,38,000,₹38
+Split AC – 2T,Furniture,Electrical,48,000,₹48
+Refrigerator – Single Door,Furniture,Electrical,18,000,₹18
+Refrigerator – Double Door,Furniture,Electrical,32,000,₹32
+Refrigerator – Side by Side,Furniture,Electrical,65,000,₹65
+Chimney,Furniture,Electrical,18,000,₹18
+Hob – 3 Burner,Furniture,Electrical,12,000,₹12
+Hob – 4 Burner,Furniture,Electrical,16,000,₹16
+Built-in Oven,Furniture,Electrical,28,000,₹28
+Wall Hung WC,Furniture,Hardware,22,000,₹22
+Wash Basin,Furniture,Hardware,6,500,₹6
+Shower Set,Furniture,Hardware,5,500,₹5
+Vanity Unit,Furniture,Hardware,14,000,₹14
+Mirror with Light,Furniture,Hardware,6,000,₹6
+Towel Rod,Furniture,Hardware,850,₹850 / Nos,SS
+Soap Dispenser,Finishes,Hardware,650,₹650 / Nos,Wall mount
+Carpentry Work,Furniture,Furniture,280,₹280 / Sq.ft,Furniture
+Electrical Work,Furniture,Furniture,450,₹450 / Point,Wiring
+Plumbing Work,Furniture,Furniture,500,₹500 / Point,Sanitary
+Painting Work,Furniture,Furniture,15,₹15 / Sq.ft,Roller
+Installation Charges,Furniture,Furniture,120,₹120 / Sq.ft,Modular
+Gypsum False Ceiling – Plain,Finishes,Furniture,110,₹110 / Sq.ft,Single-level ceiling
+Gypsum False Ceiling – Design,Furniture,Furniture,160,₹160 / Sq.ft,Cut-outs & shapes
+Gypsum False Ceiling – Double Height,Furniture,Furniture,220,₹220 / Sq.ft,Living area
+POP False Ceiling,Furniture,Furniture,140,₹140 / Sq.ft,Traditional
+Wooden False Ceiling,Furniture,Furniture,320,₹320 / Sq.ft,Veneer / laminate
+PVC False Ceiling,Furniture,Furniture,95,₹95 / Sq.ft,Budget option
+Metal Grid Ceiling,Furniture,Furniture,180,₹180 / Sq.ft,Commercial
+Cove Ceiling (Gypsum),Electrical,Furniture,180,₹180 / Rft,Indirect lighting
+Ceiling Cornice / Moulding,Furniture,Furniture,120,₹120 / Rft,POP detail
+Downlight (LED),Electrical,Electrical,650,₹650 / Nos,Cut-out light
+COB Light,Furniture,Electrical,1,200,₹1
+Profile Light,Furniture,Electrical,950,₹950 / Rft,Linear
+Strip Light (Cove),Furniture,Electrical,120,₹120 / Rft,Warm/white
+Vitrified Tile – Basic,Furniture,Finishes,95,₹95 / Sq.ft,Living/bedroom
+Vitrified Tile – Premium,Furniture,Finishes,140,₹140 / Sq.ft,Large format
+Ceramic Tile – Bathroom,Furniture,Finishes,85,₹85 / Sq.ft,Anti-skid
+Parking Tile,Furniture,Finishes,75,₹75 / Sq.ft,Heavy duty
+Marble – Makrana White,Furniture,Finishes,450,₹450 / Sq.ft,Polished
+Marble – Italian,Furniture,Finishes,950,₹950 / Sq.ft,Premium
+Granite Flooring,Furniture,Finishes,320,₹320 / Sq.ft,Durable
+Kota Stone,Furniture,Finishes,120,₹120 / Sq.ft,Budget stone
+Wooden Flooring (Laminate),Furniture,Finishes,320,₹320 / Sq.ft,Click lock
+Engineered Wood Flooring,Furniture,Finishes,550,₹550 / Sq.ft,Premium
+Vinyl Flooring,Furniture,Finishes,180,₹180 / Sq.ft,Waterproof
+SPC Flooring,Furniture,Finishes,260,₹260 / Sq.ft,Rigid core
+Tile Skirting,Furniture,Finishes,85,₹85 / Rft,Matching tile
+Marble Skirting,Furniture,Finishes,180,₹180 / Rft,Stone
+Wooden Skirting,Furniture,Finishes,220,₹220 / Rft,MDF
+PVC Skirting,Furniture,Finishes,95,₹95 / Rft,Waterproof
+Aluminium Skirting,Furniture,Finishes,260,₹260 / Rft,Premium
+Tile Laying Labour,Furniture,Finishes,45,₹45 / Sq.ft,Adhesive method
+Marble Installation Labour,Furniture,Finishes,85,₹85 / Sq.ft,Polishing included
+Wooden Flooring Installation,Furniture,Finishes,60,₹60 / Sq.ft,Click system
+Floor Levelling (Screed),Furniture,Finishes,35,₹35 / Sq.ft,Surface prep

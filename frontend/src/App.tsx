@@ -12,7 +12,6 @@ import Signup from "./pages/Signup";
 import Invite from "./pages/Invite";
 import ManageSites from "./pages/ManageSites";
 import FeedDetail from "./pages/FeedDetail";
-import Landing from "./pages/Landing";
 import UserListing from "./pages/UserListing";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -44,7 +43,9 @@ const RootRedirect = () => {
     return <Navigate to="/home" replace />;
   }
 
-  return <Landing />;
+  // Redirect to static HTML landing page
+  window.location.href = '/landing.html';
+  return null;
 };
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {

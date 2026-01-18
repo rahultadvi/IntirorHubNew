@@ -79,6 +79,7 @@ export const getPaymentsBySite = async (req, res) => {
 export const markAsPaid = async (req, res) => {
   try {
     const { paymentId } = req.params;
+    const { paymentMethod, paymentDate } = req.body;
 
     if (req.user.role !== "ADMIN") {
       return res.status(403).json({ message: "Only admin allowed" });
@@ -92,7 +93,12 @@ export const markAsPaid = async (req, res) => {
     }
 
     payment.status = "paid";
-    payment.paidDate = new Date();
+    // Use provided paymentDate or default to current date
+    payment.paidDate = paymentDate ? new Date(paymentDate) : new Date();
+    // Store payment method if provided
+    if (paymentMethod) {
+      payment.paymentMethod = paymentMethod;
+    }
     await payment.save();
 
     res.json({ message: "Payment marked as paid", payment });

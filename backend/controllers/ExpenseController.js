@@ -22,6 +22,8 @@ export const addExpense = async (req, res) => {
       amount,
       dueDate,
       siteId,
+      paymentType,
+      vendorName,
       invoiceBase64,
       invoiceFilename
     } = req.body;
@@ -44,6 +46,8 @@ export const addExpense = async (req, res) => {
       amount,
       dueDate,
       siteId,
+      paymentType: paymentType || null,
+      vendorName: vendorName || '',
       createdBy: req.user._id,
       companyName: req.user.companyName,
       status: req.user.role === 'ADMIN' ? 'approved' : 'pending'

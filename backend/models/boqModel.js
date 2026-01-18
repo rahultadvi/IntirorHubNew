@@ -72,6 +72,11 @@ const boqItemSchema = new mongoose.Schema({
   companyName: {
     type: String,
     required: true
+  },
+  category: {
+    type: String,
+    enum: ['Furniture', 'Finishes', 'Hardware', 'Electrical', 'Miscellaneous'],
+    default: 'Furniture'
   }
 }, {
   timestamps: true

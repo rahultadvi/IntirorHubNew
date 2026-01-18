@@ -51,6 +51,20 @@ const SiteSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    budgetAllocation: {
+      categories: {
+        Material: { type: Number, default: 0 },
+        Labour: { type: Number, default: 0 },
+        Electrical: { type: Number, default: 0 },
+        Equipment: { type: Number, default: 0 },
+        Transport: { type: Number, default: 0 },
+        Miscellaneous: { type: Number, default: 0 },
+      },
+      emergencyReserve: { type: Number, default: 0 },
+      profitMargin: { type: Number, default: 0 },
+      emergencyReserveLocked: { type: Boolean, default: true },
+      profitMarginLocked: { type: Boolean, default: true },
+    },
   },
   {
     timestamps: true,

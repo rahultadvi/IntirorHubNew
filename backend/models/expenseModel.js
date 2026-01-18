@@ -38,6 +38,16 @@ const expenseSchema = new mongoose.Schema({
     type: Date,
     default: undefined
   },
+  paymentType: {
+    type: String,
+    enum: ['Cash', 'Bank Transfer', 'UPI', 'NEFT', 'Cheque', 'Credit Card'],
+    default: null
+  },
+  vendorName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   invoice: {
     path: { type: String, default: null },
     filename: { type: String, default: null }

@@ -41,7 +41,7 @@ export const addBOQItem = async (req, res) => {
       status: ['MANAGER', 'AGENT'].includes(req.user.role) ? 'pending' : 'approved',
       createdBy: req.user._id,
       companyName: req.user.companyName,
-      category
+      category: category || 'Furniture'
     });
 
     // Handle file upload or base64 image

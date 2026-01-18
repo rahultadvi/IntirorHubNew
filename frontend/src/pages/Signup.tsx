@@ -135,39 +135,15 @@ const Signup: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-white text-black">
-      <div className="hidden lg:flex lg:w-1/2 bg-[#050505] text-white flex-col justify-between p-14 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#050505] text-white flex-col justify-center items-center p-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#111111,_#050505_60%)] opacity-80"></div>
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="p-3 bg-white rounded-xl">
-            <Building2 className="h-7 w-7 text-black" />
-          </div>
-          <div>
-            <p className="text-lg font-semibold tracking-wide uppercase">SiteZero</p>
-            <p className="text-xs text-gray-300">Interior Project Platform</p>
-          </div>
-        </div>
-
-        <div className="relative z-10 space-y-8">
-          <h1 className="text-5xl font-semibold leading-tight">
-            Build your interior projects with absolute clarity.
+        <div className="relative z-10 text-center max-w-lg">
+          <h1 className="text-5xl font-semibold leading-tight mb-6">
+            Fast, Efficient and Productive
           </h1>
-          <p className="text-gray-200 text-lg max-w-md">
-            Keep every site update, payment milestone, and BOQ decision in one clean workspace designed for interior teams.
+          <p className="text-gray-200 text-lg leading-relaxed">
+            SiteZero gives you the clarity to manage construction projects without the chaos.
           </p>
-          <div className="space-y-4">
-            {["Realtime status across projects", "Simple expense and payment control", "Roles for manager, agent, and client", "Detailed BOQ tracking"]
-              .map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm uppercase tracking-[0.2em] text-gray-300">
-                  <span className="h-px flex-1 bg-gray-700"></span>
-                  <span>{item}</span>
-                  <span className="h-px flex-1 bg-gray-700"></span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className="relative z-10 text-xs text-gray-500 tracking-[0.3em] uppercase">
-          Secure by design · Black and white UI
         </div>
       </div>
 

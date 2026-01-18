@@ -9,10 +9,16 @@ import {
   Filter,
   MoreVertical,
   Check,
+  Calendar,
+  PiggyBank,
+  ShieldAlert,
+  Lock,
+  Unlock,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSite } from "../context/SiteContext";
-import { expenseApi } from "../services/api";
+import { expenseApi, siteApi } from "../services/api";
 import AddExpenseModal from "../component/AddExpenseModal";
 
 interface ExpenseItem {
@@ -22,8 +28,11 @@ interface ExpenseItem {
   location?: string;
   amount: number;
   dueDate: string;
+  createdAt?: string;
   status: string;
   paymentStatus: string;
+  paymentType?: 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT' | 'Cheque' | 'Credit Card' | null;
+  vendorName?: string;
   invoice?: { path?: string | null; filename?: string | null } | null;
   createdBy?: { name?: string; role?: string; _id?: string };
 }
@@ -31,9 +40,34 @@ interface ExpenseItem {
 const Expenses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [showAllocateBudgetModal, setShowAllocateBudgetModal] = useState(false);
+  
+  // Budget allocation states
+  const [categoryBudgets, setCategoryBudgets] = useState({
+    Material: 0,
+    Labour: 0,
+    Electrical: 0,
+    Equipment: 0,
+    Transport: 0,
+    Miscellaneous: 0,
+  });
+  const [emergencyReserve, setEmergencyReserve] = useState(0);
+  const [profitMargin, setProfitMargin] = useState(0);
+  const [emergencyReserveLocked, setEmergencyReserveLocked] = useState(true);
+  const [profitMarginLocked, setProfitMarginLocked] = useState(true);
+  const [loadingBudget, setLoadingBudget] = useState(false);
+  const [savingBudget, setSavingBudget] = useState(false);
+  const [budgetAllocation, setBudgetAllocation] = useState<{
+    categories: { [key: string]: number };
+    emergencyReserve: number;
+    profitMargin: number;
+  } | null>(null);
 
   const { token, user } = useAuth();
   const { activeSite } = useSite();
@@ -57,6 +91,8 @@ const Expenses: React.FC = () => {
   const buildParams = () => {
     const params: Record<string, string> = {};
     if (selectedCategory && selectedCategory !== 'all') params.category = selectedCategory;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
     return params;
   };
 
@@ -126,7 +162,138 @@ const Expenses: React.FC = () => {
 
   useEffect(() => {
     fetchExpenses();
-  }, [token, activeSite, selectedCategory]);
+  }, [token, activeSite, selectedCategory, startDate, endDate]);
+
+  // Calculate default budget allocation: 10% profit, 20% emergency, 70% divided equally among 6 categories
+  const calculateDefaultAllocation = (budget: number) => {
+    const profitPercent = 0.10; // 10%
+    const emergencyPercent = 0.20; // 20%
+    const categoriesPercent = 0.70; // 70%
+    const numCategories = 6;
+    
+    const profit = Math.round(budget * profitPercent);
+    const emergency = Math.round(budget * emergencyPercent);
+    const categoriesTotal = Math.round(budget * categoriesPercent);
+    const perCategory = Math.round(categoriesTotal / numCategories);
+    
+    return {
+      categories: {
+        Material: perCategory,
+        Labour: perCategory,
+        Electrical: perCategory,
+        Equipment: perCategory,
+        Transport: perCategory,
+        Miscellaneous: perCategory,
+      },
+      emergencyReserve: emergency,
+      profitMargin: profit,
+      emergencyReserveLocked: true,
+      profitMarginLocked: true,
+    };
+  };
+
+  // Load budget allocation from backend
+  const loadBudgetAllocation = async () => {
+    if (!token || !activeSite?.id) return;
+    
+    try {
+      setLoadingBudget(true);
+      const response = await siteApi.getBudgetAllocation(activeSite.id, token);
+      const { budgetAllocation } = response;
+      
+      // Check if allocation exists and has values
+      const hasAllocation = budgetAllocation && (
+        Object.values(budgetAllocation.categories).some(v => v > 0) ||
+        budgetAllocation.emergencyReserve > 0 ||
+        budgetAllocation.profitMargin > 0
+      );
+      
+      if (hasAllocation) {
+        setCategoryBudgets(budgetAllocation.categories);
+        setEmergencyReserve(budgetAllocation.emergencyReserve);
+        setProfitMargin(budgetAllocation.profitMargin);
+        setEmergencyReserveLocked(budgetAllocation.emergencyReserveLocked !== false);
+        setProfitMarginLocked(budgetAllocation.profitMarginLocked !== false);
+        // Store budget allocation for validation
+        setBudgetAllocation({
+          categories: budgetAllocation.categories,
+          emergencyReserve: budgetAllocation.emergencyReserve,
+          profitMargin: budgetAllocation.profitMargin,
+        });
+      } else {
+        // Use default allocation if no saved allocation exists
+        const defaultAllocation = calculateDefaultAllocation(totalBudget);
+        setCategoryBudgets(defaultAllocation.categories);
+        setEmergencyReserve(defaultAllocation.emergencyReserve);
+        setProfitMargin(defaultAllocation.profitMargin);
+        setEmergencyReserveLocked(defaultAllocation.emergencyReserveLocked);
+        setProfitMarginLocked(defaultAllocation.profitMarginLocked);
+        // Store default allocation for validation
+        setBudgetAllocation({
+          categories: defaultAllocation.categories,
+          emergencyReserve: defaultAllocation.emergencyReserve,
+          profitMargin: defaultAllocation.profitMargin,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load budget allocation', error);
+      // Use default allocation on error (only for admin users)
+      const defaultAllocation = calculateDefaultAllocation(totalBudget);
+      setCategoryBudgets(defaultAllocation.categories);
+      setEmergencyReserve(defaultAllocation.emergencyReserve);
+      setProfitMargin(defaultAllocation.profitMargin);
+      setEmergencyReserveLocked(defaultAllocation.emergencyReserveLocked);
+      setProfitMarginLocked(defaultAllocation.profitMarginLocked);
+      // Store default allocation for validation
+      setBudgetAllocation({
+        categories: defaultAllocation.categories,
+        emergencyReserve: defaultAllocation.emergencyReserve,
+        profitMargin: defaultAllocation.profitMargin,
+      });
+    } finally {
+      setLoadingBudget(false);
+    }
+  };
+
+  // Save budget allocation to backend
+  const saveBudgetAllocationToBackend = async () => {
+    if (!token || !activeSite?.id) return;
+    
+    try {
+      setSavingBudget(true);
+      await siteApi.saveBudgetAllocation(
+        activeSite.id,
+        {
+          categories: categoryBudgets,
+          emergencyReserve,
+          profitMargin,
+          emergencyReserveLocked,
+          profitMarginLocked,
+        },
+        token
+      );
+      setShowAllocateBudgetModal(false);
+    } catch (error) {
+      console.error('Failed to save budget allocation', error);
+      alert('Failed to save budget allocation. Please try again.');
+    } finally {
+      setSavingBudget(false);
+    }
+  };
+
+  // Load budget when modal opens or when site changes
+  useEffect(() => {
+    if (showAllocateBudgetModal && activeSite?.id) {
+      loadBudgetAllocation();
+    }
+  }, [showAllocateBudgetModal, activeSite?.id, totalBudget]);
+
+  // Load budget allocation on page load for validation
+  useEffect(() => {
+    if (activeSite?.id && token) {
+      loadBudgetAllocation();
+    }
+  }, [activeSite?.id, token]);
 
   useEffect(() => {
     try {
@@ -169,10 +336,16 @@ const Expenses: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden pb-6">
+    <div className="min-h-screen w-full overflow-x-hidden pb-6">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 mt-16 ">
-        <div className="w-full px-4 py-4">
+      <div className="flex items-center justify-center mb-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-slate-800"> Expenses </h2>
+          <p className="text-slate-500 text-sm">Track your expenses and manage your budget</p>
+        </div>
+      </div>
+      <div className="border-b border-gray-200 mt-6 ">
+        <div className="max-w-md mx-auto px-4 py-4">
 
 
           {/* Budget Cards */}
@@ -226,38 +399,39 @@ const Expenses: React.FC = () => {
             ))}
           </div> */}
 
-          {/* Search Bar with Category Filter */}
-          <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex items-center gap-3">
-            <Search className="w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search expenses or vendors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
-            />
-            {/* Category Filter */}
-            <div className="relative flex items-center cursor-pointer">
-              <div className="relative">
-                <Filter className={`w-5 h-5 ${selectedCategory !== 'all' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                {selectedCategory !== 'all' && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-600 rounded-full border-2 border-white"></span>
-                )}
-              </div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                title={selectedCategory === 'all' ? 'All Categories' : selectedCategory}
+          {/* Allocate Budget Button - Admin Only */}
+          {isAdmin && (
+            <button
+              onClick={() => setShowAllocateBudgetModal(true)}
+              className="w-full bg-black hover:bg-gray-900 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2 mb-4 transition-colors shadow-sm"
+            >
+              <PiggyBank className="w-5 h-5" />
+              Allocate Budget
+            </button>
+          )}
+
+          {/* Search Bar with Filter Button */}
+          <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100">
+            <div className="flex items-center gap-3">
+              <Search className="w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search expenses or vendors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
+              />
+              {/* Filter Popup Button */}
+              <button
+                onClick={() => setShowFilterPopup(true)}
+                className="relative p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                title="Filter expenses"
               >
-                <option value="all">All Categories</option>
-                <option value="Material">Material</option>
-                <option value="Labour">Labour</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Equipment">Equipment</option>
-                <option value="Transport">Transport</option>
-                <option value="Misc">Miscellaneous</option>
-              </select>
+                <Filter className={`w-5 h-5 ${(selectedCategory !== 'all' || startDate || endDate) ? 'text-indigo-600' : 'text-slate-400'}`} />
+                {(selectedCategory !== 'all' || startDate || endDate) && (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-indigo-600 rounded-full border-2 border-white"></span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -272,8 +446,102 @@ const Expenses: React.FC = () => {
         </div>
       </div>
 
+      {/* Filter Popup Modal */}
+      {showFilterPopup && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowFilterPopup(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-slate-800">Filter Expenses</h3>
+              <button
+                onClick={() => setShowFilterPopup(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-800 font-medium"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Material">Material</option>
+                  <option value="Labour">Labour</option>
+                  <option value="Electrical">Electrical</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Misc">Miscellaneous</option>
+                </select>
+              </div>
+
+              {/* Date Filters */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Date Range
+                </label>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || undefined}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setSelectedCategory('all');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => setShowFilterPopup(false)}
+                  className="flex-1 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="w-full px-4 pt-4">
+      <div className="max-w-md mx-auto px-4 pt-4">
         {/* Results Count */}
         <p className="text-center text-sm font-semibold text-slate-400 mb-4 tracking-wider">
           {filteredExpenses.length} EXPENSE{filteredExpenses.length !== 1 ? 'S' : ''} FOUND
@@ -311,9 +579,21 @@ const Expenses: React.FC = () => {
                       <h4 className="font-bold text-slate-800 text-lg mb-2 ml-[10px]">
                         {expense.title}
                       </h4>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
-                        {expense.category.toUpperCase()}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
+                          {expense.category.toUpperCase()}
+                        </span>
+                        {expense.vendorName && (
+                          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                            Vendor: {expense.vendorName}
+                          </span>
+                        )}
+                        {expense.paymentType && (
+                          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                            {expense.paymentType}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xl font-bold text-slate-800">
@@ -475,9 +755,52 @@ const Expenses: React.FC = () => {
                   </div>
 
                   {/* Footer */}
-                  <p className="text-xs text-slate-400 font-medium tracking-wider">
-                    {expense.createdBy?.name?.toUpperCase() || '—'}
-                  </p>
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                      {expense.vendorName && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-600">Vendor:</span>
+                          <span>{expense.vendorName}</span>
+                        </div>
+                      )}
+                      {expense.paymentType && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-600">Payment:</span>
+                          <span>{expense.paymentType}</span>
+                        </div>
+                      )}
+                      {expense.createdBy?.name && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-600">Created by:</span>
+                          <span>{expense.createdBy.name}</span>
+                        </div>
+                      )}
+                      {expense.createdAt && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="font-semibold text-slate-600">Created:</span>
+                          <span>{new Date(expense.createdAt).toLocaleDateString('en-IN', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric' 
+                          })}</span>
+                        </div>
+                      )}
+                      {expense.dueDate && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="font-semibold text-slate-600">Due:</span>
+                          <span className={new Date(expense.dueDate) < new Date() && expense.paymentStatus === 'due' ? 'text-red-600 font-semibold' : ''}>
+                            {new Date(expense.dueDate).toLocaleDateString('en-IN', { 
+                              day: '2-digit', 
+                              month: 'short', 
+                              year: 'numeric' 
+                            })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )
             })
@@ -505,7 +828,254 @@ const Expenses: React.FC = () => {
         onCreated={() => fetchExpenses()}
         token={token}
         siteId={activeSite?.id || ''}
+        budgetAllocation={budgetAllocation}
+        existingExpenses={items}
       />
+
+      {/* Allocate Budget Modal */}
+      {showAllocateBudgetModal && (
+        <div 
+          className="fixed inset-0 z-[250] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAllocateBudgetModal(false);
+            }
+          }}
+        >
+          <div className="bg-white w-full max-w-md rounded-t-[3rem] p-8 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto scrollbar-hide">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Project Budget Allocation</h3>
+                <p className="text-xs font-medium text-gray-500 mt-1">Distribute project budget across categories, reserve, and profit</p>
+              </div>
+              <button 
+                onClick={() => setShowAllocateBudgetModal(false)}
+                className="bg-gray-50 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Total Project Budget Card */}
+            {(() => {
+              const totalAllocated = Object.values(categoryBudgets).reduce((sum, val) => sum + (val || 0), 0) + 
+                                   (emergencyReserve || 0) + (profitMargin || 0);
+              const remaining = Math.max(0, totalBudget - totalAllocated);
+              const progressPercent = totalBudget > 0 ? Math.min(100, (totalAllocated / totalBudget) * 100) : 0;
+              
+              return (
+                <div className="rounded-2xl p-5 mb-6 border transition-colors bg-blue-50/50 border-blue-100">
+                  <div className="flex justify-between items-center mb-5">
+                    <div>
+                      <p className="text-xs font-semibold text-blue-600 mb-1">Total Project Budget</p>
+                      <p className="text-2xl font-bold text-slate-800">₹{totalBudget.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-gray-600 mb-1">Allocated</p>
+                      <p className="text-lg font-bold text-blue-600">₹{totalAllocated.toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner border border-white p-0.5">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500 bg-green-500" 
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between items-center px-1">
+                      <p className="text-xs font-medium text-gray-600">Progress</p>
+                      <p className="text-xs font-semibold text-blue-600">₹{remaining.toLocaleString('en-IN')} Remaining</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Category-wise Budget */}
+            <div className="space-y-4 mb-6">
+              <h4 className="text-sm font-semibold text-gray-700 ml-1">Category-wise Budget</h4>
+              <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
+                {Object.keys(categoryBudgets).map((category) => (
+                  <div key={category} className="space-y-1.5 pb-4 border-b border-gray-100 last:border-none last:pb-0">
+                    <label className="text-xs font-semibold text-slate-700 ml-1">{category}</label>
+                    <div className="relative">
+                      <input
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 outline-none pr-12 text-right focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        type="number"
+                        value={categoryBudgets[category as keyof typeof categoryBudgets]}
+                        onChange={(e) => setCategoryBudgets({
+                          ...categoryBudgets,
+                          [category]: parseFloat(e.target.value) || 0
+                        })}
+                        disabled={loadingBudget}
+                      />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">₹</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Special Reserves */}
+            <div className="space-y-4 mb-6">
+              <h4 className="text-sm font-semibold text-gray-700 ml-1">Special Reserves</h4>
+              
+              {/* Emergency Reserve */}
+              <div className="rounded-2xl p-5 border transition-all bg-orange-50/50 border-orange-100">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-orange-100 text-orange-500">
+                      <ShieldAlert className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-semibold text-slate-800">Emergency Reserve</h5>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                        {emergencyReserveLocked ? 'Locked' : 'Unlocked'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setEmergencyReserveLocked(!emergencyReserveLocked)}
+                    disabled={loadingBudget}
+                    className={`w-12 h-6 rounded-full relative transition-all ${
+                      emergencyReserveLocked ? 'bg-orange-400' : 'bg-green-400'
+                    }`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all flex items-center justify-center ${
+                      emergencyReserveLocked ? 'left-1' : 'left-7'
+                    }`}>
+                      {emergencyReserveLocked ? (
+                        <Lock className="w-2.5 h-2.5 text-orange-400" />
+                      ) : (
+                        <Unlock className="w-2.5 h-2.5 text-green-400" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    disabled={emergencyReserveLocked || loadingBudget}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm font-medium outline-none pr-12 text-right transition-all ${
+                      emergencyReserveLocked || loadingBudget
+                        ? 'bg-gray-100/50 border-transparent text-gray-400 cursor-not-allowed' 
+                        : 'bg-white border-gray-200 text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'
+                    }`}
+                    type="number"
+                    value={emergencyReserve}
+                    onChange={(e) => setEmergencyReserve(parseFloat(e.target.value) || 0)}
+                  />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">₹</div>
+                </div>
+                <p className="text-xs font-medium text-gray-500 mt-3 ml-1">Usable only when unlocked by admin. For critical budget overruns.</p>
+              </div>
+
+              {/* Profit Margin */}
+              <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 text-purple-600 rounded-xl">
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-semibold text-slate-800">Profit Margin</h5>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                        {profitMarginLocked ? 'Locked' : 'Unlocked'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setProfitMarginLocked(!profitMarginLocked)}
+                    disabled={loadingBudget}
+                    className={`w-12 h-6 rounded-full relative transition-all ${
+                      profitMarginLocked ? 'bg-purple-400' : 'bg-green-400'
+                    }`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all flex items-center justify-center ${
+                      profitMarginLocked ? 'left-1' : 'left-7'
+                    }`}>
+                      {profitMarginLocked ? (
+                        <Lock className="w-2.5 h-2.5 text-purple-400" />
+                      ) : (
+                        <Unlock className="w-2.5 h-2.5 text-green-400" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    disabled={profitMarginLocked || loadingBudget}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm font-medium outline-none pr-12 text-right transition-all ${
+                      profitMarginLocked || loadingBudget
+                        ? 'bg-gray-100/50 border-transparent text-gray-400 cursor-not-allowed' 
+                        : 'bg-white border-gray-200 text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'
+                    }`}
+                    type="number"
+                    value={profitMargin}
+                    onChange={(e) => setProfitMargin(parseFloat(e.target.value) || 0)}
+                  />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">₹</div>
+                </div>
+                <p className="text-xs font-medium text-gray-500 mt-3 ml-1">Reserved project profit. Adjustable when unlocked.</p>
+              </div>
+            </div>
+
+            {/* Final Breakdown */}
+            {(() => {
+              const categoryTotal = Object.values(categoryBudgets).reduce((sum, val) => sum + (val || 0), 0);
+              const totalAllocated = categoryTotal + (emergencyReserve || 0) + (profitMargin || 0);
+              const unallocated = Math.max(0, totalBudget - totalAllocated);
+              
+              return (
+                <div className="bg-gray-50 rounded-2xl p-6 mb-6 space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 text-center">Final Breakdown</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-slate-800">Total Budget</span>
+                      <span className="text-sm font-bold text-slate-800">₹{totalBudget.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-600">Category Allocations</span>
+                      <span className="text-sm font-semibold text-gray-700">₹{categoryTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-600">Emergency Fund</span>
+                      <span className="text-sm font-semibold text-gray-700">₹{emergencyReserve.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-600">Profit Margin</span>
+                      <span className="text-sm font-semibold text-gray-700">₹{profitMargin.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="h-px bg-gray-200 my-4"></div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold text-slate-800">Unallocated Balance</span>
+                      <span className={`text-lg font-bold ${unallocated === 0 ? 'text-green-600' : 'text-gray-600'}`}>₹{unallocated.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-100 -mx-8 px-8">
+              <button
+                onClick={() => setShowAllocateBudgetModal(false)}
+                disabled={savingBudget}
+                className="flex-1 bg-gray-50 py-4 rounded-xl text-gray-600 font-semibold text-sm active:scale-95 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveBudgetAllocationToBackend}
+                disabled={savingBudget || loadingBudget}
+                className="flex-1 py-4 rounded-xl text-white font-semibold text-sm shadow-lg transition-all active:scale-95 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingBudget ? 'Saving...' : 'Save Allocation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

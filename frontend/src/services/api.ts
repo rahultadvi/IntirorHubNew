@@ -433,6 +433,65 @@ export const siteApi = {
       body,
       token,
     }),
+  getBudgetAllocation: (siteId: string, token: string) =>
+    request<{
+      budgetAllocation: {
+        categories: {
+          Material: number;
+          Labour: number;
+          Electrical: number;
+          Equipment: number;
+          Transport: number;
+          Miscellaneous: number;
+        };
+        emergencyReserve: number;
+        profitMargin: number;
+        emergencyReserveLocked: boolean;
+        profitMarginLocked: boolean;
+      };
+    }>(`/sites/${siteId}/budget-allocation`, {
+      method: "GET",
+      token,
+    }),
+  saveBudgetAllocation: (
+    siteId: string,
+    body: {
+      categories: {
+        Material: number;
+        Labour: number;
+        Electrical: number;
+        Equipment: number;
+        Transport: number;
+        Miscellaneous: number;
+      };
+      emergencyReserve: number;
+        profitMargin: number;
+        emergencyReserveLocked: boolean;
+        profitMarginLocked: boolean;
+      },
+      token: string
+    ) =>
+      request<{
+        message: string;
+        budgetAllocation: {
+          categories: {
+            Material: number;
+            Labour: number;
+            Electrical: number;
+            Equipment: number;
+            Transport: number;
+            Miscellaneous: number;
+          };
+          emergencyReserve: number;
+          profitMargin: number;
+          emergencyReserveLocked: boolean;
+          profitMarginLocked: boolean;
+        };
+      }>(`/sites/${siteId}/budget-allocation`, {
+        method: "POST",
+        body,
+        token,
+      }),
 };
 
 export const feedApi = {
@@ -548,13 +607,13 @@ export const paymentApi = {
       token,
     }),
 
-  markAsPaid: (paymentId: string, paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT', token: string) =>
+  markAsPaid: (paymentId: string, paymentMethod: 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT', paymentDate: string, token: string) =>
     request<{
       message: string;
       payment: PaymentDto;
     }>(`/payments/${paymentId}/paid`, {
       method: "PUT",
-      body: { paymentMethod },
+      body: { paymentMethod, paymentDate },
       token,
     }),
 

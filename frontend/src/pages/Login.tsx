@@ -54,39 +54,15 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-white text-black">
-      <div className="hidden lg:flex lg:w-1/2 bg-[#040404] text-white flex-col justify-between p-14 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#040404] text-white flex-col justify-center items-center p-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_#060606,_#000000_60%)] opacity-80"></div>
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="p-3 bg-white rounded-xl">
-            <Building2 className="h-7 w-7 text-black" />
-          </div>
-          <div>
-            <p className="text-lg font-semibold tracking-wide uppercase">SiteZero</p>
-            <p className="text-xs text-gray-300">Interior Project Platform</p>
-          </div>
-        </div>
-
-        <div className="relative z-10 space-y-8">
-          <h1 className="text-5xl font-semibold leading-tight max-w-lg">
-            Welcome back to the control room for your interior sites.
+        <div className="relative z-10 text-center max-w-lg">
+          <h1 className="text-5xl font-semibold leading-tight mb-6">
+            Fast, Efficient and Productive
           </h1>
-          <p className="text-gray-200 text-lg max-w-md">
-            Sign in as admin and keep payments, BOQs, and site updates aligned. Every admin login triggers a password email for your audit trail.
+          <p className="text-gray-200 text-lg leading-relaxed">
+            SiteZero gives you the clarity to manage construction projects without the chaos.
           </p>
-          <div className="space-y-4">
-            {["Monitor live BOQ revisions", "Approve expenses in seconds", "Share status with clients", "Invite managers and agents"]
-              .map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm uppercase tracking-[0.2em] text-gray-300">
-                  <span className="h-px flex-1 bg-gray-700"></span>
-                  <span>{item}</span>
-                  <span className="h-px flex-1 bg-gray-700"></span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className="relative z-10 text-xs text-gray-500 tracking-[0.3em] uppercase">
-          Designed for interior teams · Secure login alerts
         </div>
       </div>
 

@@ -31,6 +31,8 @@ const Payments: React.FC = () => {
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT'>('Bank Transfer');
+  const [paymentDate, setPaymentDate] = useState("");
+  const [selectedPaymentAmount, setSelectedPaymentAmount] = useState<number>(0);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -131,18 +133,27 @@ const Payments: React.FC = () => {
 
   const handleMarkPaidClick = (paymentId: string) => {
     if (!token || !isAdmin) return;
+    const payment = payments.find(p => p._id === paymentId);
     setSelectedPaymentId(paymentId);
     setPaymentMethod('Bank Transfer'); // Reset to default
+    setPaymentDate(new Date().toISOString().split('T')[0]); // Set today's date as default
+    setSelectedPaymentAmount(payment?.amount || 0);
     setShowPaymentMethodModal(true);
   };
 
   const handleMarkPaid = async () => {
-    if (!token || !isAdmin || !selectedPaymentId) return;
+    if (!token || !isAdmin || !selectedPaymentId || !paymentDate) {
+      showToast("Please select a payment date", "error");
+      return;
+    }
 
     try {
-      await paymentApi.markAsPaid(selectedPaymentId, paymentMethod, token);
+      await paymentApi.markAsPaid(selectedPaymentId, paymentMethod, paymentDate, token);
       setShowPaymentMethodModal(false);
       setSelectedPaymentId(null);
+      setPaymentDate("");
+      setPaymentMethod('Bank Transfer');
+      setSelectedPaymentAmount(0);
       lastSiteIdRef.current = null; // Reset to allow reload
       loadPayments();
       showToast("Payment marked as paid", "success");
@@ -156,6 +167,8 @@ const Payments: React.FC = () => {
     setShowPaymentMethodModal(false);
     setSelectedPaymentId(null);
     setPaymentMethod('Bank Transfer');
+    setPaymentDate("");
+    setSelectedPaymentAmount(0);
   };
 
   const handleDeletePayment = async (paymentId: string) => {
@@ -256,6 +269,16 @@ const Payments: React.FC = () => {
                 year: "numeric"
               })}</div>
             </div>
+            ${payment.status === 'paid' && payment.paidDate ? `
+            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Date:</div>
+              <div style="font-weight: 600; color: #059669; font-size: 14px; text-align: right;">${new Date(payment.paidDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric"
+              })}</div>
+            </div>
+            ` : ''}
             <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
               <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Made By:</div>
               <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; padding: 4px 12px;  border-radius: 6px; display: inline-block;">
@@ -318,17 +341,151 @@ const Payments: React.FC = () => {
     // Clean up
     document.body.removeChild(receiptDiv);
     
-    const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
+
+    // Define margins to avoid cut edges
+    const marginTop = 25; // mm - space for header
+    const marginBottom = 30; // mm - space for footer
+    const marginLeft = 10; // mm
+    const marginRight = 10; // mm
     
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
+    const contentWidth = pdfWidth - marginLeft - marginRight;
+    const contentHeight = pdfHeight - marginTop - marginBottom;
+    
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
-    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-    const imgX = (pdfWidth - imgWidth * ratio) / 2;
     
-    pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+    // Convert pixels to mm (96 DPI = 0.264583 mm per pixel)
+    const pixelsToMm = 0.264583;
+    const imgWidthMm = imgWidth * pixelsToMm;
+    const imgHeightMm = imgHeight * pixelsToMm;
+    
+    // Calculate ratio to fit content width
+    const ratio = contentWidth / imgWidthMm;
+    const scaledWidth = contentWidth;
+    const scaledHeight = imgHeightMm * ratio;
+    
+    // Calculate total pages needed
+    const totalPages = Math.ceil(scaledHeight / contentHeight) || 1;
+
+    const generatedDateTime = new Date().toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    // Helper function to add header on each page
+    const addHeader = (pageNum: number) => {
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 41, 59); // slate-800
+      pdf.setFont('helvetica', 'bold');
+      
+      // Left side - Document title
+      pdf.text('PAYMENT RECEIPT', marginLeft, 12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      const siteText = siteByCompany.length > 50 ? siteByCompany.substring(0, 47) + '...' : siteByCompany;
+      pdf.text(siteText, marginLeft, 16);
+      
+      // Right side - Page number and Date
+      const pageText = `Page ${pageNum} of ${totalPages}`;
+      const pageTextWidth = pdf.getTextWidth(pageText);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, 12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.text(generatedDateTime, pdfWidth - marginRight - pageTextWidth, 16);
+      
+      // Header line
+      pdf.setDrawColor(226, 232, 240); // slate-200
+      pdf.setLineWidth(0.5);
+      pdf.line(marginLeft, 20, pdfWidth - marginRight, 20);
+    };
+
+    // Helper function to add footer on each page
+    const addFooter = (pageNum: number) => {
+      const footerY = pdfHeight - marginBottom + 12;
+      
+      // Footer line
+      pdf.setDrawColor(226, 232, 240); // slate-200
+      pdf.setLineWidth(0.5);
+      pdf.line(marginLeft, footerY - 8, pdfWidth - marginRight, footerY - 8);
+      
+      // Footer text
+      pdf.setFontSize(7);
+      pdf.setTextColor(107, 114, 128); // gray-500
+      pdf.setFont('helvetica', 'normal');
+      
+      // Left side
+      pdf.text('Generated by SiteZero', marginLeft, footerY);
+      
+      // Right side - Page number
+      const pageText = `Page ${pageNum} of ${totalPages}`;
+      const pageTextWidth = pdf.getTextWidth(pageText);
+      pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, footerY);
+      
+      // Center - Generated time (if space allows)
+      const timeText = generatedDateTime;
+      const timeTextWidth = pdf.getTextWidth(timeText);
+      if (timeTextWidth < contentWidth * 0.7) {
+        pdf.text(timeText, (pdfWidth - timeTextWidth) / 2, footerY + 4);
+      }
+    };
+
+    // Add image across multiple pages
+    let imgY = marginTop;
+    let remainingHeight = scaledHeight;
+    let currentPage = 1;
+    let sourceY = 0;
+
+    while (remainingHeight > 0) {
+      // Add header and footer before adding content
+      addHeader(currentPage);
+      addFooter(currentPage);
+      
+      // Calculate how much of the image fits on this page
+      const availableHeight = contentHeight;
+      const imageHeightForThisPage = Math.min(remainingHeight, availableHeight);
+      
+      // Calculate source position in pixels
+      const sourceHeightPx = imageHeightForThisPage / ratio / pixelsToMm;
+      
+      // Create a temporary canvas for this page's portion
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = imgWidth;
+      pageCanvas.height = Math.ceil(sourceHeightPx);
+      const pageCtx = pageCanvas.getContext('2d');
+      
+      if (pageCtx) {
+        // Draw the portion of the original canvas
+        pageCtx.drawImage(
+          canvas,
+          0, sourceY, // source x, y
+          imgWidth, sourceHeightPx, // source width, height
+          0, 0, // destination x, y
+          imgWidth, sourceHeightPx // destination width, height
+        );
+      }
+      
+      const pageImgData = pageCanvas.toDataURL('image/png');
+      
+      // Add the image portion to PDF
+      pdf.addImage(pageImgData, 'PNG', marginLeft, imgY, scaledWidth, imageHeightForThisPage, undefined, 'FAST');
+      
+      // Update for next iteration
+      remainingHeight -= availableHeight;
+      sourceY += sourceHeightPx;
+      
+      if (remainingHeight > 0) {
+        pdf.addPage();
+        currentPage++;
+        imgY = marginTop;
+      }
+    }
     
     // Return PDF as blob
     return pdf.output('blob');
@@ -616,7 +773,36 @@ const Payments: React.FC = () => {
         {showPaymentMethodModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-slate-800">Select Payment Method</h3>
+              <h3 className="text-lg font-semibold mb-4 text-slate-800">Mark as Paid</h3>
+              
+              {/* Amount (Read-only) */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Amount:
+                </label>
+                <input
+                  type="text"
+                  value={formatCurrency(selectedPaymentAmount)}
+                  readOnly
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 text-slate-800 font-medium cursor-not-allowed"
+                />
+              </div>
+
+              {/* Payment Date */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Payment Date: *
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-slate-800 font-medium"
+                />
+              </div>
+
+              {/* Payment Method */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Payment Made By:
@@ -733,26 +919,37 @@ const Payments: React.FC = () => {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mb-4 text-left">
-                Due: {new Date(payment.dueDate).toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </p>
+              <div className="mb-4 space-y-1">
+                <p className="text-xs text-slate-500 text-left">
+                  Due: {new Date(payment.dueDate).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+                {payment.status === "paid" && payment.paidDate && (
+                  <p className="text-xs text-emerald-600 font-medium text-left">
+                    Paid on: {new Date(payment.paidDate).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
 
               {payment.status === "paid" ? (
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleDownloadInvoice(payment._id)}
-                    className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
+                    className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all"
                   >
                     <Download className="w-5 h-5" />
                     Download
                   </button>
                   <button
                     onClick={() => handleShareInvoice(payment._id)}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-200 transition-all"
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-600/50 transition-all"
                   >
                     <Share2 className="w-5 h-5" />
                     Share
@@ -763,7 +960,7 @@ const Payments: React.FC = () => {
                   {isAdmin && (
                     <button
                       onClick={() => handleMarkPaidClick(payment._id)}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 whitespace-nowrap hover:shadow-lg hover:shadow-blue-200 transition-all"
+                      className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 whitespace-nowrap hover:shadow-lg hover:shadow-gray-800/50 transition-all"
                     >
                       <CheckCircle2 className="w-5 h-5 shrink-0" />
                       <span>Mark Paid</span>
@@ -775,7 +972,7 @@ const Payments: React.FC = () => {
                       disabled={remindingPaymentId === payment._id}
                       className={`$
                         isAdmin ? "flex-1" : "w-full"
-                      } bg-white border-2 border-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 transition-all ${remindingPaymentId === payment._id ? 'opacity-70 cursor-wait' : ''}`}
+                      } bg-white border-2 border-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all ${remindingPaymentId === payment._id ? 'opacity-70 cursor-wait' : ''}`}
                     >
                       {remindingPaymentId === payment._id ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -789,14 +986,14 @@ const Payments: React.FC = () => {
                     <div className="flex gap-3 w-full">
                       <button
                         onClick={() => handleDownloadInvoice(payment._id)}
-                        className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-600 hover:shadow-lg hover:shadow-indigo-200 transition-all"
+                        className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all"
                       >
                         <Download className="w-5 h-5" />
                         Download
                       </button>
                       <button
                         onClick={() => handleShareInvoice(payment._id)}
-                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:from-green-600 hover:to-emerald-600 hover:shadow-lg hover:shadow-green-200 transition-all"
+                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-600/50 transition-all"
                       >
                         <Share2 className="w-5 h-5" />
                         Share

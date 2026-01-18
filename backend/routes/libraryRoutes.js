@@ -3,6 +3,7 @@ import AuthMiddleware from "../middleware/auth.js";
 
 import {
   addLibraryItem,
+  bulkAddLibraryItems,
   getLibraryItems,
   updateLibraryItem,
   deleteLibraryItem,
@@ -31,6 +32,9 @@ router.post(
   uploadSingleImage("boq-images"),
   addLibraryItem
 );
+
+// Bulk add library items
+router.post("/bulk", bulkAddLibraryItems);
 
 // Update library item
 router.put(

@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Lock,
   Unlock,
+  Upload,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import {  useAuth } from "../context/AuthContext";
@@ -145,6 +146,7 @@ const [libraryCategory, setLibraryCategory] = useState<
   interface LibraryItem {
   _id: string;
   name: string;
+  companyName?: string;
   Category?: string;
   description?: string;
   image?: string;
@@ -184,6 +186,209 @@ const fetchLibraryItems = async () => {
   } catch (error) {
     console.error("❌ Failed to fetch library", error);
     setLibraryItems([]);
+  }
+};
+
+// Handle library import from CSV/Excel
+const handleLibraryImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Validate file type
+  const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+  const validExtensions = ['.csv', '.xls', '.xlsx'];
+  const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+  
+  if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+    alert('Please upload a valid CSV or Excel file (.csv, .xls, .xlsx)');
+    e.target.value = '';
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    if (lines.length < 2) {
+      alert('CSV file must have at least a header row and one data row');
+      e.target.value = '';
+      return;
+    }
+
+    // Parse CSV - handle both comma and tab separated values
+    const separator = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(separator).map(h => h.trim().toLowerCase()).filter(h => h);
+    
+    // Required headers: name, category, qty, ratePerQty, description, tag
+    const requiredHeaders = ['name', 'category', 'qty', 'rateperqty', 'description', 'tag'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    
+    if (missingHeaders.length > 0) {
+      alert(`Missing required columns: ${missingHeaders.join(', ')}. Please use the sample file format with columns: name, category, qty, ratePerQty, description, tag`);
+      e.target.value = '';
+      return;
+    }
+
+    // Helper function to extract number from currency string (e.g., "₹18,000" -> 18000)
+    const extractNumber = (str: string): number => {
+      if (!str) return 0;
+      // Remove currency symbols, commas, spaces, and extract number
+      const numStr = str.toString().replace(/[₹,\s/]/g, '').replace(/[^0-9.]/g, '');
+      return parseFloat(numStr) || 0;
+    };
+
+    // Helper function to map tag to category
+    const tagToCategory = (tag: string): string => {
+      const normalizedTag = (tag || '').trim().toUpperCase();
+      if (['BEDS', 'WARDROBE', 'WAREDROBES', 'TV UNIT', 'SHOE RACK'].includes(normalizedTag)) {
+        return 'Furniture';
+      }
+      if (normalizedTag.includes('ELECTRICAL') || normalizedTag.includes('LIGHT') || normalizedTag.includes('APPLICES')) {
+        return 'Electrical';
+      }
+      if (normalizedTag.includes('DOOR') || normalizedTag.includes('BATHROOM')) {
+        return 'Hardware';
+      }
+      if (normalizedTag.includes('FLOOR') || normalizedTag.includes('WALL') || normalizedTag.includes('CELLING') || normalizedTag.includes('CEILING')) {
+        return 'Finishes';
+      }
+      return 'Furniture'; // Default
+    };
+
+    const items: any[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(separator).map(v => v.trim().replace(/^"|"$/g, '')); // Remove quotes
+      const item: any = {};
+      
+      headers.forEach((header, index) => {
+        if (values[index] !== undefined) {
+          item[header] = values[index] || '';
+        }
+      });
+
+      // Validate required fields are present and not empty
+      if (!item.name || !item.name.trim()) {
+        continue; // Skip rows without name
+      }
+
+      if (!item.category || !item.category.trim()) {
+        // Category is required - derive from tag if missing
+        if (item.tag && item.tag.trim()) {
+          item.category = tagToCategory(item.tag);
+        } else {
+          alert(`Row ${i + 1}: Missing required field 'category' for item "${item.name}". Please provide category or tag.`);
+          e.target.value = '';
+          return;
+        }
+      }
+
+      if (!item.qty || isNaN(parseFloat(item.qty))) {
+        alert(`Row ${i + 1}: Missing or invalid 'qty' for item "${item.name}"`);
+        e.target.value = '';
+        return;
+      }
+
+      if (!item.rateperqty || (!extractNumber(item.rateperqty) && extractNumber(item.rateperqty) === 0)) {
+        alert(`Row ${i + 1}: Missing or invalid 'ratePerQty' for item "${item.name}"`);
+        e.target.value = '';
+        return;
+      }
+
+      // Extract rate (handle currency format)
+      const extractedRate = extractNumber(item.rateperqty);
+
+      items.push({
+        name: item.name.trim(),
+        Category: item.category.trim(),
+        qty: parseFloat(item.qty) || 1,
+        ratePerQty: extractedRate,
+        baseRate: extractedRate,
+        description: (item.description || '').trim(),
+        tag: (item.tag || '').trim(),
+      });
+    }
+
+    if (items.length === 0) {
+      alert('No valid items found in the file');
+      e.target.value = '';
+      return;
+    }
+
+    // Convert items to JSON and send all in one request
+    try {
+      const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || 'http://localhost:5000';
+      const response = await fetch(`${API_BASE_URL}/library/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully imported ${result.count || items.length} item(s)`);
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to import items');
+      }
+    } catch (error: any) {
+      console.error('Bulk import error:', error);
+      alert(error.message || 'Failed to import items. Please check the file format.');
+      e.target.value = '';
+      return;
+    }
+    
+    // Refresh library items
+    await fetchLibraryItems();
+    e.target.value = '';
+  } catch (error: any) {
+    console.error('Import error:', error);
+    alert(error.message || 'Failed to import items. Please check the file format.');
+    e.target.value = '';
+  }
+};
+
+// Download sample CSV file
+const handleDownloadSampleFile = async () => {
+  try {
+    // Fetch the sample file from the public directory
+    const response = await fetch('/sample_library.csv');
+    if (!response.ok) {
+      throw new Error('Failed to fetch sample file');
+    }
+    const csvContent = await response.text();
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sample_library.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading sample file:', error);
+    // Fallback: create sample data if file fetch fails
+    const sampleData = [
+      ['name', 'category', 'qty', 'ratePerQty', 'description', 'tag'],
+      ['King Size Bed', 'Furniture', '1', '18000', 'Premium bed frame', 'BEDS'],
+      ['Wardrobe 8ft', 'Furniture', '1', '45000', '8 feet wardrobe', 'WARDROBE'],
+      ['TV Unit 6ft', 'Furniture', '1', '25000', '6 feet TV unit', 'TV UNIT'],
+      ['Floor Tiles', 'Finishes', '100', '80', 'Premium tiles', 'FLOOR'],
+      ['LED Lights', 'Electrical', '10', '500', 'LED ceiling lights', 'ELECTRICAL'],
+    ];
+    const csvContent = sampleData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sample_library.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 };
 
@@ -1439,7 +1644,9 @@ const filteredLibraryItems = useMemo(() => {
 
   return (
     <>
-      <div className="min-h-screen px-1 py-4 pb-28 relative">
+      <div className="min-h-screen pb-28 relative">
+        {/* Centered Container */}
+        <div className="max-w-md mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
         </div>
@@ -1458,7 +1665,7 @@ const filteredLibraryItems = useMemo(() => {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-4 px-2 text-[11px] font-bold rounded-xl transition-all duration-200 ${
+                className={`flex-1 py-4 px-2 text-xs font-bold rounded-xl transition-all duration-200 ${
                   isActive
                     ? "bg-slate-800 text-white shadow-md"
                     : "text-slate-400 hover:text-slate-600"
@@ -1473,13 +1680,24 @@ const filteredLibraryItems = useMemo(() => {
           <div className="flex justify-center">
             <div className="w-full max-w-5xl">
            {/* BOQ LIBRARY HEADER */}
-<div className="mb-4">
-  <h2 className="text-xl font-bold text-slate-800">
-    BOQ Library
-  </h2>
-  <p className="text-sm text-slate-500 mt-1">
-    Pre-built items for faster estimation
-  </p>
+<div className="mb-4 flex items-center justify-between">
+  <div className="flex-1 text-center">
+    <h2 className="text-xl font-bold text-slate-800">
+      BOQ Library
+    </h2>
+    <p className="text-sm text-slate-500 mt-1">
+      Pre-built items for faster estimation
+    </p>
+  </div>
+  <div className="flex items-center gap-4">
+   
+    <button
+      onClick={handleDownloadSampleFile}
+      className="text-sm font-medium text-blue-600 hover:text-blue-700 underline hover:no-underline transition-all"
+    >
+       Sample
+    </button>
+  </div>
 </div>
 
 {/* SEARCH BAR */}
@@ -1496,16 +1714,16 @@ const filteredLibraryItems = useMemo(() => {
     />
   </div>
 
-  <button
-    onClick={() => {
-      setLibrarySearch("");
-      setLibraryCategory("All");
-    }}
-    className="w-12 h-12 rounded-xl border flex items-center justify-center text-slate-600"
-    title="Reset filters"
-  >
-    ⟲
-  </button>
+  <label htmlFor="library-import-file" className="flex items-center justify-center w-9 h-9 bg-slate-900 text-white rounded-lg hover:bg-slate-800 cursor-pointer transition-colors shadow-md hover:shadow-lg" title="Import CSV/Excel">
+      <Upload className="w-4 h-4" />
+      <input
+        id="library-import-file"
+        type="file"
+        accept=".csv,.xlsx,.xls"
+        className="hidden"
+        onChange={(e) => handleLibraryImport(e)}
+      />
+    </label>
 </div>
 
             {/* CATEGORY PILLS */}
@@ -1526,6 +1744,44 @@ const filteredLibraryItems = useMemo(() => {
   ))}
 </div>
 
+              {filteredLibraryItems.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="max-w-md mx-auto">
+                    <div className="mb-6">
+                      <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-slate-800 mb-2">No Library Items</h3>
+                      <p className="text-sm text-slate-500 mb-6">Import CSV/Excel file to add items to your library</p>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <label htmlFor="library-import-file-empty" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 cursor-pointer transition-colors shadow-md hover:shadow-lg">
+                        <Upload className="w-5 h-5" />
+                        Import CSV/Excel
+                        <input
+                          id="library-import-file-empty"
+                          type="file"
+                          accept=".csv,.xlsx,.xls"
+                          className="hidden"
+                          onChange={(e) => handleLibraryImport(e)}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Sample File Display */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-left">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-slate-700">Sample File Format</h4>
+                        <button
+                          onClick={handleDownloadSampleFile}
+                          className="text-xs font-medium text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Download Sample
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
 {filteredLibraryItems.map((item) => {
   const id = item._id;
@@ -1720,6 +1976,9 @@ const filteredLibraryItems = useMemo(() => {
           {/* TITLE & DESCRIPTION */}
           <div className="mb-2 sm:mb-3">
             <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h3>
+            {item.companyName && (
+              <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.companyName}</p>
+            )}
             <div className="flex justify-between items-start mt-0.5">
               <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">{item.description || item.Category || "Generic"}</p>
               <Info className="w-3 h-3 text-slate-300 flex-shrink-0" />
@@ -1849,6 +2108,7 @@ const filteredLibraryItems = useMemo(() => {
   );
 })}
               </div>
+              )}
             </div>
           </div>
         )}
@@ -1859,7 +2119,7 @@ const filteredLibraryItems = useMemo(() => {
           <div className="px-1 pb-4">
             {/* MATERIAL USED HEADER */}
             <div className="flex justify-between items-start mb-4">
-              <div>
+              <div className="flex-1 text-center">
                 <h2 className="text-xl font-bold text-slate-800">Material Used</h2>
                 <p className="text-xs text-slate-500 font-medium mt-1">
                   Installed materials with proof & warranty
@@ -2690,7 +2950,13 @@ const filteredLibraryItems = useMemo(() => {
                         ) : (
                           <>
                             <div className="flex items-center gap-2">
-                              <h3 className="text-xl font-bold text-slate-800 cursor-pointer" onClick={toggleRoom}>{room.name}</h3>
+                              <h3 
+                                className="text-xl font-bold text-slate-800 cursor-pointer" 
+                                onClick={toggleRoom}
+                                title={room.name}
+                              >
+                                {room.name.length > 12 ? `${room.name.substring(0, 12)}...` : room.name}
+                              </h3>
                               {/* Show lock icon to ALL users (including CLIENT, AGENT, MANAGER, ADMIN) when room is locked - NO ROLE CHECK */}
                               {lockedRooms.has(room.id) && (
                                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked - No items can be added or edited">
@@ -2779,9 +3045,9 @@ const filteredLibraryItems = useMemo(() => {
                             setBoqForm({ ...boqForm, roomName: room.name });
                             setShowAddModal(true);
                           }}
-                          className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
+                          className="bg-black hover:bg-gray-900 active:bg-gray-800 text-white px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3.5 h-3.5" />
                           Add Item
                         </button>
                       )}
@@ -3134,6 +3400,7 @@ const filteredLibraryItems = useMemo(() => {
         )}
 
 
+        </div>
       </div>
 
       {/* Toast Notification */}
