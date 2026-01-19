@@ -18,13 +18,21 @@ const Profile = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      setName(user.name || "");
-      setPhone(user.phone || "");
+
+useEffect(() => {
+  if (user) {
+    setName(user.name || "");
+    setPhone(user.phone || "");
+
+    // Agar backend me company logo saved hai to uska preview set karo
+    if (user.companyLogo) {
+      setLogoPreview(`${import.meta.env.VITE_API_URL}${user.companyLogo}`);
     }
-  }, [user]);
+  }
+}, [user]);
+
 
   if (!user) {
     return <p className="text-center py-10">Loading profile...</p>;
@@ -52,14 +60,10 @@ const Profile = () => {
           {/* Logo */}
           <div className="relative w-24 h-24">
             <img
-              src={
-                user.companyLogo
-                  ? `${import.meta.env.VITE_SERVER_URL}${user.companyLogo}`
-                  : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-                      user.email
-                    )}`
-              }
-              alt="Company Logo"
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                user.email
+              )}`}
+              alt="Avatar"
               className="w-24 h-24 rounded-full border-2 object-cover"
             />
           </div>
@@ -142,22 +146,36 @@ const Profile = () => {
 
           {/* Phone */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <Phone size={16} />
-            <div className="w-full">
+            <Phone size={16} className="text-gray-600 shrink-0" />
+
+            <div>
               <p className="text-xs text-gray-400">Phone</p>
+
               {!isEditing ? (
-                <p className="font-semibold">{user.phone || "Not Added"}</p>
+                <p className="font-semibold text-gray-900">
+                  {user.phone
+                    ? `+91 ${user.phone.replace(/(\d{5})(\d{5})/, "$1 $2")}`
+                    : "Not Added"}
+                </p>
               ) : (
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="border rounded-lg px-2 py-2 w-full focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Enter phone number"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setPhone(value);
+                  }}
+                  className="border rounded-lg px-3 py-1.5 w-full mt-1
+                   focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Enter 10 digit phone number"
+                  maxLength={10}
                 />
               )}
             </div>
           </div>
+
+
+
 
           {/* Company */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -192,23 +210,82 @@ const Profile = () => {
 
           {/* Upload Company Logo (Right Side Last Box) */}
           {user.role === "ADMIN" && (
-            <div className="flex items-center justify-center p-3 bg-gray-50 rounded-xl border-2 border-dashed border-blue-400">
-              <label className="flex items-center gap-2 text-sm text-blue-600 font-semibold cursor-pointer hover:text-blue-800">
-                + Upload Company Logo
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    await uploadCompanyLogo(file);
-                    alert("Company logo updated!");
-                  }}
-                />
-              </label>
+            <div
+              className="flex items-center gap-6 p-4 rounded-2xl 
+               bg-white/70 backdrop-blur-md
+               border border-gray-200 shadow-sm 
+               hover:shadow-lg transition-all duration-300"
+            >
+              {/* Text + Upload Button (Left Side) */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700">
+                  Add your logo
+                </span>
+
+                <label
+                  title="Upload Company Logo"
+                  className="relative flex items-center justify-center w-12 h-12 
+                   rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600
+                   text-white text-xl font-bold cursor-pointer
+                   shadow-lg hover:shadow-indigo-500/50
+                   hover:scale-110 active:scale-95
+                   transition-all duration-300"
+                >
+                  +
+                  {/* pulse ring */}
+                  <span
+                    className="absolute inset-0 rounded-full 
+                     animate-ping bg-indigo-400 opacity-20"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      // Preview
+                      const previewURL = URL.createObjectURL(file);
+                      setLogoPreview(previewURL);
+
+                      // Upload
+                      await uploadCompanyLogo(file);
+                      alert("Company logo updated!");
+                    }}
+                  />
+                </label>
+              </div>
+
+              {/* Preview Box (Right Side) */}
+              <div
+                className="relative w-16 h-16 rounded-xl overflow-hidden 
+                 border border-gray-200 bg-gray-100 
+                 flex items-center justify-center group"
+              >
+                {logoPreview ? (
+                  <>
+                    <img
+                      src={logoPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <div
+                      className="absolute inset-0 bg-black/40 opacity-0 
+                       group-hover:opacity-100 transition 
+                       flex items-center justify-center"
+                    >
+                      <span className="text-white text-xs font-medium">Preview</span>
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-gray-400">Preview</span>
+                )}
+              </div>
             </div>
           )}
+
+
 
         </div>
       </div>
@@ -217,3 +294,4 @@ const Profile = () => {
 };
 
 export default Profile;
+ 
