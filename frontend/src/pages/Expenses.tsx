@@ -345,7 +345,7 @@ const Expenses: React.FC = () => {
         </div>
       </div>
       <div className="border-b border-gray-200 mt-6 ">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md mx-auto px-2 py-4">
 
 
           {/* Budget Cards */}
@@ -541,7 +541,7 @@ const Expenses: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <div className="max-w-md mx-auto px-4 pt-4">
+      <div className="max-w-md mx-auto px-2 pt-4">
         {/* Results Count */}
         <p className="text-center text-sm font-semibold text-slate-400 mb-4 tracking-wider">
           {filteredExpenses.length} EXPENSE{filteredExpenses.length !== 1 ? 'S' : ''} FOUND

@@ -1646,7 +1646,7 @@ const filteredLibraryItems = useMemo(() => {
     <>
       <div className="min-h-screen pb-28 relative">
         {/* Centered Container */}
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md mx-auto px-2 py-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
         </div>
@@ -2893,7 +2893,7 @@ const filteredLibraryItems = useMemo(() => {
               ))}
             </div>
 
-            <div className="px-1 space-y-6">
+            <div className="px-0 space-y-6">
               {filteredRooms.map((room) => {
                 const filteredItems = filterItemsByCategory(room.items);
                 // Show room even if no items

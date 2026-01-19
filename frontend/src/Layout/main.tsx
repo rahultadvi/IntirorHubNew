@@ -226,14 +226,14 @@ const MainLayout = () => {
             {/* Mobile Bottom Navigation */}
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white z-50">
                 <div className="flex items-center justify-around max-w-md mx-auto px-4 py-3">
-                    {navLinks.map((link) => {
+                    {navLinks.filter((link) => link.path !== "/home/profile").map((link) => {
                         const Icon = link.icon;
                         const active = isActive(link.path);
                         return (
                             <Link
                                 key={link.path}
                                 to={link.path}
-                                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all no-underline relative ${active
+                                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all no-underline relative ${active
                                         ? "text-white"
                                         : "text-gray-400"
                                     }`}
@@ -246,7 +246,10 @@ const MainLayout = () => {
                                         </div>
                                     </>
                                 ) : (
-                                    <Icon className="h-6 w-6 text-gray-400" />
+                                    <>
+                                        <Icon className="h-6 w-6 text-gray-400" />
+                                        <span className="text-[9px] font-medium text-gray-400 mt-0.5">{link.label}</span>
+                                    </>
                                 )}
                             </Link>
                         );

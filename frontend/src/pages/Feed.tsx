@@ -542,7 +542,7 @@ const isPostDisabled = !hasContent || isSubmitting;
 
     <div className="pb-20">
       {/* Centered Container */}
-      <div className="max-w-md mx-auto px-4">
+      <div className="max-w-md mx-auto px-2">
       {/* Header */}
 
       {/* Feed Filters */}
@@ -836,7 +836,7 @@ const isPostDisabled = !hasContent || isSubmitting;
 
               {/* Content */}
               <div className="mb-3 text-left">
-                <p className={`text-slate-700 ${!expandedContent[item.id] ? 'line-clamp-2' : ''}`}>
+                <p className={`text-sm text-slate-700 ${!expandedContent[item.id] ? 'line-clamp-2' : ''}`}>
                   {item.content}
                 </p>
                 {item.content && item.content.length > 100 && (

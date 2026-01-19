@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import { expenseApi } from '../services/api';
 
 interface Props {
@@ -34,6 +34,14 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
   const [vendorName, setVendorName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [warningData, setWarningData] = useState<{
+    show: boolean;
+    category: string;
+    categoryBudget: number;
+    totalSpentInCategory: number;
+    remaining: number;
+    expenseAmount: number;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -55,14 +63,14 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
         const newTotal = totalSpentInCategory + Number(amount);
         if (newTotal > categoryBudget) {
           const remaining = categoryBudget - totalSpentInCategory;
-          alert(
-            `Cannot add expense! This would exceed the allocated budget for ${category}.\n\n` +
-            `Allocated Budget: ₹${categoryBudget.toLocaleString('en-IN')}\n` +
-            `Already Spent: ₹${totalSpentInCategory.toLocaleString('en-IN')}\n` +
-            `Remaining: ₹${Math.max(0, remaining).toLocaleString('en-IN')}\n` +
-            `This Expense: ₹${Number(amount).toLocaleString('en-IN')}\n\n` +
-            `Please reduce the amount or contact admin to increase the budget allocation.`
-          );
+          setWarningData({
+            show: true,
+            category,
+            categoryBudget,
+            totalSpentInCategory,
+            remaining,
+            expenseAmount: Number(amount)
+          });
           return;
         }
       }
@@ -121,20 +129,88 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="absolute inset-0 bg-black/40" />
+    <>
+      {/* Warning Popup */}
+      {warningData && warningData.show && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setWarningData(null);
+            }
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60" />
+          <div 
+            className="relative bg-white rounded-xl w-full max-w-md p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-black" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-black mb-1">Budget Exceeded</h3>
+                <p className="text-sm text-black/80 mb-4">
+                  Cannot add expense! This would exceed the allocated budget for <strong>{warningData.category}</strong>.
+                </p>
+              </div>
+              <button 
+                onClick={() => setWarningData(null)} 
+                className="p-1 rounded-md hover:bg-black/5 transition-colors"
+              >
+                <X className="w-5 h-5 text-black" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-6 border-t border-black/10 pt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-black/70">Allocated Budget:</span>
+                <span className="text-sm font-semibold text-black">₹{warningData.categoryBudget.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-black/70">Already Spent:</span>
+                <span className="text-sm font-semibold text-black">₹{warningData.totalSpentInCategory.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-black/70">Remaining:</span>
+                <span className="text-sm font-semibold text-black">₹{Math.max(0, warningData.remaining).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-black/10 pt-3">
+                <span className="text-sm text-black/70">This Expense:</span>
+                <span className="text-sm font-semibold text-black">₹{warningData.expenseAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-black/60 mb-4">
+              Please reduce the amount or contact admin to increase the budget allocation.
+            </p>
+
+            <button
+              onClick={() => setWarningData(null)}
+              className="w-full px-4 py-2.5 rounded-lg bg-black text-white font-medium hover:bg-black/90 transition-colors text-sm"
+            >
+              Understood
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Expense Modal */}
       <div 
-        className="relative bg-white rounded-xl w-full max-w-md p-3 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-4rem)]" 
-        style={{ WebkitOverflowScrolling: 'touch' }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       >
+        <div className="absolute inset-0 bg-black/40" />
+        <div 
+          className="relative bg-white rounded-xl w-full max-w-md p-3 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-4rem)]" 
+          style={{ WebkitOverflowScrolling: 'touch' }}
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
@@ -226,6 +302,7 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
         </form>
       </div>
     </div>
+    </>
   );
 };
 
