@@ -54,7 +54,7 @@ const Profile = () => {
             <img
               src={
                 user.companyLogo
-                  ? `${import.meta.env.VITE_SERVER_URL}${user.companyLogo}`
+                  ? `${import.meta.env.VITE_BACKEND_URL}${user.companyLogo}`
                   : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
                       user.email
                     )}`
