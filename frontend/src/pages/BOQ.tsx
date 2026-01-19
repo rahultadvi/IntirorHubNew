@@ -2701,8 +2701,8 @@ const filteredLibraryItems = useMemo(() => {
               >
                 <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" />
                 <div 
-                  className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
-        overflow-auto max-h-[calc(100vh-8rem)]
+                  className="relative bg-white rounded-xl w-full max-w-md p-3 sm:p-6 shadow-lg
+        overflow-auto max-h-[calc(100vh-4rem)]
         transform transition-all duration-300
         scale-100 translate-y-0 opacity-100
         animate-modalIn"
@@ -2715,21 +2715,23 @@ const filteredLibraryItems = useMemo(() => {
                     </div>
                     <button onClick={() => setShowAddModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
                   </div>
-                  <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-1 gap-3">
-                    <div>
+                  <form onSubmit={handleSubmitBOQItem} className="grid grid-cols-2 gap-2.5">
+                    <div className="col-span-2">
                       <label className="block text-xs text-gray-600">Item Name / Scope of Work *</label>
                       <input
-                        className="w-full mt-1 p-2 border rounded"
+                        className="w-full mt-1 p-2 border rounded text-sm"
                         placeholder="Enter item name or scope of work"
                         value={boqForm.itemName}
                         onChange={(e) => setBoqForm({ ...boqForm, itemName: e.target.value })}
                         required
                       />
                     </div>
+
+                    {/* Category and Quantity in one row */}
                     <div>
                       <label className="block text-xs text-gray-600">Category *</label>
                       <select
-                        className="w-full mt-1 p-2 border rounded"
+                        className="w-full mt-1 p-2 border rounded text-sm"
                         value={boqForm.category}
                         onChange={(e) => setBoqForm({ ...boqForm, category: e.target.value as 'Furniture' | 'Finishes' | 'Hardware' | 'Electrical' | 'Miscellaneous' })}
                         required
@@ -2744,7 +2746,7 @@ const filteredLibraryItems = useMemo(() => {
                     <div>
                       <label className="block text-xs text-gray-600">Quantity / Size *</label>
                       <input
-                        className="w-full mt-1 p-2 border rounded"
+                        className="w-full mt-1 p-2 border rounded text-sm"
                         placeholder="Enter quantity or size"
                         type="number"
                         value={boqForm.quantity}
@@ -2752,75 +2754,77 @@ const filteredLibraryItems = useMemo(() => {
                         required
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-600">Unit *</label>
-                        <select
-                          className="w-full mt-1 p-2 border rounded"
-                          value={boqForm.unit}
-                          onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
-                        >
-                          <option>Sq.ft</option>
-                          <option>Rft</option>
-                          <option>Nos</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600">Purchased Price (₹) *</label>
-                        <input
-                          type="number"
-                          className="w-full mt-1 p-2 border rounded"
-                          placeholder="Enter purchased price per unit"
-                          value={boqForm.rate}
-                          onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
-                          required
-                        />
-                      </div>
+
+                    {/* Unit and Purchased Price in one row */}
+                    <div>
+                      <label className="block text-xs text-gray-600">Unit *</label>
+                      <select
+                        className="w-full mt-1 p-2 border rounded text-sm"
+                        value={boqForm.unit}
+                        onChange={(e) => setBoqForm({ ...boqForm, unit: e.target.value })}
+                      >
+                        <option>Sq.ft</option>
+                        <option>Rft</option>
+                        <option>Nos</option>
+                      </select>
                     </div>
                     <div>
+                      <label className="block text-xs text-gray-600">Purchased Price (₹) *</label>
+                      <input
+                        type="number"
+                        className="w-full mt-1 p-2 border rounded text-sm"
+                        placeholder="Price per unit"
+                        value={boqForm.rate}
+                        onChange={(e) => setBoqForm({ ...boqForm, rate: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="col-span-2">
                       <label className="block text-xs text-gray-600">Total Cost (₹)</label>
                       <input
                         type="text"
-                        className="w-full mt-1 p-2 border rounded bg-gray-100"
+                        className="w-full mt-1 p-2 border rounded bg-gray-100 text-sm"
                         readOnly
                         value={boqForm.quantity && boqForm.rate ? `₹${(parseFloat(boqForm.quantity) * parseFloat(boqForm.rate)).toLocaleString()}` : "Auto Calculated"}
                       />
                     </div>
-                    <div>
+
+                    <div className="col-span-2">
                       <label className="block text-xs text-gray-600">Upload Reference Image</label>
                       <input
                         type="file"
-                        className="w-full mt-1 p-2 border rounded"
+                        className="w-full mt-1 p-2 border rounded text-sm"
                         accept="image/*"
                         onChange={(e) => setBoqForm({ ...boqForm, referenceImage: e.target.files?.[0] || null })}
                       />
                     </div>
-                    <div>
+
+                    <div className="col-span-2">
                       <label className="block text-xs text-gray-600">Comments / Notes</label>
                       <textarea
-                        className="w-full mt-1 p-2 border rounded"
-                        rows={3}
+                        className="w-full mt-1 p-2 border rounded text-sm"
+                        rows={2}
                         placeholder="Add any additional comments or notes"
                         value={boqForm.comments}
                         onChange={(e) => setBoqForm({ ...boqForm, comments: e.target.value })}
                       />
                     </div>
-                    <div className="flex flex-col gap-2 mt-4">
-                      <div className="flex gap-2">
-                        <button 
-                          type="button" 
-                          onClick={() => setShowAddModal(false)} 
-                          className="flex-1 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          type="submit" 
-                          className="flex-1 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors"
-                        >
-                          Add BOQ
-                        </button>
-                      </div>
+
+                    <div className="col-span-2 flex flex-row items-center justify-end gap-2 mt-2">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowAddModal(false)} 
+                        className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors text-sm"
+                      >
+                        Add BOQ
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -3048,7 +3052,7 @@ const filteredLibraryItems = useMemo(() => {
                           className="bg-black hover:bg-gray-900 active:bg-gray-800 text-white px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          Add Item
+                          Add
                         </button>
                       )}
                     </div>

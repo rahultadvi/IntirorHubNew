@@ -131,7 +131,7 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
     >
       <div className="absolute inset-0 bg-black/40" />
       <div 
-        className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-8rem)]" 
+        className="relative bg-white rounded-xl w-full max-w-md p-3 sm:p-6 shadow-lg overflow-auto max-h-[calc(100vh-4rem)]" 
         style={{ WebkitOverflowScrolling: 'touch' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -145,61 +145,61 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
           <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
+        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-2.5">
+          <div className="col-span-2">
             <label className="block text-xs text-gray-600">Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="e.g., Cement purchase" />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full mt-1 p-2 border rounded text-sm" placeholder="e.g., Cement purchase" />
           </div>
 
-          <div className="sm:col-span-2">
+          <div className="col-span-2">
             <label className="block text-xs text-gray-600">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full mt-1 p-2 border rounded" rows={3} placeholder="Optional details" />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full mt-1 p-2 border rounded text-sm" rows={2} placeholder="Optional details" />
           </div>
 
-          {/* Vendor Name and Category in one line */}
+          {/* Vendor Name and Category in one row */}
           <div>
             <label className="block text-xs text-gray-600">Vendor Name</label>
             <input 
               value={vendorName} 
               onChange={(e) => setVendorName(e.target.value)} 
-              className="w-full mt-1 p-2 border rounded" 
-              placeholder="Enter vendor name"
+              className="w-full mt-1 p-2 border rounded text-sm" 
+              placeholder="Vendor name"
             />
           </div>
 
           <div>
             <label className="block text-xs text-gray-600">Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mt-1 p-2 border rounded">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mt-1 p-2 border rounded text-sm">
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
-          {/* Amount and Invoice in one line */}
+          {/* Amount and Due Date in one row */}
           <div>
             <label className="block text-xs text-gray-600">Amount</label>
-            <div className="mt-1 flex items-center">
-              <input value={amount} onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))} type="number" className="w-full p-2 border rounded text-right text-lg font-semibold" placeholder="0.00" />
-            </div>
+            <input 
+              value={amount} 
+              onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))} 
+              type="number" 
+              className="w-full mt-1 p-2 border rounded text-sm text-right font-semibold" 
+              placeholder="0.00" 
+            />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600">Invoice (optional)</label>
-            <div className="mt-1 flex items-center gap-2">
-              <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="hidden" id="expense-invoice" />
-              <label htmlFor="expense-invoice" className="inline-block px-3 py-2 rounded border text-sm cursor-pointer whitespace-nowrap">Choose file</label>
-              <span className="text-xs text-gray-500 truncate">{file ? file.name : 'No file'}</span>
-            </div>
+            <label className="block text-xs text-gray-600">Due Date</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full mt-1 p-2 border rounded text-sm" />
           </div>
 
-          {/* Payment Type and Due Date in one line */}
+          {/* Payment Type and Invoice in one row */}
           <div>
             <label className="block text-xs text-gray-600">Payment Type</label>
             <select 
               value={paymentType} 
               onChange={(e) => setPaymentType(e.target.value as 'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT' | 'Cheque' | 'Credit Card' | '')} 
-              className="w-full mt-1 p-2 border rounded"
+              className="w-full mt-1 p-2 border rounded text-sm"
             >
-              <option value="">Select Payment Type</option>
+              <option value="">Select</option>
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
               <option value="UPI">UPI</option>
@@ -210,13 +210,18 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600">Due Date</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full mt-1 p-2 border rounded" />
+            <label className="block text-xs text-gray-600">Invoice (optional)</label>
+            <div className="mt-1">
+              <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="hidden" id="expense-invoice" />
+              <label htmlFor="expense-invoice" className="inline-block w-full px-3 py-2 rounded border text-xs cursor-pointer text-center bg-gray-50 hover:bg-gray-100 truncate">
+                {file ? file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name : 'Choose file'}
+              </label>
+            </div>
           </div>
 
-          <div className="sm:col-span-2 flex flex-row items-center justify-end gap-2 mt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving...' : 'Create'}</button>
+          <div className="col-span-2 flex flex-row items-center justify-end gap-2 mt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 transition-colors text-sm">Cancel</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">{loading ? 'Saving...' : 'Create'}</button>
           </div>
         </form>
       </div>
