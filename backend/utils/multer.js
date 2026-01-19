@@ -193,6 +193,17 @@ export const uploadBOQFiles = (folder = "boq") =>
     { name: "photo", maxCount: 1 },
   ]);
 
+
+  // ================= COMPANY LOGO UPLOAD =================
+
+export const uploadCompanyLogo = (folder = "company-logos") =>
+  multer({
+    storage: storage(folder),
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
+  }).single("logo");
+
+
 /* ================= HELPERS ================= */
 
 export const getUploadedImagePaths = (files, folder = "images") => {
