@@ -135,7 +135,7 @@ const Login: React.FC = () => {
             </label>
 
             <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>Only admins can log in here.</span>
+              <span></span>
               <Link to="/forgot-password" className="text-black font-medium">Forgot password?</Link>
             </div>
 
