@@ -22,6 +22,10 @@ const UserSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    companyLogo: {
+      type: String,   // yaha image ka URL store hoga
+      default: null,
+    },
     password: {
       type: String,
       required: true,
@@ -86,4 +90,4 @@ const UserSchema = new mongoose.Schema(
 
 UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
 
-export default mongoose.model("User",UserSchema);
+export default mongoose.model("User", UserSchema);

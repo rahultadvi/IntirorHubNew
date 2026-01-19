@@ -9,6 +9,8 @@ interface AuthContextValue {
   setSession: (token: string, user: AuthUser) => void;
   refresh: () => Promise<void>;
   logout: () => void;
+  updateProfile: (data: Partial<AuthUser>) => Promise<void>;
+  uploadCompanyLogo: (file: File) => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -146,6 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const profile = await authApi.me(token);
       setUser(profile.user);
       persistUser(profile.user);
+      
     } catch (error) {
       clearSession();
       throw error;
@@ -158,6 +161,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearSession();
   };
 
+
+  const updateProfile = async (data: Partial<AuthUser>) => {
+  if (!token) throw new Error("Not authenticated");
+
+  setLoading(true);
+  try {
+    const res = await authApi.updateProfile(token, data);
+    const updatedUser = res.user;
+
+    setUser(updatedUser);
+    persistUser(updatedUser);
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
+
+const uploadCompanyLogo = async (file: File) => {
+  if (!token) throw new Error("Not authenticated");
+
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/admin/company/upload-logo`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Logo upload failed");
+    }
+
+    if (user) {
+      const updatedUser = {
+        ...user,
+        companyLogo: data.logo,
+      };
+      setUser(updatedUser);
+      persistUser(updatedUser);
+    }
+
+  } catch (err) {
+    console.error("Upload company logo error:", err);
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
+
+  
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -166,6 +231,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession,
       refresh,
       logout,
+      updateProfile,
+      uploadCompanyLogo,  
     }),
     [user, token, loading]
   );

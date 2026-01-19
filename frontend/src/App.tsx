@@ -19,6 +19,7 @@ import AdminSignup from "./pages/AdminSignup";
 import Adminpanel from "./pages/Adminpanel";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
+import Profile from "./pages/Profile";
 
 // LoadingScreen removed
 
@@ -137,6 +138,7 @@ function App() {
               <Route path="feed/:id" element={<FeedDetail />} />
               <Route path="manage-sites" element={<ManageSites />} />
               <Route path="users" element={<UserListing />} />
+                <Route path="profile" element={<Profile />} />
               <Route
                 path="invite"
                 element={

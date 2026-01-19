@@ -43,6 +43,7 @@ export interface AuthUser {
   createdAt?: string;
   updatedAt?: string;
   companyPaymentDue?: boolean;
+   companyLogo?: string;
 }
 
 export interface SiteDto {
@@ -215,7 +216,7 @@ const request = async <T>(
       // Trigger a custom event that AuthContext can listen to
       window.dispatchEvent(new CustomEvent("session-expired"));
     }
-    
+
     throw new ApiError(
       response.status,
       payload?.message || response.statusText || "Request failed",
@@ -309,6 +310,34 @@ export const authApi = {
       method: "POST",
       body,
     }),
+  updateProfile: (token: string, body: Partial<AuthUser>) =>
+    request<{ user: AuthUser; message: string }>("/users/update-profile", {
+      method: "PUT",
+      body,
+      token,
+    }),
+
+  // 🔥 COMPANY LOGO UPLOAD (FormData)
+  uploadCompanyLogo: async (file: File, token: string) => {
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    const response = await fetch(`${API_BASE_URL}/admin/company/upload-logo`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`, // ❌ Content-Type mat lagana
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Company logo upload failed");
+    }
+
+    return data; // { message, companyLogo, user }
+  },
 };
 
 export const userApi = {
@@ -365,7 +394,7 @@ export const userApi = {
       body,
       token,
     }),
-  
+
   deleteUser: (userId: string, token: string) =>
     request<{
       message: string;
@@ -517,7 +546,7 @@ export const feedApi = {
       }>;
     },
 
-    
+
     token: string
   ) =>
     request<{
@@ -529,30 +558,30 @@ export const feedApi = {
       token,
     }),
   // ✅ MULTER / FORM-DATA API
- createFeedFormData: async (formData: FormData, token: string) => {
-  const response = await fetch(`${API_BASE_URL}/feed`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  createFeedFormData: async (formData: FormData, token: string) => {
+    const response = await fetch(`${API_BASE_URL}/feed`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
-  const text = await response.text();
-  let data: any;
+    const text = await response.text();
+    let data: any;
 
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error("Server error (check backend logs)");
-  }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Server error (check backend logs)");
+    }
 
-  if (!response.ok) {
-    throw new Error(data.message || "Create feed failed");
-  }
+    if (!response.ok) {
+      throw new Error(data.message || "Create feed failed");
+    }
 
-  return data;
-},
+    return data;
+  },
 
 
   getFeedItem: (id: string, token: string) =>
@@ -641,13 +670,13 @@ export const paymentApi = {
   },
 
   deletePayment: (paymentId: string, token: string) =>
-  request<{
-    message: string;
-  }>(`/payments/${paymentId}`, {
-    method: "DELETE",
-    token,
-  }
-),
+    request<{
+      message: string;
+    }>(`/payments/${paymentId}`, {
+      method: "DELETE",
+      token,
+    }
+    ),
 };
 
 export const adminApi = {
@@ -812,7 +841,7 @@ export const boqApi = {
   getBOQItemsBySite: (siteId: string, token: string, params?: { status?: string; roomName?: string }) => {
     let q = '';
     if (params) {
-      const parts = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+      const parts = Object.entries(params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
       if (parts.length) q = `?${parts.join('&')}`;
     }
     return request<{

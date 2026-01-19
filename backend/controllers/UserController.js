@@ -646,6 +646,80 @@ export const toggleCompanyPayment = async (req, res) => {
   }
 };
 
+// Add this function in this file
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, companyLogo } = req.body;
+    const userId = req.user._id;
+
+    const updateData = {};
+
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+
+    // Sirf ADMIN hi company logo change kar sakta hai
+    if (companyLogo !== undefined) {
+      if (req.user.role !== "ADMIN") {
+        return res.status(403).json({ message: "Only admin can update company logo" });
+      }
+      updateData.companyLogo = companyLogo;
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    console.error("updateProfile error", error);
+    res.status(500).json({ message: "Unable to update profile" });
+  }
+};
+
+
+// ================= COMPANY LOGO UPLOAD CONTROLLER =================
+
+export const uploadCompanyLogoController = async (req, res) => {
+  try {
+    // Sirf ADMIN hi upload kar sakta hai
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Only admin can upload company logo" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No logo file uploaded" });
+    }
+
+    const logoPath = `/uploads/company-logos/${req.file.filename}`;
+
+    // Company ke saare admins me logo update
+    await userModel.updateMany(
+      { companyName: req.user.companyName, role: "ADMIN" },
+      { $set: { companyLogo: logoPath } }
+    );
+
+    res.status(200).json({
+      message: "Company logo uploaded successfully",
+      logo: logoPath,
+    });
+  } catch (error) {
+    console.error("uploadCompanyLogoController error", error);
+    res.status(500).json({ message: "Unable to upload company logo" });
+  }
+};
+
+
+
 export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -696,6 +770,7 @@ export default {
   getCompanyUsersByName,
   getCompanySites,
   toggleCompanyPayment,
+  updateProfile,
   deleteUser,
   updateUserPermissions,
 };

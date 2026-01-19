@@ -109,12 +109,11 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header 
-      className={`relative z-50 transition-all duration-500 ${
-        scrolled 
-          ? "bg-gradient-to-b from-blue-50 shadow-lg shadow-gray-200/50" 
+    <header
+      className={`relative z-50 transition-all duration-500 ${scrolled
+          ? "bg-gradient-to-b from-blue-50 shadow-lg shadow-gray-200/50"
           : "bg-gradient-to-b from-blue-50"
-      }`}
+        }`}
     >
       <div className="px-4 md:px-8 py-3">
         {/* First Row - Greeting and Profile Icon */}
@@ -146,55 +145,59 @@ const Header: React.FC = () => {
               <span className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-white"></span>
             </button>
 
-              {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-100 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`}
-                        alt="User"
-                        className="h-12 w-12 rounded-full"
-                      />
-                      <div>
-                        <p className="font-semibold text-gray-900">{displayName}</p>
-                        {displayEmail && <p className="text-xs text-gray-500">{displayEmail}</p>}
-                        <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-[10px] font-semibold bg-[#1a1a1a] text-white">
-                          {roleLabel}
-                        </span>
-                      </div>
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-100 py-2 z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`}
+                      alt="User"
+                      className="h-12 w-12 rounded-full"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-900">{displayName}</p>
+                      {displayEmail && <p className="text-xs text-gray-500">{displayEmail}</p>}
+                      <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-[10px] font-semibold bg-[#1a1a1a] text-white">
+                        {roleLabel}
+                      </span>
                     </div>
                   </div>
-                  <div className="py-2">
-                    <button
-                      type="button"
+                </div>
+                <div className="py-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      navigate("/home/profile");   // 🔥 yahi missing tha
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="text-sm font-medium">My Profile</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      navigate('/home/manage-sites');
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="text-sm font-medium">Manage Sites</span>
+                  </button>
+                  {isAdmin && (
+                    <Link
+                      to="/home/invite"
                       onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all"
+                      className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all no-underline"
                     >
-                      <User className="h-4 w-4" />
-                      <span className="text-sm font-medium">My Profile</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileDropdownOpen(false);
-                        navigate('/home/manage-sites');
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      <span className="text-sm font-medium">Manage Sites</span>
-                    </button>
-                    {isAdmin && (
-                      <Link
-                        to="/home/invite"
-                        onClick={() => setIsProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all no-underline"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        <span className="text-sm font-medium">Team Members</span>
-                      </Link>
-                    )}
-                    {/* <Link
+                      <UserPlus className="h-4 w-4" />
+                      <span className="text-sm font-medium">Team Members</span>
+                    </Link>
+                  )}
+                  {/* <Link
                       to="/home/invite"
                       onClick={() => setIsProfileDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-all no-underline"
@@ -202,18 +205,18 @@ const Header: React.FC = () => {
                       <Users className="h-4 w-4" />
                       <span className="text-sm font-medium">User Listing</span>
                     </Link> */}
-                  </div>
-                  <hr className="my-2 border-gray-100" />
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-all"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="text-sm font-medium">Logout</span>
-                  </button>
                 </div>
-              )}
+                <hr className="my-2 border-gray-100" />
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-all"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="text-sm font-medium">Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -273,21 +276,19 @@ const Header: React.FC = () => {
                         type="button"
                         key={site.id}
                         onClick={() => handleSiteSelect(site.id)}
-                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-all duration-200 rounded-2xl border-l-4 ${
-                          isActiveSite
+                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-all duration-200 rounded-2xl border-l-4 ${isActiveSite
                             ? "border-[#3b82f6] shadow-sm"
                             : "bg-white border-transparent hover:bg-gray-50 text-gray-700"
-                        }`}
+                          }`}
                         style={isActiveSite ? {
                           boxShadow: '0 4px 24px 0 rgba(59,130,246,0.10)',
                           background: 'linear-gradient(90deg, #f5f6ff 0%, #e0eaff 100%)'
                         } : {}}
                       >
                         {/* Project icon */}
-                        <span className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl font-semibold ${
-                          isActiveSite ? "bg-[#3b82f6] text-white" : "bg-gray-100 text-gray-500"
-                        }`}>
-                          <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 8V6a4 4 0 1 1 8 0v2" stroke="currentColor" strokeWidth="1.5"/></svg>
+                        <span className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl font-semibold ${isActiveSite ? "bg-[#3b82f6] text-white" : "bg-gray-100 text-gray-500"
+                          }`}>
+                          <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 8V6a4 4 0 1 1 8 0v2" stroke="currentColor" strokeWidth="1.5" /></svg>
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className={`text-base font-bold truncate ${isActiveSite ? "text-[#2563eb]" : "text-gray-900"}`}>{site.name}</p>
@@ -295,7 +296,7 @@ const Header: React.FC = () => {
                         </div>
                         {/* Checkmark for active */}
                         {isActiveSite && (
-                          <span className="ml-2 flex items-center justify-center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="#3b82f6" strokeWidth="2" fill="#f5f6ff"/><path d="M8 12.5l3 3 5-5" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                          <span className="ml-2 flex items-center justify-center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" stroke="#3b82f6" strokeWidth="2" fill="#f5f6ff" /><path d="M8 12.5l3 3 5-5" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
                         )}
                       </button>
                     );
@@ -346,9 +347,8 @@ const Header: React.FC = () => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`nav-link no-underline ${
-                    isActive(link.path) ? "nav-link-active" : "nav-link-inactive"
-                  }`}
+                  className={`nav-link no-underline ${isActive(link.path) ? "nav-link-active" : "nav-link-inactive"
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span>{link.label}</span>
