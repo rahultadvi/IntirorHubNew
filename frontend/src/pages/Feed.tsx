@@ -919,24 +919,27 @@ const isPostDisabled = !hasContent || isSubmitting;
       {/* End Centered Container */}
 
       {/* Floating Add Button */}
-<button
-  onClick={() => setShowAddForm(true)}
-  title="Add Feed"
-  className="
-    fixed bottom-24 right-6
-    w-14 h-14
-    bg-slate-900 text-white
-    rounded-full
-    shadow-xl
-    flex items-center justify-center
-    hover:bg-slate-700
-    transition-all
-    hover:scale-110
-    z-[9999]
-  "
->
-  <Plus className="w-6 h-6" />
-</button>
+{user?.role === "ADMIN" && (
+  <button
+    onClick={() => setShowAddForm(true)}
+    title="Add Feed"
+    className="
+      fixed bottom-24 right-6
+      w-14 h-14
+      bg-slate-900 text-white
+      rounded-full
+      shadow-xl
+      flex items-center justify-center
+      hover:bg-slate-700
+      transition-all
+      hover:scale-110
+      z-[9999]
+    "
+  >
+    <Plus className="w-6 h-6" />
+  </button>
+)}
+
 
 
 

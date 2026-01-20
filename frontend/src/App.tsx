@@ -1,6 +1,7 @@
 import "./App.css";
 import type { ReactElement } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import MainLayout from "./Layout/main";
 import Home from "./pages/Home";
 import Payments from "./pages/Payments";
@@ -17,21 +18,20 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminSignup from "./pages/AdminSignup";
 import Adminpanel from "./pages/Adminpanel";
+
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
 import Profile from "./pages/Profile";
 
-// LoadingScreen removed
+import ProtectedModuleRoute from "./routes/ProtectedModuleRoute";
+import Unauthorized from "./pages/Unauthorized";
+
+
+// ---------------- ROUTE HELPERS ----------------
 
 const PublicRoute = ({ children }: { children: ReactElement }) => {
   const { token } = useAuth();
-
-  // Removed loading screen
-
-  if (token) {
-    return <Navigate to="/home" replace />;
-  }
-
+  if (token) return <Navigate to="/home" replace />;
   return children;
 };
 
@@ -51,35 +51,21 @@ const RootRedirect = () => {
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { token } = useAuth();
-
-  // Removed loading screen
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!token) return <Navigate to="/login" replace />;
   return children;
 };
 
 const AdminRoute = ({ children }: { children: ReactElement }) => {
   const { token, user } = useAuth();
-
-  // Removed loading screen
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.role !== "ADMIN") {
-    return <Navigate to="/" replace />;
-  }
-
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role?.toUpperCase() !== "ADMIN") return <Navigate to="/" replace />;
   return children;
 };
 
+// ------------------------------------------------
+
 function App() {
   const ResetPasswordCatch: React.FC = () => {
-    // const location = useLocation();
     if (location.pathname && location.pathname.startsWith("/reset-password")) {
       return <ResetPassword />;
     }
@@ -91,37 +77,41 @@ function App() {
       <SiteProvider>
         <Router>
           <Routes>
+            {/* Public */}
             <Route path="/" element={<RootRedirect />} />
-            
-            <Route 
-              path="/login" 
+
+            <Route
+              path="/login"
               element={
                 <PublicRoute>
                   <Login />
                 </PublicRoute>
-              } 
+              }
             />
-            <Route 
-              path="/signup" 
+
+            <Route
+              path="/signup"
               element={
                 <PublicRoute>
                   <Signup />
                 </PublicRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin-signup" 
+
+            <Route
+              path="/admin-signup"
               element={
                 <PublicRoute>
                   <AdminSignup />
                 </PublicRoute>
               }
             />
+
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            {/* catch any variants like unexpected trailing segments */}
             <Route path="/reset-password/*" element={<ResetPassword />} />
 
+            {/* Main App with Layout */}
             <Route
               path="/home"
               element={
@@ -142,12 +132,17 @@ function App() {
               <Route
                 path="invite"
                 element={
-                  <AdminRoute>
+                  <ProtectedModuleRoute module="invite">
                     <Invite />
-                  </AdminRoute>
+                  </ProtectedModuleRoute>
                 }
               />
+
+              {/* Unauthorized page inside layout */}
+              <Route path="unauthorized" element={<Unauthorized />} />
             </Route>
+
+            {/* Admin Panel */}
             <Route
               path="/adminpanel"
               element={
@@ -156,7 +151,8 @@ function App() {
                 </AdminRoute>
               }
             />
-            {/* catch-all: render reset-password when pathname begins with it, otherwise redirect home */}
+
+            {/* Catch All */}
             <Route path="*" element={<ResetPasswordCatch />} />
           </Routes>
         </Router>

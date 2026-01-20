@@ -24,7 +24,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
-import {  useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { boqApi, libraryApi, materialApi, type MaterialDto } from "../services/api";
 // import libraryData from "../data/libraryData";
 import jsPDF from 'jspdf';
@@ -59,6 +59,10 @@ const BOQ: React.FC = () => {
   // const [materials, setMaterials] = useState([]);
   const [activeTab, setActiveTab] = useState<"boq" | "material" | "library">("boq");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const { user, token } = useAuth();
+const isAdmin = user?.role === "ADMIN";
+
+
 
   // const handleOpenMaterial = (material: any) => {
   //   console.log("Open material:", material);
@@ -103,12 +107,12 @@ const BOQ: React.FC = () => {
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, 'bill' | 'photo' | null>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [lockedRooms, setLockedRooms] = useState<Set<string>>(new Set());
-  
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
-  
+
   const { activeSite } = useSite();
   const location = useLocation();
 
@@ -128,19 +132,19 @@ const BOQ: React.FC = () => {
   // const [materials, setMaterials] = useState<any[]>([]);
   // const [libraryItems, setLibraryItems] = useState<any[]>([]);
   // Removed unused state variables
-const { user, token } = useAuth();
+  // const { user, token } = useAuth();
 
-// Material Used – search & category
-const [materialSearch, setMaterialSearch] = useState("");
-const [materialCategory, setMaterialCategory] = useState<
-  "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
->("All");
+  // Material Used – search & category
+  const [materialSearch, setMaterialSearch] = useState("");
+  const [materialCategory, setMaterialCategory] = useState<
+    "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
+  >("All");
 
-// 🔍 Library search & category (SAFE)
-const [librarySearch, setLibrarySearch] = useState("");
-const [libraryCategory, setLibraryCategory] = useState<
-  "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
->("All");
+  // 🔍 Library search & category (SAFE)
+  const [librarySearch, setLibrarySearch] = useState("");
+  const [libraryCategory, setLibraryCategory] = useState<
+    "All" | "Furniture" | "Finishes" | "Hardware" | "Electrical"
+  >("All");
 
 
   interface LibraryItem {
@@ -394,11 +398,11 @@ const handleDownloadSampleFile = async () => {
 
 
 
-useEffect(() => {
-  if (activeTab === "library" && token) {
-    fetchLibraryItems();
-  }
-}, [activeTab, libraryCategory, librarySearch, token]);
+  useEffect(() => {
+    if (activeTab === "library" && token) {
+      fetchLibraryItems();
+    }
+  }, [activeTab, libraryCategory, librarySearch, token]);
 
 
   const [boqForm, setBoqForm] = useState({
@@ -414,7 +418,6 @@ useEffect(() => {
 
   // Role-based permissions
   const canAddItems = user && ['ADMIN', 'MANAGER', 'AGENT'].includes(user.role);
-  const isAdmin = user?.role === 'ADMIN';
 
   const allRoomNames = useMemo(() => {
     const roomNames = new Set<string>();
@@ -445,11 +448,11 @@ useEffect(() => {
         const roomName = item.roomName;
         if (roomMap[roomName]) {
           // Calculate amount using purchaseRate if available, otherwise use rate
-          const effectiveRate = (item.purchaseRate !== null && item.purchaseRate !== undefined) 
-            ? item.purchaseRate 
+          const effectiveRate = (item.purchaseRate !== null && item.purchaseRate !== undefined)
+            ? item.purchaseRate
             : item.rate;
           const calculatedAmount = item.quantity * effectiveRate;
-          
+
           roomMap[roomName].items.push({
             id: item._id,
             name: item.itemName,
@@ -473,255 +476,255 @@ useEffect(() => {
 
 
 
-// Fetch BOQ items when site or token changes
-useEffect(() => {
-  if (activeSite && token) {
-    fetchBOQItems();
-  }
-}, [activeSite, token]);
+  // Fetch BOQ items when site or token changes
+  useEffect(() => {
+    if (activeSite && token) {
+      fetchBOQItems();
+    }
+  }, [activeSite, token]);
 
-// Track if materials have been fetched for current site/tab combination
-const [materialsFetched, setMaterialsFetched] = useState<string | null>(null);
+  // Track if materials have been fetched for current site/tab combination
+  const [materialsFetched, setMaterialsFetched] = useState<string | null>(null);
 
-// Fetch materials only when material tab becomes active (controlled)
-useEffect(() => {
-  // Create a unique key for current site/tab combination
-  const fetchKey = activeSite?.id && activeTab === "material" ? `${activeSite.id}-material` : null;
-  
-  if (fetchKey && fetchKey !== materialsFetched && activeSite && token) {
-    fetchMaterials();
-    setMaterialsFetched(fetchKey);
-  } else if (activeTab !== "material") {
-    // Reset flag when switching away from material tab
-    setMaterialsFetched(null);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeTab, activeSite?.id]); // Only depend on activeTab and site ID to prevent unnecessary API calls
+  // Fetch materials only when material tab becomes active (controlled)
+  useEffect(() => {
+    // Create a unique key for current site/tab combination
+    const fetchKey = activeSite?.id && activeTab === "material" ? `${activeSite.id}-material` : null;
 
-// Refetch materials when explicitly needed (after add/update/delete)
-const refetchMaterials = () => {
-  if (activeSite && token && activeTab === "material") {
-    fetchMaterials();
-  }
-};
+    if (fetchKey && fetchKey !== materialsFetched && activeSite && token) {
+      fetchMaterials();
+      setMaterialsFetched(fetchKey);
+    } else if (activeTab !== "material") {
+      // Reset flag when switching away from material tab
+      setMaterialsFetched(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeSite?.id]); // Only depend on activeTab and site ID to prevent unnecessary API calls
 
-// Material form state
-const [materialForm, setMaterialForm] = useState({
-  category: "Finishes" as "Furniture" | "Finishes" | "Hardware" | "Electrical",
-  name: "",
-  description: "",
-  installedAt: "",
-  vendorName: "",
-  vendorCity: "",
-  cost: "",
-  warrantyDuration: "",
-  warrantyModel: "",
-  warrantySince: "",
-  invoice: null as File | null,
-  photo: null as File | null,
-  warrantyDoc: null as File | null,
-});
+  // Refetch materials when explicitly needed (after add/update/delete)
+  const refetchMaterials = () => {
+    if (activeSite && token && activeTab === "material") {
+      fetchMaterials();
+    }
+  };
 
- const fetchBOQItems = async () => {
-  if (!token || !activeSite) return;
+  // Material form state
+  const [materialForm, setMaterialForm] = useState({
+    category: "Finishes" as "Furniture" | "Finishes" | "Hardware" | "Electrical",
+    name: "",
+    description: "",
+    installedAt: "",
+    vendorName: "",
+    vendorCity: "",
+    cost: "",
+    warrantyDuration: "",
+    warrantyModel: "",
+    warrantySince: "",
+    invoice: null as File | null,
+    photo: null as File | null,
+    warrantyDoc: null as File | null,
+  });
 
-  try {
-    const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
-    const { boqItems, lockedRooms } = response as {
-      boqItems: Record<string, any[]>;
-      lockedRooms?: string[];
-      stats: any;
+  const fetchBOQItems = async () => {
+    if (!token || !activeSite) return;
+
+    try {
+      const response = await boqApi.getBOQItemsBySite(activeSite.id, token);
+      const { boqItems, lockedRooms } = response as {
+        boqItems: Record<string, any[]>;
+        lockedRooms?: string[];
+        stats: any;
+      };
+
+      setBoqItems(Object.values(boqItems || {}).flat());
+
+      // Update locked rooms from API response
+      if (lockedRooms && Array.isArray(lockedRooms)) {
+        setLockedRooms(new Set(lockedRooms));
+      }
+    } catch (error) {
+      console.error("Failed to fetch BOQ items", error);
+      setBoqItems([]);
+    }
+  };
+
+
+  const handleAddRoom = async () => {
+    if (!newRoomName.trim()) return;
+    if (!token || !activeSite) return;
+
+    const dummyItem = {
+      roomName: newRoomName,
+      itemName: "Room Added",
+      quantity: 1,
+      unit: "Nos",
+      rate: 0,
+      totalCost: 0,
+      comments: "",
+      siteId: activeSite.id,
     };
 
-    setBoqItems(Object.values(boqItems || {}).flat());
-    
-    // Update locked rooms from API response
-    if (lockedRooms && Array.isArray(lockedRooms)) {
-      setLockedRooms(new Set(lockedRooms));
+    await boqApi.addBOQItem(dummyItem, token);
+    setNewRoomName("");
+    setShowAddRoomModal(false);
+    fetchBOQItems();
+  };
+
+  const handleUpdateBOQItem = async (itemId: string, quantity?: number, purchaseRate?: number | null) => {
+    if (!token || !isAdmin) return;
+
+    try {
+      setUpdatingItemId(itemId);
+      const updateBody: { quantity?: number; purchaseRate?: number | null } = {};
+      if (quantity !== undefined) updateBody.quantity = quantity;
+      if (purchaseRate !== undefined) updateBody.purchaseRate = purchaseRate;
+
+      await boqApi.updateBOQItem(itemId, updateBody, token);
+      await fetchBOQItems();
+      setEditingPurchaseRate({});
+    } catch (error) {
+      console.error("Failed to update BOQ item", error);
+      showToast("Failed to update BOQ item. Please try again.", 'error');
+    } finally {
+      setUpdatingItemId(null);
     }
-  } catch (error) {
-    console.error("Failed to fetch BOQ items", error);
-    setBoqItems([]);
-  }
-};
-
-
-const handleAddRoom = async () => {
-  if (!newRoomName.trim()) return;
-  if (!token || !activeSite) return;
-
-  const dummyItem = {
-    roomName: newRoomName,
-    itemName: "Room Added",
-    quantity: 1,
-    unit: "Nos",
-    rate: 0,
-    totalCost: 0,
-    comments: "",
-    siteId: activeSite.id,
   };
 
-  await boqApi.addBOQItem(dummyItem, token);
-  setNewRoomName("");
-  setShowAddRoomModal(false);
-  fetchBOQItems();
-};
+  const handleDeleteBOQItem = async (itemId: string) => {
+    if (!token || !isAdmin) return;
 
-const handleUpdateBOQItem = async (itemId: string, quantity?: number, purchaseRate?: number | null) => {
-  if (!token || !isAdmin) return;
-  
-  try {
-    setUpdatingItemId(itemId);
-    const updateBody: { quantity?: number; purchaseRate?: number | null } = {};
-    if (quantity !== undefined) updateBody.quantity = quantity;
-    if (purchaseRate !== undefined) updateBody.purchaseRate = purchaseRate;
+    if (!window.confirm("Are you sure you want to delete this BOQ item? This action cannot be undone.")) {
+      return;
+    }
 
-    await boqApi.updateBOQItem(itemId, updateBody, token);
-    await fetchBOQItems();
-    setEditingPurchaseRate({});
-  } catch (error) {
-    console.error("Failed to update BOQ item", error);
-    showToast("Failed to update BOQ item. Please try again.", 'error');
-  } finally {
-    setUpdatingItemId(null);
-  }
-};
-
-const handleDeleteBOQItem = async (itemId: string) => {
-  if (!token || !isAdmin) return;
-  
-  if (!window.confirm("Are you sure you want to delete this BOQ item? This action cannot be undone.")) {
-    return;
-  }
-
-  try {
-    await boqApi.deleteBOQItem(itemId, token);
-    await fetchBOQItems();
-    setExpandedItemId(null); // Close expanded view after deletion
-    showToast("BOQ item deleted successfully!");
-  } catch (error) {
-    console.error("Failed to delete BOQ item", error);
-    showToast("Failed to delete BOQ item. Please try again.", 'error');
-  }
-};
-
-const handleUploadBOQFile = async (itemId: string, file: File, type: 'bill' | 'photo') => {
-  if (!token || !isAdmin) return;
-  
-  try {
-    setUploadingFiles((prev) => ({ ...prev, [itemId]: type }));
-    const formData = new FormData();
-    formData.append(type, file);
-    
-    await boqApi.updateBOQItemFiles(itemId, formData, token);
-    await fetchBOQItems();
-    setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
-  } catch (error) {
-    console.error("Failed to upload file", error);
-    showToast("Failed to upload file. Please try again.", 'error');
-    setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
-  }
-};
-
-
-const handleSubmitBOQItem = async (
-  e?: React.FormEvent,
-  keepModalOpen = false
-) => {
-  e?.preventDefault();
-
-  // 🔐 Auth & site validation
-  if (!token || !activeSite) {
-    console.error("Token or active site missing");
-    return;
-  }
-
-  // ✅ Basic validation
-  if (
-    !boqForm.itemName ||
-    !boqForm.quantity ||
-    !boqForm.rate
-  ) {
-    showToast("Please fill all required fields", 'error');
-    return;
-  }
-
-  const quantity = parseFloat(boqForm.quantity);
-  const rate = parseFloat(boqForm.rate);
-
-  if (isNaN(quantity) || isNaN(rate)) {
-    showToast("Quantity and Rate must be valid numbers", 'error');
-    return;
-  }
-
-  // Set default roomName if not set (use first available room)
-  const roomNameToUse = boqForm.roomName || (allRoomNames.length > 0 ? allRoomNames[0] : '');
-  if (!roomNameToUse) {
-    showToast("No rooms available. Please add a room first.", 'error');
-    return;
-  }
-
-  // When adding, purchaseRate equals rate (purchased price = base price initially)
-  const purchaseRate = rate;
-  // totalCost will be calculated on the backend using purchaseRate (final price)
-
-  // 📦 Base payload
-  const payload: any = {
-    roomName: roomNameToUse,
-    itemName: boqForm.itemName,
-    quantity,
-    unit: boqForm.unit,
-    rate, // Base price
-    purchaseRate: purchaseRate, // Purchased price = final price (used in calculation)
-    category: boqForm.category,
-    comments: boqForm.comments,
-    siteId: activeSite.id,
+    try {
+      await boqApi.deleteBOQItem(itemId, token);
+      await fetchBOQItems();
+      setExpandedItemId(null); // Close expanded view after deletion
+      showToast("BOQ item deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete BOQ item", error);
+      showToast("Failed to delete BOQ item. Please try again.", 'error');
+    }
   };
 
-  try {
-    // 🖼️ If image exists → convert to base64
-    if (boqForm.referenceImage) {
-      const file = boqForm.referenceImage;
+  const handleUploadBOQFile = async (itemId: string, file: File, type: 'bill' | 'photo') => {
+    if (!token || !isAdmin) return;
 
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () =>
-          resolve((reader.result as string).split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+    try {
+      setUploadingFiles((prev) => ({ ...prev, [itemId]: type }));
+      const formData = new FormData();
+      formData.append(type, file);
+
+      await boqApi.updateBOQItemFiles(itemId, formData, token);
+      await fetchBOQItems();
+      setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
+    } catch (error) {
+      console.error("Failed to upload file", error);
+      showToast("Failed to upload file. Please try again.", 'error');
+      setUploadingFiles((prev) => ({ ...prev, [itemId]: null }));
+    }
+  };
+
+
+  const handleSubmitBOQItem = async (
+    e?: React.FormEvent,
+    keepModalOpen = false
+  ) => {
+    e?.preventDefault();
+
+    // 🔐 Auth & site validation
+    if (!token || !activeSite) {
+      console.error("Token or active site missing");
+      return;
+    }
+
+    // ✅ Basic validation
+    if (
+      !boqForm.itemName ||
+      !boqForm.quantity ||
+      !boqForm.rate
+    ) {
+      showToast("Please fill all required fields", 'error');
+      return;
+    }
+
+    const quantity = parseFloat(boqForm.quantity);
+    const rate = parseFloat(boqForm.rate);
+
+    if (isNaN(quantity) || isNaN(rate)) {
+      showToast("Quantity and Rate must be valid numbers", 'error');
+      return;
+    }
+
+    // Set default roomName if not set (use first available room)
+    const roomNameToUse = boqForm.roomName || (allRoomNames.length > 0 ? allRoomNames[0] : '');
+    if (!roomNameToUse) {
+      showToast("No rooms available. Please add a room first.", 'error');
+      return;
+    }
+
+    // When adding, purchaseRate equals rate (purchased price = base price initially)
+    const purchaseRate = rate;
+    // totalCost will be calculated on the backend using purchaseRate (final price)
+
+    // 📦 Base payload
+    const payload: any = {
+      roomName: roomNameToUse,
+      itemName: boqForm.itemName,
+      quantity,
+      unit: boqForm.unit,
+      rate, // Base price
+      purchaseRate: purchaseRate, // Purchased price = final price (used in calculation)
+      category: boqForm.category,
+      comments: boqForm.comments,
+      siteId: activeSite.id,
+    };
+
+    try {
+      // 🖼️ If image exists → convert to base64
+      if (boqForm.referenceImage) {
+        const file = boqForm.referenceImage;
+
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve((reader.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        payload.referenceImageBase64 = base64;
+        payload.referenceImageFilename = file.name;
+      }
+
+      // 🚀 API call
+      await boqApi.addBOQItem(payload, token);
+
+      // 🔄 Reset form
+      setBoqForm({
+        roomName: keepModalOpen ? boqForm.roomName : "",
+        itemName: "",
+        quantity: "",
+        unit: "Sq.ft",
+        rate: "",
+        category: "Furniture",
+        comments: "",
+        referenceImage: null,
       });
 
-      payload.referenceImageBase64 = base64;
-      payload.referenceImageFilename = file.name;
+      // 📦 Refresh BOQ list
+      fetchBOQItems();
+
+      // ❌ Close modal if needed
+      if (!keepModalOpen) {
+        setShowAddModal(false);
+      }
+    } catch (error) {
+      console.error("Failed to add BOQ item", error);
+      showToast("Failed to add BOQ item. Please try again.", 'error');
     }
-
-    // 🚀 API call
-    await boqApi.addBOQItem(payload, token);
-
-    // 🔄 Reset form
-    setBoqForm({
-      roomName: keepModalOpen ? boqForm.roomName : "",
-      itemName: "",
-      quantity: "",
-      unit: "Sq.ft",
-      rate: "",
-      category: "Furniture",
-      comments: "",
-      referenceImage: null,
-    });
-
-    // 📦 Refresh BOQ list
-    fetchBOQItems();
-
-    // ❌ Close modal if needed
-    if (!keepModalOpen) {
-      setShowAddModal(false);
-    }
-  } catch (error) {
-    console.error("Failed to add BOQ item", error);
-    showToast("Failed to add BOQ item. Please try again.", 'error');
-  }
-};
+  };
 
 
   const handleEditRoomName = (roomId: string, currentName: string) => {
@@ -801,7 +804,7 @@ const handleSubmitBOQItem = async (
         const purchaseAmount = item.quantity * purchaseRate;
         const categoryDisplay = typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : (item.category || 'N/A');
         const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
-        
+
         return `
           <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
             <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
@@ -972,25 +975,25 @@ const handleSubmitBOQItem = async (
       const marginBottom = 30; // mm - space for footer
       const marginLeft = 10; // mm
       const marginRight = 10; // mm
-      
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const contentWidth = pdfWidth - marginLeft - marginRight;
       const contentHeight = pdfHeight - marginTop - marginBottom;
-      
+
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
+
       // Convert pixels to mm (96 DPI = 96 pixels per inch = 3.7795 pixels per mm)
       const pixelsToMm = 0.264583;
       const imgWidthMm = imgWidth * pixelsToMm;
       const imgHeightMm = imgHeight * pixelsToMm;
-      
+
       // Calculate ratio to fit content width
       const ratio = contentWidth / imgWidthMm;
       const scaledWidth = contentWidth;
       const scaledHeight = imgHeightMm * ratio;
-      
+
       // Calculate total pages needed
       const totalPages = Math.ceil(scaledHeight / contentHeight) || 1;
 
@@ -999,14 +1002,14 @@ const handleSubmitBOQItem = async (
         pdf.setFontSize(10);
         pdf.setTextColor(30, 41, 59); // slate-800
         pdf.setFont('helvetica', 'bold');
-        
+
         // Left side - Document title
         pdf.text('BILL OF QUANTITIES', marginLeft, 12);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
         const siteText = siteByCompany.length > 50 ? siteByCompany.substring(0, 47) + '...' : siteByCompany;
         pdf.text(siteText, marginLeft, 16);
-        
+
         // Right side - Page number and Date
         const pageText = `Page ${pageNum} of ${totalPages}`;
         const pageTextWidth = pdf.getTextWidth(pageText);
@@ -1015,7 +1018,7 @@ const handleSubmitBOQItem = async (
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
         pdf.text(generatedDate, pdfWidth - marginRight - pageTextWidth, 16);
-        
+
         // Header line
         pdf.setDrawColor(226, 232, 240); // slate-200
         pdf.setLineWidth(0.5);
@@ -1025,25 +1028,25 @@ const handleSubmitBOQItem = async (
       // Helper function to add footer on each page
       const addFooter = (pageNum: number) => {
         const footerY = pdfHeight - marginBottom + 12;
-        
+
         // Footer line
         pdf.setDrawColor(226, 232, 240); // slate-200
         pdf.setLineWidth(0.5);
         pdf.line(marginLeft, footerY - 8, pdfWidth - marginRight, footerY - 8);
-        
+
         // Footer text
         pdf.setFontSize(7);
         pdf.setTextColor(107, 114, 128); // gray-500
         pdf.setFont('helvetica', 'normal');
-        
+
         // Left side
         pdf.text('Generated by SiteZero', marginLeft, footerY);
-        
+
         // Right side - Page number
         const pageText = `Page ${pageNum} of ${totalPages}`;
         const pageTextWidth = pdf.getTextWidth(pageText);
         pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, footerY);
-        
+
         // Center - Generated time (if space allows)
         const timeText = generatedDateTime;
         const timeTextWidth = pdf.getTextWidth(timeText);
@@ -1062,20 +1065,20 @@ const handleSubmitBOQItem = async (
         // Add header and footer before adding content
         addHeader(currentPage);
         addFooter(currentPage);
-        
+
         // Calculate how much of the image fits on this page
         const availableHeight = contentHeight;
         const imageHeightForThisPage = Math.min(remainingHeight, availableHeight);
-        
+
         // Calculate source position in pixels
         const sourceHeightPx = imageHeightForThisPage / ratio / pixelsToMm;
-        
+
         // Create a temporary canvas for this page's portion
         const pageCanvas = document.createElement('canvas');
         pageCanvas.width = imgWidth;
         pageCanvas.height = Math.ceil(sourceHeightPx);
         const pageCtx = pageCanvas.getContext('2d');
-        
+
         if (pageCtx) {
           // Draw the portion of the original canvas
           pageCtx.drawImage(
@@ -1086,16 +1089,16 @@ const handleSubmitBOQItem = async (
             imgWidth, sourceHeightPx // destination width, height
           );
         }
-        
+
         const pageImgData = pageCanvas.toDataURL('image/png');
-        
+
         // Add the image portion to PDF
         pdf.addImage(pageImgData, 'PNG', marginLeft, imgY, scaledWidth, imageHeightForThisPage, undefined, 'FAST');
-        
+
         // Update for next iteration
         remainingHeight -= availableHeight;
         sourceY += sourceHeightPx;
-        
+
         if (remainingHeight > 0) {
           pdf.addPage();
           currentPage++;
@@ -1109,40 +1112,40 @@ const handleSubmitBOQItem = async (
       throw error;
     }
   };
-// Helper function to get static image based on category/tag
-const getLibraryItemImage = (item: LibraryItem): string => {
-  // If image exists and is a URL, use it
-  if (item.image) {
-    if (item.image.startsWith("http")) {
-      return item.image;
+  // Helper function to get static image based on category/tag
+  const getLibraryItemImage = (item: LibraryItem): string => {
+    // If image exists and is a URL, use it
+    if (item.image) {
+      if (item.image.startsWith("http")) {
+        return item.image;
+      }
+      if (item.image.startsWith("/")) {
+        return item.image;
+      }
     }
-    if (item.image.startsWith("/")) {
-      return item.image;
-    }
-  }
 
-  // Default image from frontend - using logo or default library image
-  // Replace this path with your actual logo: /logo.png or /images/logo.png
-  // Place your logo file in: /frontend/public/logo.png or /frontend/public/images/logo.png
-  return "/logo.png";
-};
+    // Default image from frontend - using logo or default library image
+    // Replace this path with your actual logo: /logo.png or /images/logo.png
+    // Place your logo file in: /frontend/public/logo.png or /frontend/public/images/logo.png
+    return "/logo.png";
+  };
 
-const filteredLibraryItems = useMemo(() => {
-  const search = librarySearch.toLowerCase();
+  const filteredLibraryItems = useMemo(() => {
+    const search = librarySearch.toLowerCase();
 
-  return (libraryItems ?? []).filter((item) => {
-    const searchMatch =
-      item.name?.toLowerCase().includes(search) ||
-      item.Category?.toLowerCase().includes(search) ||
-      item.description?.toLowerCase().includes(search);
+    return (libraryItems ?? []).filter((item) => {
+      const searchMatch =
+        item.name?.toLowerCase().includes(search) ||
+        item.Category?.toLowerCase().includes(search) ||
+        item.description?.toLowerCase().includes(search);
 
-    const categoryMatch =
-      libraryCategory === "All" ||
-      item.Category === libraryCategory;
+      const categoryMatch =
+        libraryCategory === "All" ||
+        item.Category === libraryCategory;
 
-    return searchMatch && categoryMatch;
-  });
-}, [libraryItems, librarySearch, libraryCategory]);
+      return searchMatch && categoryMatch;
+    });
+  }, [libraryItems, librarySearch, libraryCategory]);
 
 
 
@@ -1310,7 +1313,7 @@ const filteredLibraryItems = useMemo(() => {
         const brand = descriptionParts[0]?.trim() || "";
         const model = descriptionParts[1]?.trim() || "";
         const hasWarranty = !!(material.warranty?.duration || material.warranty?.model);
-        const warrantyInfo = hasWarranty 
+        const warrantyInfo = hasWarranty
           ? `${material.warranty?.duration || ''}${material.warranty?.model ? ` • ${material.warranty.model}` : ''}`.trim()
           : 'N/A';
 
@@ -1453,7 +1456,7 @@ const filteredLibraryItems = useMemo(() => {
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
 
       pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
-      
+
       const filenameSiteName = (activeSite?.name || 'Materials').replace(/[^a-z0-9]/gi, '_').toLowerCase();
       const filename = `${filenameSiteName}_Materials_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(filename);
@@ -1511,7 +1514,7 @@ const filteredLibraryItems = useMemo(() => {
       }
 
       await materialApi.addMaterial(formData, token);
-      
+
       // Reset form
       setMaterialForm({
         category: "Finishes",
@@ -1566,7 +1569,7 @@ const filteredLibraryItems = useMemo(() => {
       }
 
       await materialApi.updateMaterial(editingMaterial._id, formData, token);
-      
+
       setEditingMaterial(null);
       setShowAddMaterialModal(false);
       refetchMaterials();
@@ -1669,7 +1672,7 @@ const filteredLibraryItems = useMemo(() => {
                   isActive
                     ? "bg-slate-800 text-white shadow-md"
                     : "text-slate-400 hover:text-slate-600"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -1700,19 +1703,19 @@ const filteredLibraryItems = useMemo(() => {
   </div>
 </div>
 
-{/* SEARCH BAR */}
-<div className="flex gap-3 mb-4">
-  <div className="relative flex-1">
-    <span className="absolute left-3 top-3 text-slate-400">🔍</span>
-    <input
-      type="text"
-      placeholder="Search items, brands..."
-      value={librarySearch}
-      onChange={(e) => setLibrarySearch(e.target.value)}
-      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200
+              {/* SEARCH BAR */}
+              <div className="flex gap-3 mb-4">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-3 text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search items, brands..."
+                    value={librarySearch}
+                    onChange={(e) => setLibrarySearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200
         focus:ring-2 focus:ring-slate-300 outline-none"
-    />
-  </div>
+                  />
+                </div>
 
   <label htmlFor="library-import-file" className="flex items-center justify-center w-9 h-9 bg-slate-900 text-white rounded-lg hover:bg-slate-800 cursor-pointer transition-colors shadow-md hover:shadow-lg" title="Import CSV/Excel">
       <Upload className="w-4 h-4" />
@@ -1726,23 +1729,22 @@ const filteredLibraryItems = useMemo(() => {
     </label>
 </div>
 
-            {/* CATEGORY PILLS */}
-            <div className="flex gap-3 mb-4 overflow-x-auto no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-  {(["All", "Furniture", "Finishes", "Hardware", "Electrical"] as const).map((cat) => (
-    <button
-      key={cat}
-      onClick={() => setLibraryCategory(cat)}
-      className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition
-        ${
-          libraryCategory === cat
-            ? "bg-slate-900 text-white"
-            : "bg-white border text-slate-600 hover:bg-slate-100"
-        }`}
-    >
-      {cat}
-    </button>
-  ))}
-</div>
+              {/* CATEGORY PILLS */}
+              <div className="flex gap-3 mb-4 overflow-x-auto no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {(["All", "Furniture", "Finishes", "Hardware", "Electrical"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setLibraryCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition
+        ${libraryCategory === cat
+                        ? "bg-slate-900 text-white"
+                        : "bg-white border text-slate-600 hover:bg-slate-100"
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
 
               {filteredLibraryItems.length === 0 ? (
                 <div className="py-12 text-center">
@@ -1783,330 +1785,324 @@ const filteredLibraryItems = useMemo(() => {
                 </div>
               ) : (
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
-{filteredLibraryItems.map((item) => {
-  const id = item._id;
-  const inputs = libraryItemInputs[id] || { quantity: 1, unit: "Nos.", room: allRoomNames[0] || "Living Room" };
-  const isEditingRate = editingLibraryRate === id;
-  const displayRate = isEditingRate ? parseFloat(editingLibraryRateValue) || item.ratePerQty : (typeof item.ratePerQty === 'number' ? item.ratePerQty : parseFloat(item.ratePerQty) || 0);
-  const totalAmount = displayRate * inputs.quantity;
+                {filteredLibraryItems.map((item) => {
+                  const id = item._id;
+                  const inputs = libraryItemInputs[id] || { quantity: 1, unit: "Nos.", room: allRoomNames[0] || "Living Room" };
+                  const isEditingRate = editingLibraryRate === id;
+                  const displayRate = isEditingRate ? parseFloat(editingLibraryRateValue) || item.ratePerQty : (typeof item.ratePerQty === 'number' ? item.ratePerQty : parseFloat(item.ratePerQty) || 0);
+                  const totalAmount = displayRate * inputs.quantity;
 
-  // Get category display name from tag or Category
-  const getCategoryDisplay = () => {
-    const tag = (item.tag || "").toUpperCase();
-    if (tag.includes("BED")) return "Beds";
-    if (tag.includes("WARDROBE") || tag.includes("WARDROB")) return "Wardrobes";
-    if (tag.includes("TV") || tag.includes("UNIT")) return "TV Unit";
-    if (tag.includes("TABLE") || tag.includes("DESK")) return "Tables";
-    if (tag.includes("SOFA")) return "Sofas";
-    if (tag.includes("CHAIR")) return "Chairs";
-    if (tag.includes("DOOR")) return "Doors";
-    if (tag.includes("ELECTRICAL") || tag.includes("LIGHT")) return "Electrical";
-    if (tag.includes("FLOOR")) return "Floor";
-    if (tag.includes("WALL")) return "Wall Panels";
-    if (tag.includes("CEILING")) return "Ceiling";
-    return item.Category || "Furniture";
-  };
+                  // Get category display name from tag or Category
+                  const getCategoryDisplay = () => {
+                    const tag = (item.tag || "").toUpperCase();
+                    if (tag.includes("BED")) return "Beds";
+                    if (tag.includes("WARDROBE") || tag.includes("WARDROB")) return "Wardrobes";
+                    if (tag.includes("TV") || tag.includes("UNIT")) return "TV Unit";
+                    if (tag.includes("TABLE") || tag.includes("DESK")) return "Tables";
+                    if (tag.includes("SOFA")) return "Sofas";
+                    if (tag.includes("CHAIR")) return "Chairs";
+                    if (tag.includes("DOOR")) return "Doors";
+                    if (tag.includes("ELECTRICAL") || tag.includes("LIGHT")) return "Electrical";
+                    if (tag.includes("FLOOR")) return "Floor";
+                    if (tag.includes("WALL")) return "Wall Panels";
+                    if (tag.includes("CEILING")) return "Ceiling";
+                    return item.Category || "Furniture";
+                  };
 
-  // Get unit display (parse from qty or use default)
-  const getUnitDisplay = () => {
-    if (typeof item.qty === "string") {
-      // If qty is like "Nos", "Sq.ft", etc.
-      return item.qty;
-    }
-    return "Nos.";
-  };
+                  // Get unit display (parse from qty or use default)
+                  const getUnitDisplay = () => {
+                    if (typeof item.qty === "string") {
+                      // If qty is like "Nos", "Sq.ft", etc.
+                      return item.qty;
+                    }
+                    return "Nos.";
+                  };
 
-  const handleQuantityChange = (value: number) => {
-    setLibraryItemInputs(prev => ({
-      ...prev,
-      [id]: { ...inputs, quantity: Math.max(1, value) }
-    }));
-  };
+                  const handleQuantityChange = (value: number) => {
+                    setLibraryItemInputs(prev => ({
+                      ...prev,
+                      [id]: { ...inputs, quantity: Math.max(1, value) }
+                    }));
+                  };
 
-  const handleUnitChange = (unit: string) => {
-    setLibraryItemInputs(prev => ({
-      ...prev,
-      [id]: { ...inputs, unit }
-    }));
-  };
+                  const handleUnitChange = (unit: string) => {
+                    setLibraryItemInputs(prev => ({
+                      ...prev,
+                      [id]: { ...inputs, unit }
+                    }));
+                  };
 
-  const handleRoomChange = (room: string) => {
-    setLibraryItemInputs(prev => ({
-      ...prev,
-      [id]: { ...inputs, room }
-    }));
-  };
+                  const handleRoomChange = (room: string) => {
+                    setLibraryItemInputs(prev => ({
+                      ...prev,
+                      [id]: { ...inputs, room }
+                    }));
+                  };
 
-  const handleStartEditRate = () => {
-    setEditingLibraryRate(id);
-    setEditingLibraryRateValue(item.ratePerQty.toString());
-  };
+                  const handleStartEditRate = () => {
+                    setEditingLibraryRate(id);
+                    setEditingLibraryRateValue(item.ratePerQty.toString());
+                  };
 
-  const handleSaveRate = async () => {
-    if (!token) return;
-    
-    try {
-      const newRate = parseFloat(editingLibraryRateValue);
-      if (isNaN(newRate) || newRate <= 0) {
-        showToast("Please enter a valid rate", 'error');
-        return;
-      }
+                  const handleSaveRate = async () => {
+                    if (!token) return;
 
-      // Update library item rate via API
-      await libraryApi.updateLibraryItem(id, { 
-        ratePerQty: newRate,
-        baseRate: newRate 
-      }, token);
-      
-      // Update local state
-      const updatedItems = libraryItems.map(libItem => 
-        libItem._id === id 
-          ? { ...libItem, ratePerQty: newRate }
-          : libItem
-      );
-      setLibraryItems(updatedItems);
-      setEditingLibraryRate(null);
-    } catch (error) {
-      console.error("Failed to update rate", error);
-      showToast("Failed to update rate. Please try again.", 'error');
-      setEditingLibraryRate(null);
-    }
-  };
+                    try {
+                      const newRate = parseFloat(editingLibraryRateValue);
+                      if (isNaN(newRate) || newRate <= 0) {
+                        showToast("Please enter a valid rate", 'error');
+                        return;
+                      }
 
-  const handleCancelEditRate = () => {
-    setEditingLibraryRate(null);
-    setEditingLibraryRateValue("");
-  };
+                      // Update library item rate via API
+                      await libraryApi.updateLibraryItem(id, {
+                        ratePerQty: newRate,
+                        baseRate: newRate
+                      }, token);
 
-  const handleAddToBOQ = async () => {
-    if (!token || !activeSite) return;
-    
-    try {
-      // Get category from library item - normalize to match BOQ category format
-      const getCategoryFromLibrary = (): "Furniture" | "Finishes" | "Hardware" | "Electrical" | "Miscellaneous" => {
-        const category = item.Category || "";
-        const tag = (item.tag || "").toUpperCase();
-        
-        // Check category first
-        if (category) {
-          const normalizedCategory = category.toLowerCase();
-          if (normalizedCategory.includes('furniture')) return "Furniture";
-          if (normalizedCategory.includes('finishes')) return "Finishes";
-          if (normalizedCategory.includes('hardware')) return "Hardware";
-          if (normalizedCategory.includes('electrical') || normalizedCategory.includes('electronics')) return "Electrical";
-          if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return "Miscellaneous";
-        }
-        
-        // Check tag for category hints
-        if (tag.includes("ELECTRICAL") || tag.includes("LIGHT") || tag.includes("ELECTRONIC")) return "Electrical";
-        if (tag.includes("FLOOR") || tag.includes("WALL") || tag.includes("CEILING") || tag.includes("PAINT") || tag.includes("LAMINATE")) return "Finishes";
-        if (tag.includes("HARDWARE") || tag.includes("HINGE") || tag.includes("HANDLE")) return "Hardware";
-        
-        // Default to Furniture if it's furniture-related items
-        if (tag.includes("BED") || tag.includes("WARDROBE") || tag.includes("TV") || tag.includes("UNIT") || 
-            tag.includes("TABLE") || tag.includes("SOFA") || tag.includes("CHAIR") || tag.includes("DESK")) {
-          return "Furniture";
-        }
-        
-        // Default to Furniture if no match
-        return "Furniture";
-      };
+                      // Update local state
+                      const updatedItems = libraryItems.map(libItem =>
+                        libItem._id === id
+                          ? { ...libItem, ratePerQty: newRate }
+                          : libItem
+                      );
+                      setLibraryItems(updatedItems);
+                      setEditingLibraryRate(null);
+                    } catch (error) {
+                      console.error("Failed to update rate", error);
+                      showToast("Failed to update rate. Please try again.", 'error');
+                      setEditingLibraryRate(null);
+                    }
+                  };
 
-      const category = getCategoryFromLibrary();
+                  const handleCancelEditRate = () => {
+                    setEditingLibraryRate(null);
+                    setEditingLibraryRateValue("");
+                  };
 
-      const payload = {
-        roomName: inputs.room,
-        itemName: item.name,
-        quantity: inputs.quantity,
-        unit: inputs.unit,
-        rate: displayRate || item.ratePerQty,
-        category: category,
-        totalCost: totalAmount,
-        comments: "",
-        siteId: activeSite.id,
-      };
+                  const handleAddToBOQ = async () => {
+                    if (!token || !activeSite) return;
 
-      await boqApi.addBOQItem(payload, token);
-      
-      // Show success toast immediately after API call succeeds
-      showToast("Item added to BOQ successfully!");
-      
-      // Refresh BOQ items (non-blocking - errors won't prevent toast from showing)
-      try {
-        await fetchBOQItems();
-      } catch (fetchError) {
-        console.error("Failed to refresh BOQ items", fetchError);
-        // Don't show error toast - the item was added successfully
-      }
-      
-      // Reset inputs
-      setLibraryItemInputs(prev => {
-        const newInputs = { ...prev };
-        delete newInputs[id];
-        return newInputs;
-      });
-    } catch (error) {
-      console.error("Failed to add to BOQ", error);
-      showToast("Failed to add item to BOQ", 'error');
-    }
-  };
+                    try {
+                      // Get category from library item - normalize to match BOQ category format
+                      const getCategoryFromLibrary = (): "Furniture" | "Finishes" | "Hardware" | "Electrical" | "Miscellaneous" => {
+                        const category = item.Category || "";
+                        const tag = (item.tag || "").toUpperCase();
 
-  return (
-    <div key={id} className="h-full">
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full group">
-        {/* IMAGE SECTION */}
-        <div className="relative h-28 sm:h-32 w-full bg-slate-100 overflow-hidden">
-          <img
-            src={getLibraryItemImage(item)}
-            alt={item.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => {
-              // Fallback to SVG placeholder if logo.png doesn't exist
-              // This creates a simple gray placeholder with "No Image" text
-              (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect fill='%23f1f5f9' width='300' height='200'/%3E%3Ctext fill='%2394a3b8' font-family='sans-serif' font-size='14' x='150' y='100' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
-            }}
-          />
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600 shadow-sm border border-white">
-            {getCategoryDisplay()}
-          </div>
-        </div>
+                        // Check category first
+                        if (category) {
+                          const normalizedCategory = category.toLowerCase();
+                          if (normalizedCategory.includes('furniture')) return "Furniture";
+                          if (normalizedCategory.includes('finishes')) return "Finishes";
+                          if (normalizedCategory.includes('hardware')) return "Hardware";
+                          if (normalizedCategory.includes('electrical') || normalizedCategory.includes('electronics')) return "Electrical";
+                          if (normalizedCategory.includes('miscellaneous') || normalizedCategory.includes('misc')) return "Miscellaneous";
+                        }
 
-        {/* CONTENT SECTION */}
-        <div className="p-2.5 sm:p-4 flex flex-col flex-1">
-          {/* TITLE & DESCRIPTION */}
-          <div className="mb-2 sm:mb-3">
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h3>
-            {item.companyName && (
-              <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 line-clamp-1">{item.companyName}</p>
-            )}
-            <div className="flex justify-between items-start mt-0.5">
-              <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">{item.description || item.Category || "Generic"}</p>
-              <Info className="w-3 h-3 text-slate-300 flex-shrink-0" />
-            </div>
-          </div>
+                        // Default to Furniture if it's furniture-related items
+                        if (tag.includes("BED") || tag.includes("WARDROBE") || tag.includes("TV") || tag.includes("UNIT") ||
+                          tag.includes("TABLE") || tag.includes("SOFA") || tag.includes("CHAIR") || tag.includes("DESK")) {
+                          return "Furniture";
+                        }
 
-          {/* BASE RATE SECTION */}
-          <div className="mb-3 sm:mb-4">
-            <div className="flex items-center gap-1 sm:gap-2 mb-1">
-              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wide">BASE RATE</span>
-              {isAdmin && (
-                <>
-                  {isEditingRate ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        value={editingLibraryRateValue}
-                        onChange={(e) => setEditingLibraryRateValue(e.target.value)}
-                        className="w-20 px-1 py-0.5 text-xs border rounded"
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleSaveRate}
-                        className="text-green-500 hover:text-green-600"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={handleCancelEditRate}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                        // Default to Furniture if no match
+                        return "Furniture";
+                      };
+
+                      const category = getCategoryFromLibrary();
+
+                      const payload = {
+                        roomName: inputs.room,
+                        itemName: item.name,
+                        quantity: inputs.quantity,
+                        unit: inputs.unit,
+                        rate: displayRate || item.ratePerQty,
+                        category: category,
+                        totalCost: totalAmount,
+                        comments: "",
+                        siteId: activeSite.id,
+                      };
+
+                      await boqApi.addBOQItem(payload, token);
+
+                      // Show success toast immediately after API call succeeds
+                      showToast("Item added to BOQ successfully!");
+
+                      // Refresh BOQ items (non-blocking - errors won't prevent toast from showing)
+                      try {
+                        await fetchBOQItems();
+                      } catch (fetchError) {
+                        console.error("Failed to refresh BOQ items", fetchError);
+                        // Don't show error toast - the item was added successfully
+                      }
+
+                      // Reset inputs
+                      setLibraryItemInputs(prev => {
+                        const newInputs = { ...prev };
+                        delete newInputs[id];
+                        return newInputs;
+                      });
+                    } catch (error) {
+                      console.error("Failed to add to BOQ", error);
+                      showToast("Failed to add item to BOQ", 'error');
+                    }
+                  };
+
+
+                  return (
+                    <div key={id} className="h-full">
+                      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full group">
+                        {/* IMAGE SECTION */}
+                        <div className="relative h-28 sm:h-32 w-full bg-slate-100 overflow-hidden">
+                          <img
+                            src={getLibraryItemImage(item)}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              // Fallback to SVG placeholder if logo.png doesn't exist
+                              // This creates a simple gray placeholder with "No Image" text
+                              (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect fill='%23f1f5f9' width='300' height='200'/%3E%3Ctext fill='%2394a3b8' font-family='sans-serif' font-size='14' x='150' y='100' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+                            }}
+                          />
+                          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600 shadow-sm border border-white">
+                            {getCategoryDisplay()}
+                          </div>
+                        </div>
+
+                        {/* CONTENT SECTION */}
+                        <div className="p-2.5 sm:p-4 flex flex-col flex-1">
+                          {/* TITLE & DESCRIPTION */}
+                          <div className="mb-2 sm:mb-3">
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h3>
+                            <div className="flex justify-between items-start mt-0.5">
+                              <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">{item.description || item.Category || "Generic"}</p>
+                              <Info className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                            </div>
+                          </div>
+
+                          {/* BASE RATE SECTION */}
+                          <div className="mb-3 sm:mb-4">
+                            <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wide">BASE RATE</span>
+                              {isAdmin && (
+                                <>
+                                  {isEditingRate ? (
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        value={editingLibraryRateValue}
+                                        onChange={(e) => setEditingLibraryRateValue(e.target.value)}
+                                        className="w-20 px-1 py-0.5 text-xs border rounded"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={handleSaveRate}
+                                        className="text-green-500 hover:text-green-600"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEditRate}
+                                        className="text-red-500 hover:text-red-600"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={handleStartEditRate}
+                                      className="text-slate-300 hover:text-blue-500"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+
+                            </div>
+                            <div className="text-base sm:text-lg font-bold text-slate-800">
+                              ₹{formatCurrency(displayRate).replace('₹', '')} <span className="text-[10px] sm:text-xs font-medium text-slate-400">/ {getUnitDisplay()}</span>
+                            </div>
+                          </div>
+
+                          {/* INPUTS SECTION */}
+                          <div className="mt-auto space-y-2 sm:space-y-3 pt-2 sm:pt-3 border-t border-slate-50">
+                            {/* QUANTITY & UNIT */}
+                            <div className="flex gap-1.5 sm:gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={inputs.quantity}
+                                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                                className="w-12 sm:w-16 bg-slate-50 border border-slate-200 rounded-lg text-center text-xs sm:text-sm font-bold text-slate-700 py-1 sm:py-1.5 focus:outline-none focus:border-slate-400"
+                              />
+                              <div className="relative flex-1">
+                                <select
+                                  value={inputs.unit}
+                                  onChange={(e) => handleUnitChange(e.target.value)}
+                                  className="w-full h-full bg-slate-50 border border-slate-200 rounded-lg text-[10px] sm:text-xs font-bold text-slate-600 px-1.5 sm:px-2 py-1 sm:py-1.5 appearance-none focus:outline-none focus:border-slate-400"
+                                >
+                                  <option value="Nos.">Nos.</option>
+                                  <option value="Sq. Ft.">Sq. Ft.</option>
+                                  <option value="R. Ft.">R. Ft.</option>
+                                  <option value="Lumpsum">Lumpsum</option>
+                                  <option value="Meters">Meters</option>
+                                  <option value="Sets">Sets</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* ROOM SELECTOR */}
+                            <div className="relative">
+                              <select
+                                value={inputs.room}
+                                onChange={(e) => handleRoomChange(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg text-[10px] sm:text-xs font-semibold text-slate-600 px-2 sm:px-3 py-1.5 sm:py-2 appearance-none focus:outline-none focus:border-slate-400"
+                              >
+                                {allRoomNames.length > 0 ? (
+                                  allRoomNames.map((room) => (
+                                    <option key={room} value={room}>{room}</option>
+                                  ))
+                                ) : (
+                                  <>
+                                    <option value="Living Room">Living Room</option>
+                                    <option value="Kitchen">Kitchen</option>
+                                    <option value="Bedroom 1">Bedroom 1</option>
+                                    <option value="Bedroom 2">Bedroom 2</option>
+                                    <option value="Bedroom 3">Bedroom 3</option>
+                                    <option value="Toilet 1">Toilet 1</option>
+                                    <option value="Toilet 2">Toilet 2</option>
+                                    <option value="Foyer">Foyer</option>
+                                    <option value="Balcony">Balcony</option>
+                                    <option value="Utility">Utility</option>
+                                  </>
+                                )}
+                              </select>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
+                              </div>
+                            </div>
+
+                            {/* ADD TO BOQ BUTTON */}
+                            <button
+                              onClick={handleAddToBOQ}
+                              className="w-full py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 shadow-md bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20 active:scale-95"
+                            >
+                              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <span className="hidden sm:inline">Add to BOQ</span>
+                              <span className="sm:hidden">Add</span>
+                            </button>
+
+                            {/* TOTAL */}
+                            <div className="text-center">
+                              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Total: {formatCurrency(totalAmount)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleStartEditRate}
-                      className="text-slate-300 hover:text-blue-500"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="text-base sm:text-lg font-bold text-slate-800">
-              ₹{formatCurrency(displayRate).replace('₹', '')} <span className="text-[10px] sm:text-xs font-medium text-slate-400">/ {getUnitDisplay()}</span>
-            </div>
-          </div>
-
-          {/* INPUTS SECTION */}
-          <div className="mt-auto space-y-2 sm:space-y-3 pt-2 sm:pt-3 border-t border-slate-50">
-            {/* QUANTITY & UNIT */}
-            <div className="flex gap-1.5 sm:gap-2">
-              <input
-                type="number"
-                min="1"
-                value={inputs.quantity}
-                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                className="w-12 sm:w-16 bg-slate-50 border border-slate-200 rounded-lg text-center text-xs sm:text-sm font-bold text-slate-700 py-1 sm:py-1.5 focus:outline-none focus:border-slate-400"
-              />
-              <div className="relative flex-1">
-                <select
-                  value={inputs.unit}
-                  onChange={(e) => handleUnitChange(e.target.value)}
-                  className="w-full h-full bg-slate-50 border border-slate-200 rounded-lg text-[10px] sm:text-xs font-bold text-slate-600 px-1.5 sm:px-2 py-1 sm:py-1.5 appearance-none focus:outline-none focus:border-slate-400"
-                >
-                  <option value="Nos.">Nos.</option>
-                  <option value="Sq. Ft.">Sq. Ft.</option>
-                  <option value="R. Ft.">R. Ft.</option>
-                  <option value="Lumpsum">Lumpsum</option>
-                  <option value="Meters">Meters</option>
-                  <option value="Sets">Sets</option>
-                </select>
-              </div>
-            </div>
-
-            {/* ROOM SELECTOR */}
-            <div className="relative">
-              <select
-                value={inputs.room}
-                onChange={(e) => handleRoomChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg text-[10px] sm:text-xs font-semibold text-slate-600 px-2 sm:px-3 py-1.5 sm:py-2 appearance-none focus:outline-none focus:border-slate-400"
-              >
-                {allRoomNames.length > 0 ? (
-                  allRoomNames.map((room) => (
-                    <option key={room} value={room}>{room}</option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Living Room">Living Room</option>
-                    <option value="Kitchen">Kitchen</option>
-                    <option value="Bedroom 1">Bedroom 1</option>
-                    <option value="Bedroom 2">Bedroom 2</option>
-                    <option value="Bedroom 3">Bedroom 3</option>
-                    <option value="Toilet 1">Toilet 1</option>
-                    <option value="Toilet 2">Toilet 2</option>
-                    <option value="Foyer">Foyer</option>
-                    <option value="Balcony">Balcony</option>
-                    <option value="Utility">Utility</option>
-                  </>
-                )}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
-              </div>
-            </div>
-
-            {/* ADD TO BOQ BUTTON */}
-            <button
-              onClick={handleAddToBOQ}
-              className="w-full py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 shadow-md bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20 active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Add to BOQ</span>
-              <span className="sm:hidden">Add</span>
-            </button>
-
-            {/* TOTAL */}
-            <div className="text-center">
-              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Total: {formatCurrency(totalAmount)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-})}
+                  );
+                })}
               </div>
               )}
             </div>
@@ -2125,7 +2121,7 @@ const filteredLibraryItems = useMemo(() => {
                   Installed materials with proof & warranty
                 </p>
               </div>
-              <button 
+              <button
                 onClick={generateMaterialsPDF}
                 className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition-transform"
               >
@@ -2154,11 +2150,10 @@ const filteredLibraryItems = useMemo(() => {
                 <button
                   key={cat}
                   onClick={() => setMaterialCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-                    materialCategory === cat
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${materialCategory === cat
                       ? "bg-slate-900 text-white"
                       : "bg-white border text-slate-600 hover:bg-slate-100"
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -2352,7 +2347,7 @@ const filteredLibraryItems = useMemo(() => {
                             className="flex-1 py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50"
                           >
                             <Plus className="w-3.5 h-3.5" />
-                             Invoice
+                            Invoice
                           </button>
                         )}
 
@@ -2372,7 +2367,7 @@ const filteredLibraryItems = useMemo(() => {
                             className="flex-1 py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50"
                           >
                             <Plus className="w-3.5 h-3.5" />
-                             Photo
+                            Photo
                           </button>
                         )}
 
@@ -2392,7 +2387,7 @@ const filteredLibraryItems = useMemo(() => {
                             className="flex-1 py-2 rounded-lg border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50"
                           >
                             <Plus className="w-3.5 h-3.5" />
-                             Warranty
+                            Warranty
                           </button>
                         )}
                       </div>
@@ -2402,205 +2397,205 @@ const filteredLibraryItems = useMemo(() => {
               </div>
             )}
 
-{/* ADD/EDIT MATERIAL MODAL */}
-{showAddMaterialModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-    <div className="absolute inset-0 bg-black/40" onClick={() => {
-      setShowAddMaterialModal(false);
-      setEditingMaterial(null);
-    }} />
-    <div className="relative bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg overflow-auto max-h-[calc(100vh-4rem)]">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold">
-            {editingMaterial ? "Edit Material" : "Add Material"}
-          </h3>
-          <span className="text-xs text-gray-500">Material used with proof & warranty</span>
-        </div>
-        <button onClick={() => {
-          setShowAddMaterialModal(false);
-          setEditingMaterial(null);
-        }} className="p-1 rounded-md hover:bg-gray-100">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      <form onSubmit={editingMaterial ? handleUpdateMaterial : handleAddMaterial} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
-            <select
-              className="w-full p-2 border rounded-lg text-sm"
-              value={materialForm.category}
-              onChange={(e) => setMaterialForm({ ...materialForm, category: e.target.value as any })}
-              required
-            >
-              <option value="Finishes">Finishes</option>
-              <option value="Hardware">Hardware</option>
-              <option value="Electrical">Electrical</option>
-              <option value="Electronics">Electronics</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
-            <input
-              type="text"
-              className="w-full p-2 border rounded-lg text-sm"
-              placeholder="e.g., Laminate - Matte Wood"
-              value={materialForm.name}
-              onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
-              required
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-          <input
-            type="text"
-            className="w-full p-2 border rounded-lg text-sm"
-            placeholder="e.g., Merino • 2201 SF"
-            value={materialForm.description}
-            onChange={(e) => setMaterialForm({ ...materialForm, description: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Installed At *</label>
-          <select
-            className="w-full p-2 border rounded-lg text-sm"
-            value={materialForm.installedAt}
-            onChange={(e) => setMaterialForm({ ...materialForm, installedAt: e.target.value })}
-            required
-          >
-            <option value="">Select a room</option>
-            {allRoomNames.length > 0 ? (
-              allRoomNames.map((roomName) => (
-                <option key={roomName} value={roomName}>
-                  {roomName}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No rooms available. Add rooms in BOQ first.</option>
+            {/* ADD/EDIT MATERIAL MODAL */}
+            {showAddMaterialModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="absolute inset-0 bg-black/40" onClick={() => {
+                  setShowAddMaterialModal(false);
+                  setEditingMaterial(null);
+                }} />
+                <div className="relative bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg overflow-auto max-h-[calc(100vh-4rem)]">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {editingMaterial ? "Edit Material" : "Add Material"}
+                      </h3>
+                      <span className="text-xs text-gray-500">Material used with proof & warranty</span>
+                    </div>
+                    <button onClick={() => {
+                      setShowAddMaterialModal(false);
+                      setEditingMaterial(null);
+                    }} className="p-1 rounded-md hover:bg-gray-100">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <form onSubmit={editingMaterial ? handleUpdateMaterial : handleAddMaterial} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                        <select
+                          className="w-full p-2 border rounded-lg text-sm"
+                          value={materialForm.category}
+                          onChange={(e) => setMaterialForm({ ...materialForm, category: e.target.value as any })}
+                          required
+                        >
+                          <option value="Finishes">Finishes</option>
+                          <option value="Hardware">Hardware</option>
+                          <option value="Electrical">Electrical</option>
+                          <option value="Electronics">Electronics</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          placeholder="e.g., Laminate - Matte Wood"
+                          value={materialForm.name}
+                          onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                      <input
+                        type="text"
+                        className="w-full p-2 border rounded-lg text-sm"
+                        placeholder="e.g., Merino • 2201 SF"
+                        value={materialForm.description}
+                        onChange={(e) => setMaterialForm({ ...materialForm, description: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Installed At *</label>
+                      <select
+                        className="w-full p-2 border rounded-lg text-sm"
+                        value={materialForm.installedAt}
+                        onChange={(e) => setMaterialForm({ ...materialForm, installedAt: e.target.value })}
+                        required
+                      >
+                        <option value="">Select a room</option>
+                        {allRoomNames.length > 0 ? (
+                          allRoomNames.map((roomName) => (
+                            <option key={roomName} value={roomName}>
+                              {roomName}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>No rooms available. Add rooms in BOQ first.</option>
+                        )}
+                      </select>
+                      {allRoomNames.length === 0 && (
+                        <p className="text-xs text-gray-500 mt-1">Please add rooms in the BOQ section first.</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Vendor Name *</label>
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          placeholder="e.g., City Hardware"
+                          value={materialForm.vendorName}
+                          onChange={(e) => setMaterialForm({ ...materialForm, vendorName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Vendor City</label>
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          placeholder="e.g., Mumbai"
+                          value={materialForm.vendorCity}
+                          onChange={(e) => setMaterialForm({ ...materialForm, vendorCity: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Cost (₹) *</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded-lg text-sm"
+                        placeholder="e.g., 4500"
+                        value={materialForm.cost}
+                        onChange={(e) => setMaterialForm({ ...materialForm, cost: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Duration</label>
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          placeholder="e.g., 10 Years"
+                          value={materialForm.warrantyDuration}
+                          onChange={(e) => setMaterialForm({ ...materialForm, warrantyDuration: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Model</label>
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          placeholder="e.g., Since 01/10/2023"
+                          value={materialForm.warrantyModel}
+                          onChange={(e) => setMaterialForm({ ...materialForm, warrantyModel: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Since</label>
+                        <input
+                          type="date"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          value={materialForm.warrantySince}
+                          onChange={(e) => setMaterialForm({ ...materialForm, warrantySince: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Invoice</label>
+                        <input
+                          type="file"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          accept="image/*,application/pdf"
+                          onChange={(e) => setMaterialForm({ ...materialForm, invoice: e.target.files?.[0] || null })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Photo</label>
+                        <input
+                          type="file"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          accept="image/*"
+                          onChange={(e) => setMaterialForm({ ...materialForm, photo: e.target.files?.[0] || null })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Doc</label>
+                        <input
+                          type="file"
+                          className="w-full p-2 border rounded-lg text-sm"
+                          accept="image/*,application/pdf"
+                          onChange={(e) => setMaterialForm({ ...materialForm, warrantyDoc: e.target.files?.[0] || null })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddMaterialModal(false);
+                          setEditingMaterial(null);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        {editingMaterial ? "Update" : "Add"} Material
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             )}
-          </select>
-          {allRoomNames.length === 0 && (
-            <p className="text-xs text-gray-500 mt-1">Please add rooms in the BOQ section first.</p>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Vendor Name *</label>
-            <input
-              type="text"
-              className="w-full p-2 border rounded-lg text-sm"
-              placeholder="e.g., City Hardware"
-              value={materialForm.vendorName}
-              onChange={(e) => setMaterialForm({ ...materialForm, vendorName: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Vendor City</label>
-            <input
-              type="text"
-              className="w-full p-2 border rounded-lg text-sm"
-              placeholder="e.g., Mumbai"
-              value={materialForm.vendorCity}
-              onChange={(e) => setMaterialForm({ ...materialForm, vendorCity: e.target.value })}
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Cost (₹) *</label>
-          <input
-            type="number"
-            className="w-full p-2 border rounded-lg text-sm"
-            placeholder="e.g., 4500"
-            value={materialForm.cost}
-            onChange={(e) => setMaterialForm({ ...materialForm, cost: e.target.value })}
-            required
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Duration</label>
-            <input
-              type="text"
-              className="w-full p-2 border rounded-lg text-sm"
-              placeholder="e.g., 10 Years"
-              value={materialForm.warrantyDuration}
-              onChange={(e) => setMaterialForm({ ...materialForm, warrantyDuration: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Model</label>
-            <input
-              type="text"
-              className="w-full p-2 border rounded-lg text-sm"
-              placeholder="e.g., Since 01/10/2023"
-              value={materialForm.warrantyModel}
-              onChange={(e) => setMaterialForm({ ...materialForm, warrantyModel: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Since</label>
-            <input
-              type="date"
-              className="w-full p-2 border rounded-lg text-sm"
-              value={materialForm.warrantySince}
-              onChange={(e) => setMaterialForm({ ...materialForm, warrantySince: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Invoice</label>
-            <input
-              type="file"
-              className="w-full p-2 border rounded-lg text-sm"
-              accept="image/*,application/pdf"
-              onChange={(e) => setMaterialForm({ ...materialForm, invoice: e.target.files?.[0] || null })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Photo</label>
-            <input
-              type="file"
-              className="w-full p-2 border rounded-lg text-sm"
-              accept="image/*"
-              onChange={(e) => setMaterialForm({ ...materialForm, photo: e.target.files?.[0] || null })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Warranty Doc</label>
-            <input
-              type="file"
-              className="w-full p-2 border rounded-lg text-sm"
-              accept="image/*,application/pdf"
-              onChange={(e) => setMaterialForm({ ...materialForm, warrantyDoc: e.target.files?.[0] || null })}
-            />
-          </div>
-        </div>
-        <div className="flex gap-2 justify-end pt-4">
-          <button
-            type="button"
-            onClick={() => {
-              setShowAddMaterialModal(false);
-              setEditingMaterial(null);
-            }}
-            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {editingMaterial ? "Update" : "Add"} Material
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
 
           </div>
         )}
@@ -2618,7 +2613,7 @@ const filteredLibraryItems = useMemo(() => {
     gap-3
   "
             >
-             
+
               {/* ROOM FILTERS */}
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {/* ALL ROOMS */}
@@ -2636,15 +2631,15 @@ const filteredLibraryItems = useMemo(() => {
                     }
       `}
                 >
-                  
+
                   All Rooms
                 </button>
- 
+
                 {/* DYNAMIC ROOMS */}
                 {allRoomNames.map((roomName) => {
                   const roomKey = roomName.toLowerCase().replace(/\s+/g, "-");
                   const isActive = selectedRoom === roomKey;
-                 
+
 
                   return (
                     <button
@@ -2663,18 +2658,19 @@ const filteredLibraryItems = useMemo(() => {
           `}
                     >
                       {roomName}
-                     
+
                     </button>
                   );
                 })}
               </div>
 
               {/* ADD ROOM BUTTON */}
-              
-              <button
-                title="Add Room"
-                onClick={() => setShowAddRoomModal(true)}
-                className="
+
+            {isAdmin && (
+  <button
+    title="Add Room"
+    onClick={() => setShowAddRoomModal(true)}
+    className="
       w-12 h-12
       rounded-full
       bg-black text-white
@@ -2686,12 +2682,14 @@ const filteredLibraryItems = useMemo(() => {
       transition
       focus:outline-none focus:ring-2 focus:ring-slate-400
     "
-              >
-                <Plus className="w-6 h-6" />
-              </button>
+  >
+    <Plus className="w-6 h-6" />
+  </button>
+)}
+
             </div>
             {showAddModal && (
-              <div 
+              <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
                 onClick={(e) => {
                   if (e.target === e.currentTarget) {
@@ -2832,7 +2830,7 @@ const filteredLibraryItems = useMemo(() => {
             )}
 
             {showAddRoomModal && (
-              <div 
+              <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
                 onClick={(e) => {
                   if (e.target === e.currentTarget) {
@@ -2841,7 +2839,7 @@ const filteredLibraryItems = useMemo(() => {
                 }}
               >
                 <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" />
-                <div 
+                <div
                   className="relative bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
@@ -2882,11 +2880,10 @@ const filteredLibraryItems = useMemo(() => {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-                    selectedCategory === cat
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${selectedCategory === cat
                       ? "bg-slate-900 text-white"
                       : "bg-white border text-slate-600 hover:bg-slate-100"
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -2900,7 +2897,7 @@ const filteredLibraryItems = useMemo(() => {
 
                 const roomSubtotal = filteredItems.reduce((sum, item) => sum + item.amount, 0);
                 const isRoomExpanded = expandedRooms.has(room.id);
-                
+
                 const toggleRoom = () => {
                   setExpandedRooms(prev => {
                     const newSet = new Set(prev);
@@ -2975,7 +2972,7 @@ const filteredLibraryItems = useMemo(() => {
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       if (!token || !activeSite) return;
-                                      
+
                                       try {
                                         await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
                                         setLockedRooms(prev => {
@@ -3010,7 +3007,7 @@ const filteredLibraryItems = useMemo(() => {
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       if (!token || !activeSite) return;
-                                      
+
                                       try {
                                         await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
                                         setLockedRooms(prev => {
@@ -3073,13 +3070,13 @@ const filteredLibraryItems = useMemo(() => {
                             return (
                               <div key={item.id} className="relative">
                                 {/* Item Header - Clickable */}
-                                <div 
+                                <div
                                   className={`relative flex items-center pl-2 py-2 cursor-pointer transition-all duration-200 rounded-xl pr-1 mb-4 ${isExpanded ? 'bg-slate-50/80' : 'hover:bg-slate-50'}`}
                                   onClick={() => setExpandedItemId(isExpanded ? null : item.id.toString())}
                                 >
                                   {/* Left border indicator - Category based color */}
                                   <div className={`absolute left-1 top-2 bottom-2 w-1 rounded-full ${getCategoryColor(item.category)}`} />
-                                  
+
                                   {/* Item Name */}
                                   <div className="w-[45%] pr-2 pl-2 text-left">
                                     <div className="flex flex-col gap-1">
@@ -3131,8 +3128,8 @@ const filteredLibraryItems = useMemo(() => {
                                 {/* Expanded Content */}
                                 {isExpanded && (
                                   <div className="pb-2 animate-in fade-in slide-in-from-top-4 duration-300 ease-out">
-                                
-                                    
+
+
                                     {/* Base Price and Purchased Price */}
                                     <div className="flex gap-3 mb-6">
                                       <div className="flex-1 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
@@ -3147,7 +3144,7 @@ const filteredLibraryItems = useMemo(() => {
                                             <input
                                               type="number"
                                               value={
-                                                editingPurchaseRate[item.id.toString()] !== undefined 
+                                                editingPurchaseRate[item.id.toString()] !== undefined
                                                   ? (editingPurchaseRate[item.id.toString()] === null ? '' : String(editingPurchaseRate[item.id.toString()]))
                                                   : (item.purchaseRate !== null && item.purchaseRate !== undefined ? String(item.purchaseRate) : String(item.rate))
                                               }
@@ -3158,7 +3155,7 @@ const filteredLibraryItems = useMemo(() => {
                                               onBlur={(e) => {
                                                 const inputValue = e.target.value;
                                                 const currentPurchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
-                                                
+
                                                 if (inputValue === '') {
                                                   // If empty, default to rate (base price)
                                                   const defaultValue = item.rate;
@@ -3207,7 +3204,7 @@ const filteredLibraryItems = useMemo(() => {
                                         <div className="flex items-center gap-2">
                                           {isAdmin && !lockedRooms.has(room.id) ? (
                                             <>
-                                              <button 
+                                              <button
                                                 className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
@@ -3226,7 +3223,7 @@ const filteredLibraryItems = useMemo(() => {
                                                   item.quantity
                                                 )}
                                               </div>
-                                              <button 
+                                              <button
                                                 className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
@@ -3344,7 +3341,7 @@ const filteredLibraryItems = useMemo(() => {
 
                                     {/* Collapse Button */}
                                     <div className="flex justify-center">
-                                      <button 
+                                      <button
                                         className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors py-2"
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -3410,11 +3407,10 @@ const filteredLibraryItems = useMemo(() => {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className={`px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium ${
-            toast.type === 'success' 
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+          <div className={`px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium ${toast.type === 'success'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
+            }`}>
             {toast.message}
           </div>
         </div>
