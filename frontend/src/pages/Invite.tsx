@@ -387,6 +387,7 @@ const Invite: React.FC = () => {
 
             {showAddForm && (
               <form
+                id="invite-form"
                 onSubmit={handleSubmit}
                 className="mt-8 space-y-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
               >
