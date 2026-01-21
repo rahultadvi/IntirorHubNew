@@ -8,24 +8,22 @@ import Payments from "./pages/Payments";
 import BOQ from "./pages/BOQ";
 import Expenses from "./pages/Expenses";
 import Feed from "./pages/Feed";
+import FeedDetail from "./pages/FeedDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Invite from "./pages/Invite";
 import ManageSites from "./pages/ManageSites";
-import FeedDetail from "./pages/FeedDetail";
 import UserListing from "./pages/UserListing";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminSignup from "./pages/AdminSignup";
 import Adminpanel from "./pages/Adminpanel";
+import Profile from "./pages/Profile";
+import Unauthorized from "./pages/Unauthorized";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
-import Profile from "./pages/Profile";
-
 import ProtectedModuleRoute from "./routes/ProtectedModuleRoute";
-import Unauthorized from "./pages/Unauthorized";
-
 
 // ---------------- ROUTE HELPERS ----------------
 
@@ -37,16 +35,8 @@ const PublicRoute = ({ children }: { children: ReactElement }) => {
 
 const RootRedirect = () => {
   const { token } = useAuth();
-
-  // Removed loading screen
-
-  if (token) {
-    return <Navigate to="/home" replace />;
-  }
-
-  // Redirect to static HTML landing page
-  window.location.href = '/landing.html';
-  return null;
+  if (token) return <Navigate to="/home" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -57,29 +47,27 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
 
 const AdminRoute = ({ children }: { children: ReactElement }) => {
   const { token, user } = useAuth();
+
   if (!token) return <Navigate to="/login" replace />;
-  if (user?.role?.toUpperCase() !== "ADMIN") return <Navigate to="/" replace />;
+  if (user?.role?.toUpperCase() !== "ADMIN") {
+    return <Navigate to="/home/unauthorized" replace />;
+  }
+
   return children;
 };
 
 // ------------------------------------------------
 
 function App() {
-  const ResetPasswordCatch: React.FC = () => {
-    if (location.pathname && location.pathname.startsWith("/reset-password")) {
-      return <ResetPassword />;
-    }
-    return <Navigate to="/" replace />;
-  };
-
   return (
     <AuthProvider>
       <SiteProvider>
         <Router>
           <Routes>
-            {/* Public */}
+            {/* Root */}
             <Route path="/" element={<RootRedirect />} />
 
+            {/* Public */}
             <Route
               path="/login"
               element={
@@ -88,7 +76,6 @@ function App() {
                 </PublicRoute>
               }
             />
-
             <Route
               path="/signup"
               element={
@@ -97,7 +84,6 @@ function App() {
                 </PublicRoute>
               }
             />
-
             <Route
               path="/admin-signup"
               element={
@@ -106,12 +92,11 @@ function App() {
                 </PublicRoute>
               }
             />
-
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/reset-password/*" element={<ResetPassword />} />
 
-            {/* Main App with Layout */}
+            {/* Main App */}
             <Route
               path="/home"
               element={
@@ -120,15 +105,60 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Home />} />
-              <Route path="payments" element={<Payments />} />
-              <Route path="boq" element={<BOQ />} />
-              <Route path="expenses" element={<Expenses />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="feed/:id" element={<FeedDetail />} />
-              <Route path="manage-sites" element={<ManageSites />} />
-              <Route path="users" element={<UserListing />} />
-                <Route path="profile" element={<Profile />} />
+              <Route
+                index
+                element={
+                  <ProtectedModuleRoute module="home">
+                    <Home />
+                  </ProtectedModuleRoute>
+                }
+              />
+
+              <Route
+                path="payments"
+                element={
+                  <ProtectedModuleRoute module="payments">
+                    <Payments />
+                  </ProtectedModuleRoute>
+                }
+              />
+
+              <Route
+                path="boq"
+                element={
+                  <ProtectedModuleRoute module="boq">
+                    <BOQ />
+                  </ProtectedModuleRoute>
+                }
+              />
+
+              <Route
+                path="expenses"
+                element={
+                  <ProtectedModuleRoute module="expenses">
+                    <Expenses />
+                  </ProtectedModuleRoute>
+                }
+              />
+
+              <Route
+                path="feed"
+                element={
+                  <ProtectedModuleRoute module="feed">
+                    <Feed />
+                  </ProtectedModuleRoute>
+                }
+              />
+
+              <Route
+                path="feed/:id"
+                element={
+                  <ProtectedModuleRoute module="feed">
+                    <FeedDetail />
+                  </ProtectedModuleRoute>
+                }
+              />
+
               <Route
                 path="invite"
                 element={
@@ -138,7 +168,12 @@ function App() {
                 }
               />
 
-              {/* Unauthorized page inside layout */}
+              {/* Normally admin-only features, but still under /home */}
+              <Route path="manage-sites" element={<ManageSites />} />
+              <Route path="users" element={<UserListing />} />
+              <Route path="profile" element={<Profile />} />
+
+              {/* Unauthorized */}
               <Route path="unauthorized" element={<Unauthorized />} />
             </Route>
 
@@ -153,7 +188,7 @@ function App() {
             />
 
             {/* Catch All */}
-            <Route path="*" element={<ResetPasswordCatch />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </SiteProvider>
