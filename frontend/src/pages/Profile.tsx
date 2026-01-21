@@ -21,17 +21,17 @@ const Profile = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
 
-useEffect(() => {
-  if (user) {
-    setName(user.name || "");
-    setPhone(user.phone || "");
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setPhone(user.phone || "");
 
-    // Agar backend me company logo saved hai to uska preview set karo
-    if (user.companyLogo) {
-      setLogoPreview(`${import.meta.env.VITE_BACKEND_URL}${user.companyLogo}`);
+      // Agar backend me company logo saved hai to uska preview set karo
+      if (user.companyLogo) {
+        setLogoPreview(`${import.meta.env.VITE_BACKEND_URL}${user.companyLogo}`);
+      }
     }
-  }
-}, [user]);
+  }, [user]);
 
 
   if (!user) {
@@ -58,15 +58,20 @@ useEffect(() => {
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
 
           {/* Logo */}
-          <div className="relative w-24 h-24">
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-                user.email
-              )}`}
-              alt="Avatar"
-              className="w-24 h-24 rounded-full border-2 object-cover"
-            />
+          {/* Initials Avatar */}
+          <div className="relative w-24 h-24 rounded-full 
+  bg-gradient-to-br from-blue-500 to-purple-600 
+  flex items-center justify-center 
+  text-white text-2xl font-bold uppercase shadow-md">
+            {user.name
+              ? user.name
+                .split(" ")
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+              : "U"}
           </div>
+
 
           {/* User Info */}
           <div className="flex-1 text-center sm:text-left">
@@ -294,4 +299,3 @@ useEffect(() => {
 };
 
 export default Profile;
- 

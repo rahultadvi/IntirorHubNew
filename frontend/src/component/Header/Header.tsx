@@ -137,11 +137,30 @@ const Header: React.FC = () => {
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="relative group"
             >
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`}
-                alt="User"
-                className="relative h-11 w-11 rounded-full border-2 border-white shadow-lg object-cover"
-              />
+            {/* Initials Avatar */}
+<div
+  className="
+    relative 
+    w-14 h-14 
+    min-w-[56px] min-h-[56px]
+    rounded-full
+    bg-gradient-to-br from-blue-500 to-purple-600
+    flex items-center justify-center
+    text-white text-base font-semibold uppercase
+    shadow-sm
+    leading-none
+  "
+>
+  {user?.name
+    ? user.name
+        .split(" ")
+        .map((word) => word[0])
+        .join("")
+        .slice(0, 2)
+    : "U"}
+</div>
+
+
               <span className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-white"></span>
             </button>
 
@@ -149,11 +168,28 @@ const Header: React.FC = () => {
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-100 py-2 z-50">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`}
-                      alt="User"
-                      className="h-12 w-12 rounded-full"
-                    />
+                    <div
+  className="
+    relative 
+    w-14 h-14 
+    min-w-[56px] min-h-[56px]
+    rounded-full
+    bg-gradient-to-br from-blue-500 to-purple-600
+    flex items-center justify-center
+    text-white text-base font-semibold uppercase
+    shadow-sm
+    leading-none
+  "
+>
+  {user?.name
+    ? user.name
+        .split(" ")
+        .map((word) => word[0])
+        .join("")
+        .slice(0, 2)
+    : "U"}
+</div>
+
                     <div>
                       <p className="font-semibold text-gray-900">{displayName}</p>
                       {displayEmail && <p className="text-xs text-gray-500">{displayEmail}</p>}
