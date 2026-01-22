@@ -2832,23 +2832,28 @@
                 <p class="text-slate-500 text-lg font-medium">Contractors and builders across India are saving hours
                   every week.</p>
               </div>
-              <div class="flex gap-3"><button
+              <div class="flex gap-3">
+                <button id="prevBtn"
                   class="w-12 h-12 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:border-slate-900 hover:text-slate-900 transition-colors shadow-sm"
                   aria-label="Previous testimonial"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" class="lucide lucide-arrow-left" aria-hidden="true">
                     <path d="m12 19-7-7 7-7"></path>
                     <path d="M19 12H5"></path>
-                  </svg></button><button
+                  </svg>
+                </button>
+                <button id="nextBtn"
                   class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white hover:bg-blue-600 transition-colors shadow-lg"
                   aria-label="Next testimonial"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round" class="lucide lucide-arrow-right" aria-hidden="true">
                     <path d="M5 12h14"></path>
                     <path d="m12 5 7 7-7 7"></path>
-                  </svg></button></div>
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div class="flex gap-6 overflow-x-auto pb-10 snap-x snap-mandatory scrollbar-hide -mx-6 px-6"
+            <div id="testimonialSlider" class="flex gap-6 overflow-x-auto pb-10 snap-x snap-mandatory scrollbar-hide -mx-6 px-6"
               style="scrollbar-width: none;">
               <div
                 class="min-w-[320px] md:min-w-[400px] snap-center bg-white rounded-3xl border border-slate-100 shadow-lg hover:shadow-xl transition-shadow overflow-hidden flex flex-col group">
@@ -3049,6 +3054,8 @@
             </div>
           </div>
         </section>
+
+
         <section id="pricing" class="py-32 px-6 bg-white relative border-t border-slate-100">
           <div class="max-w-7xl mx-auto">
             <div class="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
@@ -3434,7 +3441,26 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+  const slider = document.getElementById("testimonialSlider");
+  const nextBtn = document.getElementById("nextBtn");
+  const prevBtn = document.getElementById("prevBtn");
 
+  // One card width + gap (adjust if needed)
+  const scrollAmount = 420;
+
+  nextBtn.addEventListener("click", () => {
+    slider.scrollBy({
+      left: scrollAmount,
+      behavior: "smooth",
+    });
+  });
+
+  prevBtn.addEventListener("click", () => {
+    slider.scrollBy({
+      left: -scrollAmount,
+      behavior: "smooth",
+    });
+  });
 
 
   </script>

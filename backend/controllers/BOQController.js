@@ -459,6 +459,43 @@ export const lockBOQRoom = async (req, res) => {
   }
 };
 
+// 🔥 Delete all BOQ items of a room (Admin only)
+export const deleteBOQItemsByRoom = async (req, res) => {
+  try {
+    const { roomName, siteId } = req.params;
+
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can delete room materials' });
+    }
+
+    const site = await Site.findById(siteId);
+    if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    const hasAccess =
+      site.companyName === req.user.companyName ||
+      (req.user.siteAccess && req.user.siteAccess.some(id => id.toString() === siteId));
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'You do not have access to this site' });
+    }
+
+    const result = await BOQItem.deleteMany({
+      siteId,
+      roomName
+    });
+
+    res.json({
+      message: `Deleted ${result.deletedCount} items from room ${roomName}`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Error deleting BOQ items by room', error);
+    res.status(500).json({ message: 'Error deleting room materials', error: error.message });
+  }
+};
+
+
 // Unlock a BOQ room (Admin only)
 export const unlockBOQRoom = async (req, res) => {
   try {
