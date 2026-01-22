@@ -881,7 +881,20 @@ export const boqApi = {
 
   unlockBOQRoom: (body: { siteId: string; roomName: string }, token: string) =>
     request<{ message: string; locked: boolean }>('/boq/room/unlock', { method: 'POST', body, token }),
+
+  deleteBOQItemsByRoom: (siteId: string, roomName: string, token: string) =>
+  request<{ message: string; deletedCount: number }>(
+    `/boq/materials/room/${siteId}/${encodeURIComponent(roomName)}`,
+    {
+      method: "DELETE",
+      token,
+    }
+  ),
+
 };
+
+
+
 
 export const materialApi = {
   addMaterial: async (formData: FormData, token: string) => {
@@ -933,6 +946,11 @@ export const materialApi = {
       method: "DELETE",
       token,
     }),
+
+
+
+
+
 };
 
 export interface MaterialDto {

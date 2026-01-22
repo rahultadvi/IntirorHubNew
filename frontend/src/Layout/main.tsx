@@ -16,7 +16,7 @@ const MainLayout = () => {
         { path: "/home/boq", icon: FileText, label: "BOQ" },
         { path: "/home/expenses", icon: TrendingUp, label: "Expenses" },
         { path: "/home/feed", icon: Rss, label: "Feed" },
-         { path: "/home/profile", icon: User, label: "Profile" },
+        { path: "/home/profile", icon: User, label: "Profile" },
     ];
 
     const isActive = (path: string) => {
@@ -108,6 +108,10 @@ const MainLayout = () => {
         }
     };
 
+    const isManageSites =
+        location.pathname.includes("manage-sites") ||
+        location.pathname.includes("/sites");
+
     return (
         <>
             <Header />
@@ -139,7 +143,7 @@ const MainLayout = () => {
                     </div>
                 )}
             </div>
-            {user && !isHomePage && !isBOQ && !isClient && (
+            {user && !isHomePage && !isBOQ && !isClient && !isManageSites && (
                 <button
                     onClick={() => {
                         const p = location.pathname;
@@ -156,7 +160,7 @@ const MainLayout = () => {
                         } else if (p.startsWith('/home/invite')) {
                             navigate('/home/invite?openAdd=1');
                             setTimeout(() => window.dispatchEvent(new Event('open-add-invite')), 150);
-                        } 
+                        }
                     }}
                     title="Add"
                     className={"fixed bottom-24 right-5 z-50 p-4 bg-gray-800 hover:bg-border border-white text-white rounded-full shadow-xl transition active:scale-95"}
@@ -234,8 +238,8 @@ const MainLayout = () => {
                                 key={link.path}
                                 to={link.path}
                                 className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all no-underline relative ${active
-                                        ? "text-white"
-                                        : "text-gray-400"
+                                    ? "text-white"
+                                    : "text-gray-400"
                                     }`}
                             >
                                 {active ? (

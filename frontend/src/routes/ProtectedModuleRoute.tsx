@@ -1,32 +1,37 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import type { ReactNode } from "react";
 
-interface ProtectedModuleRouteProps {
+interface Props {
+  children: React.ReactElement;
   module: string;
-  children: ReactNode;
 }
 
-const ProtectedModuleRoute = ({ module, children }: ProtectedModuleRouteProps) => {
-  const { user, loading } = useAuth();
+const ProtectedModuleRoute: React.FC<Props> = ({ children, module }) => {
+  const { token, user } = useAuth();
 
-  if (loading) return null;
-
-  if (!user) {
+  // 1. Not logged in
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // ADMIN ko full access
-  if (user.role?.toUpperCase() === "ADMIN") {
-    return <>{children}</>;
+  // 2. Admin has full access
+  if (user?.role?.toUpperCase() === "ADMIN") {
+    return children;
   }
 
-  // Module permission check
-  if (!user.allowedModules || !user.allowedModules.includes(module)) {
+  // 3. If allowedModules missing → Unauthorized
+  if (!user?.allowedModules || user.allowedModules.length === 0) {
+    console.log("No allowedModules found for user");
     return <Navigate to="/home/unauthorized" replace />;
   }
 
-  return <>{children}</>;
+  // 4. If this module not allowed → Unauthorized
+  if (!user.allowedModules.includes(module)) {
+    console.log("Module not allowed:", module, user.allowedModules);
+    return <Navigate to="/home/unauthorized" replace />;
+  }
+
+  return children;
 };
 
 export default ProtectedModuleRoute;

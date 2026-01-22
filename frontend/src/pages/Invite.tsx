@@ -68,22 +68,22 @@ const Invite: React.FC = () => {
 
 
   useEffect(() => {
-    const savedFormData = localStorage.getItem("inviteFormData");
     const savedSites = localStorage.getItem("selectedSites");
     const savedModules = localStorage.getItem("selectedModules");
-    const savedShowAddForm = localStorage.getItem("showAddForm");
+    // const savedShowAddForm = localStorage.getItem("showAddForm");
 
-    if (savedFormData) setFormData(JSON.parse(savedFormData));
     if (savedSites) setSelectedSites(JSON.parse(savedSites));
     if (savedModules) setSelectedModules(JSON.parse(savedModules));
-    if (savedShowAddForm) setShowAddForm(JSON.parse(savedShowAddForm));
-    setIsHydrated(true)
+    // if (savedShowAddForm !== null) setShowAddForm(JSON.parse(savedShowAddForm));
+
+    setIsHydrated(true);
   }, []);
+
   // Save form data in localStorage
-  useEffect(() => {
-    if (!isHydrated) return;
-    localStorage.setItem("inviteFormData", JSON.stringify(formData));
-  }, [formData, isHydrated]);
+  // useEffect(() => {
+  //   if (!isHydrated) return;
+  //   localStorage.setItem("inviteFormData", JSON.stringify(formData));
+  // }, [formData, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -114,17 +114,22 @@ const Invite: React.FC = () => {
   }, [authLoading, navigate, token, user]);
 
   // Open add form when navigated with ?openAdd=1 — watch location.search so it works without remount
-  const location = useLocation();
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(location.search || window.location.search);
-      if (params.get("openAdd")) setShowAddForm(true);
-    } catch (e) { }
+  // const location = useLocation();
+  // useEffect(() => {
+  //   try {
+  //     const params = new URLSearchParams(location.search || window.location.search);
+  //     if (params.get("openAdd")) setShowAddForm(true);
+  //   } catch (e) { }
 
-    const handler = () => setShowAddForm(true);
-    window.addEventListener('open-add-invite', handler as EventListener);
-    return () => window.removeEventListener('open-add-invite', handler as EventListener);
-  }, [location.search]);
+  //   const handler = () => setShowAddForm(true);
+  //   window.addEventListener('open-add-invite', handler as EventListener);
+  //   return () => window.removeEventListener('open-add-invite', handler as EventListener);
+  // }, [location.search]);
+
+
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -159,6 +164,7 @@ const Invite: React.FC = () => {
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
+
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -290,8 +296,61 @@ const Invite: React.FC = () => {
       setIsDeleting(false);
     }
   };
+  // const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
+  //   event.stopPropagation();
+  //    console.log("🔥 FORM SUBMIT TRIGGERED");
+
+  //   if (isSubmitting) return;
+
+  //   if (!token) {
+  //     navigate("/login", { replace: true });
+  //     return;
+  //   }
+
+  //   try {
+  //     setIsSubmitting(true);
+
+  //     await authApi.inviteUser(
+  //       {
+  //         email: formData.email,
+  //         name: formData.name,
+  //         phone: formData.phone,
+  //         role: formData.role,
+  //         siteIds: selectedSites,
+  //         allowedModules:
+  //           selectedModules.length === allModules.length
+  //             ? undefined
+  //             : selectedModules,
+  //       },
+  //       token
+  //     );
+
+  //     setSuccess("Invitation sent successfully!");
+
+  //     setFormData({ email: "", name: "", phone: "", role: roles[0].value });
+  //     setSelectedSites([]);
+  //     setSelectedModules(["home", "payments", "boq", "expenses", "feed"]);
+  //     setShowAddForm(false);
+
+  //     localStorage.removeItem("inviteFormData");
+  //     localStorage.removeItem("selectedSites");
+  //     localStorage.removeItem("selectedModules");
+  //     localStorage.removeItem("showAddForm");
+  //   } catch (error) {
+  //     console.error(error);
+  //     // setError("Invite send nahi ho paya");
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
+  
+
+    if (isSubmitting) return;
 
     if (!token) {
       navigate("/login", { replace: true });
@@ -317,31 +376,34 @@ const Invite: React.FC = () => {
       );
 
       setSuccess("Invitation sent successfully!");
+      setError(null); 
 
+      // Reset form
       setFormData({ email: "", name: "", phone: "", role: roles[0].value });
       setSelectedSites([]);
-      setSelectedModules([
-        "home",
-        "payments",
-        "boq",
-        "expenses",
-        "feed",
-      ]);
-      setShowAddForm(false);
+      setSelectedModules(["home", "payments", "boq", "expenses", "feed"]);
 
-      localStorage.removeItem("inviteFormData");
+      setTimeout(() => {
+        setShowAddForm(false);
+      }, 500);
+
+   
       localStorage.removeItem("selectedSites");
       localStorage.removeItem("selectedModules");
       localStorage.removeItem("showAddForm");
-    } catch (error) {
-      console.error(error);
-      setError("Invite send nahi ho paya");
+
+    } catch (error: any) {
+      console.error("Invite error:", error);
+   
+      if (error instanceof ApiError) {
+        setError(error.message);
+      } else {
+        setError("Invitation failed. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -374,20 +436,29 @@ const Invite: React.FC = () => {
 
         {user?.role === "ADMIN" && (
           <>
-            <div className="absolute bottom-0 right-0 mb-6 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowAddForm((s) => !s)}
-                title="Invite Teammate"
-                className="fixed bottom-24 right-5 z-50 p-4 bg-gray-800 text-white rounded-full"
-              >
-                <Plus className="h-6 w-6" />
-              </button>
-            </div>
+            {/* <div className="absolute bottom-0 right-0 mb-6 flex items-center justify-between"> */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("PLUS CLICKED → OPEN FORM");
+                setShowAddForm(true);   // sirf open karega
+              }}
+              title="Invite Teammate"
+              className="fixed bottom-24 right-5 z-[9999] p-4 bg-gray-800 text-white rounded-full shadow-lg"
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+
+
+            {/* </div> */}
 
             {showAddForm && (
               <form
+                id="invite-form"
                 onSubmit={handleSubmit}
+                onClick={(e) => e.stopPropagation()}
                 className="mt-8 space-y-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
               >
                 <div className="grid gap-6 md:grid-cols-2">
@@ -411,7 +482,9 @@ const Invite: React.FC = () => {
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         name="phone"
+
                         value={formData.phone}
+
                         onChange={handleChange}
                         placeholder="1234567890"
                         className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-12 pr-4 text-sm text-black outline-none transition focus:border-black focus:ring-2 focus:ring-black/10"
@@ -560,7 +633,7 @@ const Invite: React.FC = () => {
         )}
         {/* Project Team Section */}
         <div className="mt-8 rounded-3xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center gap-3 p-6 border-b border-gray-100">
+          {/* <div className="flex items-center gap-3 p-6 border-b border-gray-100">
             <Users className="h-6 w-6 text-gray-600" />
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
@@ -571,96 +644,129 @@ const Invite: React.FC = () => {
                 {projectUsers.length === 1 ? "Member" : "Members"}
               </p>
             </div>
-          </div>
+          </div> */}
 
-          <div className="p-6">
-            {loadingUsers ? (
-              <div className="py-8 text-center text-sm text-gray-500">
-                Loading team members...
+          <div>
+            <div className="flex items-center gap-3 p-6 border-b border-gray-100">
+              <Users className="h-6 w-6 text-gray-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Project Team
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {projectUsers.length}{" "}
+                  {projectUsers.length === 1 ? "Member" : "Members"}
+                </p>
               </div>
-            ) : projectUsers.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-500">
-                No team members found.
-              </div>
-            ) : (
-              <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projectUsers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex flex-col rounded-xl border border-gray-100 bg-gray-50 p-4 h-full"
-                  >
-                    {/* Header with name and delete icon */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3 flex-1">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="h-12 w-12 flex-shrink-0 rounded-full"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate text-sm font-semibold text-gray-900">
-                            {member.name}
-                          </p>
-                          {user?.role === "ADMIN" && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                              {member.siteAccessCount ?? 0} sites
-                            </span>
-                          )}
+            </div>
+
+            <div className="p-6">
+              {loadingUsers ? (
+                <div className="py-8 text-center text-sm text-gray-500">
+                  Loading team members...
+                </div>
+              ) : projectUsers.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-500">
+                  No team members found.
+                </div>
+              ) : (
+                <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projectUsers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex flex-col rounded-xl border border-gray-100 bg-gray-50 p-4 h-full"
+                    >
+                      {/* Header with name and delete icon */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3 flex-1">
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="h-12 w-12 flex-shrink-0 rounded-full"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-semibold text-gray-900">
+                              {member.name}
+                            </p>
+                            {user?.role === "ADMIN" && (
+                              <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                                {member.siteAccessCount ?? 0} sites
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {/* Delete icon in top right */}
+                        {user?.role === "ADMIN" && member.role !== "ADMIN" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              e.nativeEvent.stopImmediatePropagation();
+                              setDeletingUser(member);
+                            }}
+                            onMouseDown={(e) => e.preventDefault()} // ✅ Extra prevention
+                            className="rounded-full bg-red-50 p-2 hover:bg-red-100 transition-colors text-red-600"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-                      {/* Delete icon in top right */}
-                      {user?.role === "ADMIN" && member.role !== "ADMIN" && (
-                        <button
-                          type="button"
-                          onClick={() => setDeletingUser(member)}
-                          className="rounded-full bg-red-50 p-2 hover:bg-red-100 transition-colors text-red-600"
-                          title="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
 
-                    {/* Email */}
-                    <p className="truncate text-xs text-gray-500 mb-3">
-                      {member.email}
-                    </p>
+                      {/* Email */}
+                      <p className="truncate text-xs text-gray-500 mb-3">
+                        {member.email}
+                      </p>
 
-                    {/* Role badge and Manage buttons row */}
-                    <div className="flex items-center justify-between mt-auto gap-2">
-                      <span className="inline-flex items-center rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                        {member.role}
-                      </span>
-                      {user?.role === "ADMIN" && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditPermissions(member)}
-                            className="rounded-md bg-white px-2 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-1"
-                            title="Edit permissions"
-                          >
-                            <Settings className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditSites(member)}
-                            className="rounded-md bg-white px-3 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors"
-                          >
-                            Manage sites
-                          </button>
-                        </div>
-                      )}
+                      {/* Role badge and Manage buttons row */}
+                      <div className="flex items-center justify-between mt-auto gap-2">
+                        <span className="inline-flex items-center rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                          {member.role}
+                        </span>
+                        {user?.role === "ADMIN" && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                                openEditPermissions(member);
+                              }}
+                              onMouseDown={(e) => e.preventDefault()} // ✅ Extra prevention
+                              className="rounded-md bg-white px-2 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                              title="Edit permissions"
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                                openEditSites(member);
+                              }}
+                              onMouseDown={(e) => e.preventDefault()} // ✅ Extra prevention
+                              className="rounded-md bg-white px-3 py-1 text-xs font-medium border border-gray-100 hover:bg-gray-50 transition-colors"
+                            >
+                              Manage sites
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {/* Edit Sites Modal */}
         {editingUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-xl bg-white p-6">
+            <div className="w-full max-w-md rounded-xl bg-white p-6" onClick={(e) => e.stopPropagation()} >
               <h3 className="text-lg font-semibold">
                 Manage sites for {editingUser.name}
               </h3>
@@ -714,6 +820,7 @@ const Invite: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Edit Module Permissions</h2>
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingPermissions(null);
                       setEditingModules([]);
@@ -752,6 +859,7 @@ const Invite: React.FC = () => {
 
                 <div className="flex gap-3">
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingPermissions(null);
                       setEditingModules([]);
@@ -761,6 +869,7 @@ const Invite: React.FC = () => {
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={handleSavePermissions}
                     className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                   >
@@ -824,6 +933,7 @@ const Invite: React.FC = () => {
               <div className="flex items-start justify-between">
                 <h3 className="text-lg font-semibold">Invitation email preview</h3>
                 <button
+                  type="button"
                   onClick={() => setShowTemplateModal(false)}
                   className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
                 >
@@ -857,6 +967,7 @@ const Invite: React.FC = () => {
 
               <div className="mt-6 flex justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => setShowTemplateModal(false)}
                   className="rounded-xl px-4 py-2 border"
                 >

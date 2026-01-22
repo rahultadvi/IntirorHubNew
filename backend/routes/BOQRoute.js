@@ -23,6 +23,13 @@ router.delete('/:boqId', auth, BOQController.deleteBOQItem);
 // Serve reference image
 router.get('/image/:filename', BOQController.getBOQImage);
 
+
+router.delete(
+  "/materials/room/:siteId/:roomName",
+  auth,   // tumhara auth middleware
+  BOQController.deleteBOQItemsByRoom
+);
+
 // Lock/Unlock BOQ room (Admin only)
 router.post('/room/lock', auth, BOQController.lockBOQRoom);
 router.post('/room/unlock', auth, BOQController.unlockBOQRoom);

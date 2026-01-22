@@ -1,0 +1,99 @@
+/* =========================
+   GLOBAL CARD BASE (NORMAL)
+========================= */
+#solo-main,
+#Team_main,
+#business-main{
+  position: relative;
+  cursor: pointer;
+  border-radius: 20px;
+  background: #ffffff;
+  transition: all 0.25s ease;
+}
+
+/* Simple hover */
+#solo-main:hover,
+#Team_main:hover,
+#business-main:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+/* =========================
+   SOLO CARD
+========================= */
+/* #solo-main{
+
+  color: #1c1397;
+}
+#solo-main:hover{
+  background: #fff5f5;
+}
+#solo-main:hover h3{
+  color: #dc2626;
+} */
+
+/* =========================
+   TEAM CARD
+========================= */
+/* #Team_main{
+  border: 1px solid #facc15;
+  background: #f8fbff;
+}
+#Team_main:hover{
+  background: #fffde7;
+}
+#Team_main h3{
+  color: #2563eb;
+}
+#Team_main:hover h3{
+  color: #4f46e5;
+} */
+
+/* =========================
+   BUSINESS CARD
+========================= */
+/* #business-main{
+  border: 1px solid #000000;
+  background: #ffffff;
+}
+#business-main:hover{
+  background: #f9fafb;
+}
+#business-main:hover h3{
+  color: #2563eb;
+} */
+
+/* =========================
+   BUTTON INSIDE ALL CARDS
+========================= */
+#solo-main a,
+#Team_main a,
+#business-main a{
+  display: block;
+  text-align: center;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+  transition: background .2s ease, color .2s ease;
+}
+
+/* Button hover */
+#solo-main:hover a{
+  background: #2926dc;
+  color: #fff;
+}
+#Team_main:hover a{
+  background: #4f46e5;
+  color: #fff;
+}
+#business-main:hover a{
+  background: #2563eb;
+  color: #fff;
+}
+
+/* Active selected plan (simple) */
+.active-card{
+  border: 2px solid #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.3);
+}
