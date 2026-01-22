@@ -52,7 +52,6 @@ const Header: React.FC = () => {
   const roleLabel = user?.role
     ? `${user.role.charAt(0)}${user.role.slice(1).toLowerCase()}`
     : "Member";
-  const avatarSeed = useMemo(() => encodeURIComponent(displayEmail || displayName || "User"), [displayEmail, displayName]);
 
   const handleLogout = () => {
     logout();

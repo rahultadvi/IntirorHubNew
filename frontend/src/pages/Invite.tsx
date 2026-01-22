@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authApi, ApiError, type UserRole, userApi } from "../services/api";
 import {
   Mail,
@@ -679,11 +679,20 @@ const Invite: React.FC = () => {
                       {/* Header with name and delete icon */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3 flex-1">
-                          <img
-                            src={member.avatar}
-                            alt={member.name}
-                            className="h-12 w-12 flex-shrink-0 rounded-full"
-                          />
+                          <div className="h-12 w-12 flex-shrink-0 rounded-full bg-gray-200 flex items-center justify-center">
+                            {member.name ? (
+                              <span className="text-sm font-semibold text-gray-700">
+                                {member.name
+                                  .split(' ')
+                                  .map(n => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)}
+                              </span>
+                            ) : (
+                              <User className="h-6 w-6 text-gray-500" />
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="truncate text-sm font-semibold text-gray-900">
                               {member.name}

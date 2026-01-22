@@ -118,11 +118,9 @@ const UserListing: React.FC = () => {
               >
                 <div className="flex flex-col items-center text-center">
                   {/* Avatar */}
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="h-20 w-20 rounded-full mb-4"
-                  />
+                  <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center mb-4">
+                    <User className="h-10 w-10 text-gray-500" />
+                  </div>
                   
                   {/* Name */}
                   <h3 

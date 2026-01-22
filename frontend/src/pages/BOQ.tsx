@@ -200,8 +200,7 @@ const BOQ: React.FC = () => {
     }
 
     try {
-      const res = await boqApi.deleteBOQItemsByRoom(siteId, roomName, token);
-      alert(res.message);
+      await boqApi.deleteBOQItemsByRoom(siteId, roomName, token);
       fetchBOQItems();
       refetchMaterials();
     } catch (err) {
@@ -1738,7 +1737,7 @@ const BOQ: React.FC = () => {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`flex-1 py-4 px-2 text-xs font-bold rounded-xl transition-all duration-200 ${isActive
+                  className={`flex-1 py-4 px-2 text-sm font-bold rounded-xl transition-all duration-200 ${isActive
                       ? "bg-slate-800 text-white shadow-md"
                       : "text-slate-400 hover:text-slate-600"
                     }`}
@@ -2980,9 +2979,9 @@ const BOQ: React.FC = () => {
                   };
 
                   return (
-                    <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-[2rem] px-2 py-5 mb-6 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+                    <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-[2rem] px-2 py-3 mt-1 mb-0 shadow-xl shadow-slate-200/50 relative overflow-hidden">
                       {/* Room Header */}
-                      <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-3 py-2">
                         <div className="flex items-center gap-2 flex-1">
                           <button
                             onClick={toggleRoom}
@@ -3006,133 +3005,133 @@ const BOQ: React.FC = () => {
                               />
                               <button
                                 onClick={() => handleSaveRoomName()}
-                                className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                                className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
                               >
                                 <Check className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={handleCancelEdit}
-                                className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
                               >
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
                           ) : (
+                            <h3
+                              className="text-xl font-bold text-slate-800 cursor-pointer"
+                              onClick={toggleRoom}
+                              title={room.name}
+                            >
+                              {room.name.length > 12 ? `${room.name.substring(0, 12)}..` : room.name}
+                            </h3>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {/* Show lock icon to ALL users (including CLIENT, AGENT, MANAGER, ADMIN) when room is locked - NO ROLE CHECK */}
+                          {lockedRooms.has(room.id) && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked - No items can be added or edited">
+                              <Lock className="w-4 h-4" />
+                              <span className="text-xs font-semibold">Locked</span>
+                            </div>
+                          )}
+                          {/* Show admin-only buttons when room is unlocked */}
+                          {isAdmin && !lockedRooms.has(room.id) && (
                             <>
-                              <div className="flex items-center gap-2">
-                                <h3
-                                  className="text-xl font-bold text-slate-800 cursor-pointer"
-                                  onClick={toggleRoom}
-                                  title={room.name}
-                                >
-                                  {room.name.length > 12 ? `${room.name.substring(0, 12)}...` : room.name}
-                                </h3>
-                                {/* Show lock icon to ALL users (including CLIENT, AGENT, MANAGER, ADMIN) when room is locked - NO ROLE CHECK */}
-                                {lockedRooms.has(room.id) && (
-                                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-100 text-amber-700 border border-amber-300 rounded-lg" title="Room is locked - No items can be added or edited">
-                                    <Lock className="w-4 h-4" />
-                                    <span className="text-xs font-semibold">Locked</span>
-                                  </div>
-                                )}
-                                {/* Show admin-only buttons when room is unlocked */}
-                                {isAdmin && !lockedRooms.has(room.id) && (
-                                  <>
-                                    <button
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (!token || !activeSite) return;
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!token || !activeSite) return;
 
-                                        try {
-                                          await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
-                                          setLockedRooms(prev => {
-                                            const newSet = new Set(prev);
-                                            newSet.add(room.id);
-                                            return newSet;
-                                          });
-                                          showToast("Room locked");
-                                        } catch (error) {
-                                          console.error("Failed to lock room", error);
-                                          showToast("Failed to lock room", 'error');
-                                        }
-                                      }}
-                                      className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                      title="Lock room"
-                                    >
-                                      <Unlock className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditRoomName(room.id, room.name)}
-                                      className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                      title="Edit room name"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
-                                {/* Show admin-only unlock button when room is locked */}
-                                {isAdmin && lockedRooms.has(room.id) && (
-                                  <>
-                                    <button
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (!token || !activeSite) return;
+                                  try {
+                                    await boqApi.lockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                    setLockedRooms(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.add(room.id);
+                                      return newSet;
+                                    });
+                                    showToast("Room locked");
+                                  } catch (error) {
+                                    console.error("Failed to lock room", error);
+                                    showToast("Failed to lock room", 'error');
+                                  }
+                                }}
+                                className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center"
+                                title="Lock room"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditRoomName(room.id, room.name)}
+                                className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+                                title="Edit room name"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          {/* Show admin-only unlock button when room is locked */}
+                          {isAdmin && lockedRooms.has(room.id) && (
+                            <>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!token || !activeSite) return;
 
-                                        try {
-                                          await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
-                                          setLockedRooms(prev => {
-                                            const newSet = new Set(prev);
-                                            newSet.delete(room.id);
-                                            return newSet;
-                                          });
-                                          showToast("Room unlocked");
-                                        } catch (error) {
-                                          console.error("Failed to unlock room", error);
-                                          showToast("Failed to unlock room", 'error');
-                                        }
-                                      }}
-                                      className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                      title="Unlock room"
-                                    >
-                                      <Unlock className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditRoomName(room.id, room.name)}
-                                      className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Edit room name"
-                                      disabled={lockedRooms.has(room.id)}
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
-                                  <button
+                                  try {
+                                    await boqApi.unlockBOQRoom({ siteId: activeSite.id, roomName: room.name }, token);
+                                    setLockedRooms(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(room.id);
+                                      return newSet;
+                                    });
+                                    showToast("Room unlocked");
+                                  } catch (error) {
+                                    console.error("Failed to unlock room", error);
+                                    showToast("Failed to unlock room", 'error');
+                                  }
+                                }}
+                                className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center"
+                                title="Unlock room"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditRoomName(room.id, room.name)}
+                                className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                title="Edit room name"
+                                disabled={lockedRooms.has(room.id)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          {isAdmin && (
+                            <button
                               onClick={() => handleDeleteRoomMaterials(activeSite?.id, room.name)}
                               title="Delete all materials of this room"
-                               className="bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
+                              className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
-                              </div>
-                            </>
                           )}
-                        </div>
-                        {canAddItems && !lockedRooms.has(room.id) && (
-                         
-
-
+                          {canAddItems && !lockedRooms.has(room.id) ? (
                             <button
                               onClick={() => {
                                 setBoqForm({ ...boqForm, roomName: room.name });
                                 setShowAddModal(true);
                               }}
-                              className="bg-black hover:bg-gray-900 active:bg-gray-800 text-white px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
+                              className="bg-black hover:bg-gray-900 active:bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow-md mr-0.5"
                             >
-                              <Plus className="w-3.5 h-3.5" />
-                              Add
+                              <Plus className="w-4 h-4" />
+                              <span>Add</span>
                             </button>
-                          
-                         
-                        )}
+                          ) : (
+                            <div className="px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 invisible mr-0.5">
+                              <Plus className="w-4 h-4" />
+                              <span>Add</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {isRoomExpanded && filteredItems.length > 0 ? (
@@ -3411,11 +3410,10 @@ const BOQ: React.FC = () => {
                                               e.stopPropagation();
                                               handleDeleteBOQItem(item.id.toString());
                                             }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors"
+                                            className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                             title="Delete this item"
                                           >
                                             <Trash2 className="w-4 h-4" />
-                                            Delete Item
                                           </button>
                                         </div>
                                       )}
