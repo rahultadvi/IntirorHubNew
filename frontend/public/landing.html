@@ -16,6 +16,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SiteZero - The Operating System for Construction</title>
+  <link rel="stylesheet" href="landing.css">
+  <script src="landing.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap"
     rel="stylesheet">
@@ -2295,6 +2297,33 @@
         line-height: 1
       }
     }
+   .pricing-card {
+  transition: all 0.3s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+
+.pricing-card.active {
+  border: 2px solid #2563eb;
+  background: linear-gradient(180deg, #eff6ff, #ffffff);
+  transform: scale(1.05);
+  box-shadow: 0 25px 50px rgba(37, 99, 235, 0.25);
+  z-index: 10;
+}
+
+.pricing-card.active h3 {
+  color: #2563eb;
+}
+
+.pricing-card.active a {
+  background-color: #2563eb !important;
+  color: white !important;
+  border-color: #2563eb !important;
+}
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro"></script>
 </head>
@@ -2302,45 +2331,56 @@
 <body>
   <div id="root">
     <div class="min-h-screen bg-white text-gray-900 selection:bg-blue-100 selection:text-blue-900">
+      
       <nav
-        class="fixed top-0 left-0 w-full z-50 transition-all duration-300 border-b bg-transparent border-transparent py-6">
-        <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div class="flex items-center gap-2 z-50 cursor-pointer">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"><span
-                class="font-bold text-white text-lg">S</span></div><span
-              class="text-xl font-bold tracking-tight text-slate-900">SiteZero</span>
-          </div>
-          <div
-            class="hidden md:flex items-center gap-1 bg-white/50 rounded-full p-1 border border-white/50 backdrop-blur-md absolute left-1/2 -translate-x-1/2 shadow-sm">
-            <a href="#features"
-              class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors rounded-full hover:bg-white">Features</a><a
-              href="#how-it-works"
-              class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors rounded-full hover:bg-white">How
-              It Works</a><a href="#pricing"
-              class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors rounded-full hover:bg-white">Pricing</a><a
-              href="#blog"
-              class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors rounded-full hover:bg-white">Blog</a>
-          </div>
-          <div class="hidden md:flex items-center gap-4"><a href="/login"
-              class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Log in</a><a href="/signup"
-              class="group relative inline-flex h-9 items-center justify-center overflow-hidden rounded-full bg-slate-900 px-6 font-medium text-white transition-all hover:bg-blue-600 shadow-md"><span
-                class="mr-2 text-sm">Get Started</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-arrow-right h-4 w-4 transition-transform group-hover:translate-x-1"
-                aria-hidden="true">
-                <path d="M5 12h14"></path>
-                <path d="m12 5 7 7-7 7"></path>
-              </svg></a></div>
-          <div class="md:hidden z-50"><button class="text-slate-900"><svg xmlns="http://www.w3.org/2000/svg" width="24"
-                height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu" aria-hidden="true">
-                <path d="M4 5h16"></path>
-                <path d="M4 12h16"></path>
-                <path d="M4 19h16"></path>
-              </svg></button></div>
-        </div>
-      </nav>
+  id="navbar"
+  class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-transparent border-b border-transparent py-6">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-2 z-50 cursor-pointer">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+        <span class="font-bold text-white text-lg">S</span>
+      </div>
+      <span class="text-xl font-bold tracking-tight text-slate-900">SiteZero</span>
+    </div>
+
+    <!-- Center Menu -->
+    <div
+      class="hidden md:flex items-center gap-1 bg-white/50 rounded-full p-1 border border-white/50 backdrop-blur-md absolute left-1/2 -translate-x-1/2 shadow-sm">
+      <a href="#features"
+        class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-white">Features</a>
+      <a href="#how-it-works"
+        class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-white">How It Works</a>
+      <a href="#pricing"
+        class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-white">Pricing</a>
+      <a href="#blog"
+        class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-white">Blog</a>
+    </div>
+
+    <!-- Right Buttons -->
+    <div class="hidden md:flex items-center gap-4">
+      <a href="/login"
+        class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Log in</a>
+      <a href="/signup"
+        class="group inline-flex h-9 items-center justify-center rounded-full bg-slate-900 px-6 text-sm font-medium text-white transition hover:bg-blue-600 shadow-md">
+        Get Started
+      </a>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div class="md:hidden z-50">
+      <button class="text-slate-900">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+      
       <main>
         <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden bg-[#fff5f7]">
           <div
@@ -3019,20 +3059,24 @@
                   for the number of active sites you manage. No feature lock. No per-user charges.</p>
               </div>
               <div class="flex items-center p-1 bg-slate-100 rounded-full border border-slate-200"><button
-                  class="px-6 py-2 rounded-full text-sm font-bold transition-all text-slate-500 hover:text-slate-900">Monthly</button><button
-                  class="px-6 py-2 rounded-full text-sm font-bold transition-all bg-white text-slate-900 shadow-sm">Yearly
+                  class="px-6 py-2 rounded-full text-sm font-bold transition-all text-slate-500 hover:text-slate-900 toggle-btn toggle-inactive" id="monthlyBtn">Monthly</button><button
+                  class="px-6 py-2 rounded-full text-sm font-bold transition-all bg-white text-slate-900 shadow-sm toggle-btn toggle-active" id="yearlyBtn">Yearly
                   <span
                     class="ml-1 text-[10px] text-green-700 font-bold bg-green-100 px-1.5 py-0.5 rounded-full">-20%</span></button>
               </div>
             </div>
+
+
+
+
             <div class="grid md:grid-cols-3 gap-8">
-              <div
-                class="p-8 rounded-3xl border border-slate-200 bg-white hover:shadow-xl transition-all duration-300 flex flex-col">
-                <h3 class="text-lg font-bold text-slate-500 mb-2">Solo</h3>
+              <div id="solo-main"
+                class="p-8 rounded-3xl border border-slate-200 bg-white hover:shadow-xl transition-all duration-300 flex flex-col pricing-card">
+                <h3 class="text-lg font-bold  text-slate-500 mb-2" id="rrr">Solo</h3>
                 <p class="text-sm text-slate-400 font-medium mb-6 min-h-[40px]">Best for solo interior designers or
                   single ongoing projects.</p>
-                <div class="flex items-baseline gap-1 mb-6"><span
-                    class="text-4xl font-black text-slate-900">₹6,710</span><span
+                <div class="flex items-baseline gap-1 mb-6"><span id="solo-price" 
+                    class="text-4xl font-black text-slate-900 ">₹6,710</span><span  id="solo-duration"
                     class="text-slate-500 font-medium">/year</span></div>
                 <div class="space-y-4 mb-8 text-slate-600 text-sm font-medium flex-1">
                   <div class="flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -3064,14 +3108,14 @@
                   class="w-full py-3 rounded-xl bg-slate-50 text-slate-900 font-bold border border-slate-200 hover:bg-slate-100 transition-colors text-center block">Get
                   Started</a>
               </div>
-              <div
+              <div id="Team_main"
                 class="p-8 rounded-3xl border border-blue-200 bg-blue-50/50 relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
                 <h3 class="text-lg font-bold text-blue-600 mb-2">Team</h3>
                 <p class="text-sm text-slate-500 font-medium mb-6 min-h-[40px]">Ideal for small interior teams handling
                   multiple homes.</p>
-                <div class="flex items-baseline gap-1 mb-6"><span
-                    class="text-4xl font-black text-slate-900">₹20,150</span><span
+                <div class="flex items-baseline gap-1 mb-6"><span  id="team-price"
+                    class="text-4xl font-black text-slate-900">₹20,150</span><span  id="team-duration"
                     class="text-slate-500 font-medium">/year</span></div>
                 <div class="space-y-4 mb-8 text-slate-700 text-sm font-medium flex-1">
                   <div class="flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -3094,17 +3138,18 @@
                       stroke-linejoin="round" class="lucide lucide-check text-blue-600 shrink-0" aria-hidden="true">
                       <path d="M20 6 9 17l-5-5"></path>
                     </svg> Priority Support</div>
-                </div><a href="/signup"
-                  class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 text-center block">Start
+                </div>
+                <a href="/signup"
+                  class="w-full py-3 rounded-xl bg-slate-50 text-slate-900 font-bold border border-slate-200 hover:bg-slate-100 transition-colors text-center block">Start
                   Free Trial</a>
               </div>
-              <div
+              <div id="business-main"
                 class="p-8 rounded-3xl border border-slate-200 bg-white hover:shadow-xl transition-all duration-300 flex flex-col">
                 <h3 class="text-lg font-bold text-slate-500 mb-2">Business</h3>
                 <p class="text-sm text-slate-400 font-medium mb-6 min-h-[40px]">Built for growing interior and turnkey
                   firms.</p>
-                <div class="flex items-baseline gap-1 mb-6"><span
-                    class="text-4xl font-black text-slate-900">₹33,590</span><span
+                <div class="flex items-baseline gap-1 mb-6"><span  id="business-price"
+                    class="text-4xl font-black text-slate-900">₹33,590</span><span id="business-duration"
                     class="text-slate-500 font-medium">/year</span></div>
                 <div class="space-y-4 mb-8 text-slate-600 text-sm font-medium flex-1">
                   <div class="flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -3132,6 +3177,10 @@
                   Sales</a>
               </div>
             </div>
+
+
+
+
             <div class="mt-16 pt-10 border-t border-slate-100 text-center">
               <p class="text-slate-400 font-bold text-sm uppercase tracking-wider mb-6">Included in every plan</p>
               <div class="flex flex-wrap justify-center gap-x-8 gap-y-4 text-slate-600 font-medium text-sm"><span
@@ -3286,6 +3335,108 @@
         });
       });
     });
+
+
+    
+
+/////////////////////////////////navbar
+const navbar = document.getElementById("navbar");
+
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 20) {
+      navbar.classList.add(
+        "bg-white/90",
+        "backdrop-blur-md",
+        "border-slate-200",
+        "shadow-sm",
+        "py-3"
+      );
+      navbar.classList.remove(
+        "bg-transparent",
+        "border-transparent",
+        "py-6"
+      );
+    } else {
+      navbar.classList.remove(
+        "bg-white/90",
+        "backdrop-blur-md",
+        "border-slate-200",
+        "shadow-sm",
+        "py-3"
+      );
+      navbar.classList.add(
+        "bg-transparent",
+        "border-transparent",
+        "py-6"
+      );
+    }
+  });
+  
+
+document.addEventListener("DOMContentLoaded", () => {
+  const monthlyBtn = document.getElementById("monthlyBtn");
+  const yearlyBtn = document.getElementById("yearlyBtn");
+
+  const prices = {
+    monthly: {
+      solo: "₹699",
+      team: "₹2,099",
+      business: "₹3,499",
+      duration: "/mo"
+    },
+    yearly: {
+      solo: "₹6,710",
+      team: "₹20,150",
+      business: "₹33,590",
+      duration: "/year"
+    }
+  };
+
+  const soloPrice = document.getElementById("solo-price");
+  const teamPrice = document.getElementById("team-price");
+  const businessPrice = document.getElementById("business-price");
+
+  const soloDuration = document.getElementById("solo-duration");
+  const teamDuration = document.getElementById("team-duration");
+  const businessDuration = document.getElementById("business-duration");
+
+  function setActive(active, inactive) {
+    active.classList.add("bg-white", "text-slate-900", "shadow-sm");
+    active.classList.remove("text-slate-500");
+
+    inactive.classList.remove("bg-white", "text-slate-900", "shadow-sm");
+    inactive.classList.add("text-slate-500");
+  }
+
+  function setPrices(type) {
+    soloPrice.textContent = prices[type].solo;
+    teamPrice.textContent = prices[type].team;
+    businessPrice.textContent = prices[type].business;
+
+    soloDuration.textContent = prices[type].duration;
+    teamDuration.textContent = prices[type].duration;
+    businessDuration.textContent = prices[type].duration;
+  }
+
+  monthlyBtn.addEventListener("click", () => {
+    setActive(monthlyBtn, yearlyBtn);
+    setPrices("monthly");
+  });
+
+  yearlyBtn.addEventListener("click", () => {
+    setActive(yearlyBtn, monthlyBtn);
+    setPrices("yearly");
+  });
+
+  // Default = Yearly (jaise screenshot me)
+  setActive(yearlyBtn, monthlyBtn);
+  setPrices("yearly");
+});
+
+
+
+
+
   </script>
 </body>
 
