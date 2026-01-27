@@ -44,7 +44,7 @@ export interface AuthUser {
   updatedAt?: string;
   companyPaymentDue?: boolean;
   companyLogo?: string;
-  allowedModules: string[]; 
+  allowedModules: string[];
 }
 
 export interface SiteDto {
@@ -495,33 +495,33 @@ export const siteApi = {
         Miscellaneous: number;
       };
       emergencyReserve: number;
+      profitMargin: number;
+      emergencyReserveLocked: boolean;
+      profitMarginLocked: boolean;
+    },
+    token: string
+  ) =>
+    request<{
+      message: string;
+      budgetAllocation: {
+        categories: {
+          Material: number;
+          Labour: number;
+          Electrical: number;
+          Equipment: number;
+          Transport: number;
+          Miscellaneous: number;
+        };
+        emergencyReserve: number;
         profitMargin: number;
         emergencyReserveLocked: boolean;
         profitMarginLocked: boolean;
-      },
-      token: string
-    ) =>
-      request<{
-        message: string;
-        budgetAllocation: {
-          categories: {
-            Material: number;
-            Labour: number;
-            Electrical: number;
-            Equipment: number;
-            Transport: number;
-            Miscellaneous: number;
-          };
-          emergencyReserve: number;
-          profitMargin: number;
-          emergencyReserveLocked: boolean;
-          profitMarginLocked: boolean;
-        };
-      }>(`/sites/${siteId}/budget-allocation`, {
-        method: "POST",
-        body,
-        token,
-      }),
+      };
+    }>(`/sites/${siteId}/budget-allocation`, {
+      method: "POST",
+      body,
+      token,
+    }),
 };
 
 export const feedApi = {
@@ -883,13 +883,51 @@ export const boqApi = {
     request<{ message: string; locked: boolean }>('/boq/room/unlock', { method: 'POST', body, token }),
 
   deleteBOQItemsByRoom: (siteId: string, roomName: string, token: string) =>
-  request<{ message: string; deletedCount: number }>(
-    `/boq/materials/room/${siteId}/${encodeURIComponent(roomName)}`,
-    {
-      method: "DELETE",
-      token,
+    request<{ message: string; deletedCount: number }>(
+      `/boq/materials/room/${siteId}/${encodeURIComponent(roomName)}`,
+      {
+        method: "DELETE",
+        token,
+      }
+    ),
+  exportAllBOQPDF: async (siteId: string, token: string) => {
+    const res = await fetch(`${API_BASE_URL}/boq/export/pdf`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ siteId }),
+    });
+
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "PDF export failed");
     }
-  ),
+
+
+    return await res.blob(); // directly PDF blob return karega
+  },
+exportAllBOQHTML: async (siteId: string, token: string) => {
+const res = await fetch(`${API_BASE_URL}/boq/export/export-all-boq-html`, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+Authorization: `Bearer ${token}`,
+},
+body: JSON.stringify({ siteId }),
+});
+
+
+if (!res.ok) {
+const text = await res.text();
+throw new Error(text || "HTML export failed");
+}
+
+
+return await res.json(); // ye bhi important hai
+},
 
 };
 

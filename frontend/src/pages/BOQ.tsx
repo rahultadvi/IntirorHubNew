@@ -240,6 +240,549 @@ const BOQ: React.FC = () => {
   //   }
   // };
 
+
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  // const handleExportCompleteBOQPDF = async () => {
+  //   try {
+  //     if (!activeSite?.id || !token) {
+  //       showToast("Site or token missing", "error");
+  //       return;
+  //     }
+
+  //     const blob = await boqApi.exportAllBOQPDF(activeSite.id, token);
+
+  //     const url = window.URL.createObjectURL(blob);
+  //     const a = document.createElement("a");
+  //     a.href = url;
+  //     a.download = `${activeSite.name.replace(/\s+/g, "_")}_Complete_BOQ.pdf`;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
+  //     window.URL.revokeObjectURL(url);
+
+  //     showToast("Complete BOQ PDF downloaded");
+  //   } catch (err) {
+  //     console.error(err);
+  //     showToast("Failed to export complete BOQ PDF", "error");
+  //   }
+  // };
+  const getRoomCategorySummary = (items: any[]) => {
+  const summary: any = {};
+
+  items.forEach(item => {
+    const base = item.quantity * item.rate;
+    const purchase = item.quantity * (item.purchaseRate ?? item.rate);
+
+    if (!summary[item.category]) {
+      summary[item.category] = {
+        count: 0,
+        base: 0,
+        purchase: 0,
+      };
+    }
+
+    summary[item.category].count += 1;
+    summary[item.category].base += base;
+    summary[item.category].purchase += purchase;
+  });
+
+  return summary;
+};
+const getRoomTotals = (items: any[]) => {
+  let totalBase = 0;
+  let totalPurchase = 0;
+
+  items.forEach(item => {
+    const base = item.quantity * item.rate;
+    const purchase = item.quantity * (item.purchaseRate ?? item.rate);
+
+    totalBase += base;
+    totalPurchase += purchase;
+  });
+
+  return { totalBase, totalPurchase };
+};
+  
+const handleExportCompleteBOQPDF = async () => {
+  try {
+    const siteId = activeSite?.id;   // id fix
+    console.log("SITE ID:", siteId);
+
+    if (!siteId || !token) {
+      showToast("Site or token missing", "error");
+      return;
+    }
+
+    // 1. Backend se complete BOQ ka JSON
+    const data = await boqApi.exportAllBOQHTML(siteId, token);
+
+    // 2. JSON → HTML
+    const html = generateBOQHTML(data);
+
+    // 3. Hidden container banao
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    container.style.width = "800px";
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    // 4. HTML → Canvas
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+
+    document.body.removeChild(container);
+
+    // 5. Canvas → PDF
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    // 6. Direct download
+    const projectName = activeSite?.name || "Project";
+    const filename = `${projectName}_Complete_BOQ_${new Date()
+      .toISOString()
+      .split("T")[0]}.pdf`;
+
+    pdf.save(filename);
+
+    showToast("Complete BOQ PDF downloaded successfully");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to export BOQ PDF", "error");
+  }
+};
+
+
+const generateBOQHTML = (data: any) => {
+  const { site, totals, categorySummary, rooms, groupedByRoom, generatedAt } = data;
+
+  const formatCurrency = (val: number) =>
+    "₹ " + Number(val).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const docDate = new Date(generatedAt).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const docTime = new Date(generatedAt).toLocaleString("en-IN");
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>BOQ - ${site.name}</title>
+<style>
+@page {
+  margin: 120px 40px 100px 40px;
+}
+
+/* Repeating Header */
+.print-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: white;
+  z-index: 1000;
+}
+
+/* Repeating Footer */
+.print-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: white;
+  z-index: 1000;
+}
+
+/* Content ko header/footer ke beech me rakho */
+.page {
+  margin-top: 120px;
+  margin-bottom: 100px;
+}
+  body {
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    padding: 20px;
+    color: #111827;
+    overflow-x: hidden;
+  }
+
+.page {
+background: #ffffff;
+max-width: 900px; /* fixed width nahi, max width */
+width: 100%;
+margin: 0 auto;
+padding: 40px 50px;
+border: 1px solid #d1d5db;
+box-sizing: border-box;
+}
+
+  /* ===== TOP THIN HEADER ===== */
+  .top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+
+  .top-left h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .top-left p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: #374151;
+  }
+
+  .top-right {
+    text-align: right;
+    font-size: 11px;
+  }
+
+  /* ===== DARK BANNER HEADER ===== */
+  .banner {
+    background: linear-gradient(to right, #1e293b, #334155);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+
+  .banner-left h1 {
+    margin: 0;
+    font-size: 26px;
+  }
+
+  .banner-left p {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #e5e7eb;
+  }
+
+  .banner-date {
+    background: rgba(255,255,255,0.15);
+    padding: 12px 16px;
+    border-radius: 8px;
+    text-align: right;
+  }
+
+  .banner-date small {
+    display: block;
+    font-size: 11px;
+    color: #cbd5f5;
+  }
+
+  .banner-date strong {
+    font-size: 14px;
+    color: #fff;
+  }
+
+  /* ===== SECTION TITLES ===== */
+  h2 {
+    margin-top: 35px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 5px;
+    font-size: 15px;
+  }
+
+  /* ===== CATEGORY SUMMARY CARD ===== */
+  .category-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px;
+  }
+
+  .category-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 13px;
+  }
+
+  .category-row:last-child {
+    border-bottom: none;
+  }
+
+  .category-left {
+    font-weight: 600;
+  }
+
+  .category-right {
+    text-align: right;
+  }
+
+  .base-text {
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .purchase-text {
+    color: #059669;
+    font-weight: bold;
+  }
+
+  /* ===== TABLE ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 6px;
+  }
+
+  th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  tr:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  .amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* ===== ROOM TITLE ===== */
+  .room {
+    margin-top: 30px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  /* ===== TOTAL BOX ===== */
+  .totals {
+    margin-top: 30px;
+    padding: 18px 20px;
+    background: #ecfdf5;
+    border: 2px solid #86efac;
+    border-radius: 12px;
+    width: 380px;
+    font-size: 14px;
+  }
+
+  .totals p {
+    margin: 6px 0;
+    font-weight: bold;
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    margin-top: 40px;
+    padding-top: 10px;
+    border-top: 2px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #374151;
+  }
+</style>
+</head>
+<body>
+
+
+<div class="page">
+
+  <!-- Thin Header -->
+  <div class="top-header">
+    <div class="top-left">
+      <h3>BILL OF QUANTITIES</h3>
+      <p>${site.projectType} – ${site.name}</p>
+    </div>
+    <div class="top-right">
+      <div>Page 1 of 1</div>
+      <div>${docDate}</div>
+    </div>
+  </div>
+
+  <!-- Dark Banner -->
+  <div class="banner">
+    <div class="banner-left">
+      <h1>BILL OF QUANTITIES</h1>
+      <p>${site.projectType} – ${site.name}</p>
+    </div>
+    <div class="banner-date">
+      <small>DOCUMENT DATE</small>
+      <strong>${docDate}</strong>
+    </div>
+  </div>
+
+  <!-- CATEGORY SUMMARY -->
+  <h2>Summary by Category</h2>
+  <div class="category-card">
+    ${Object.entries(categorySummary).map(([cat, d]: any) => `
+      <div class="category-row">
+        <div class="category-left">
+          ${cat}<br/>
+          <small>${d.count} items</small>
+        </div>
+        <div class="category-right">
+          <div class="base-text">Base: ${formatCurrency(d.base)}</div>
+          <div class="purchase-text">Purchase: ${formatCurrency(d.purchase)}</div>
+        </div>
+      </div>
+    `).join("")}
+  </div>
+
+  <!-- ROOM WISE TABLES -->
+<!-- ROOM WISE TABLES -->
+${rooms.map((room: string) => {
+  const roomItems = groupedByRoom[room];
+  const roomCategorySummary = getRoomCategorySummary(roomItems);
+  const roomTotals = getRoomTotals(roomItems);
+
+  return `
+    <!-- ROOM BANNER (har room ka apna banner) -->
+    <div class="banner">
+      <div class="banner-left">
+        <h1>BILL OF QUANTITIES</h1>
+        <p>${site.projectType} – ${site.name}</p>
+        <p style="font-size:13px; color:#cbd5f5;">Room: ${room}</p>
+      </div>
+      <div class="banner-date">
+        <small>DOCUMENT DATE</small>
+        <strong>${docDate}</strong>
+      </div>
+    </div>
+
+    <div class="room">Room: ${room}</div>
+
+    <!-- ROOM SUMMARY -->
+    <h2>Summary by Category</h2>
+    <div class="category-card">
+      ${Object.entries(roomCategorySummary).map(([cat, d]: any) => `
+        <div class="category-row">
+          <div class="category-left">
+            ${cat}<br/>
+            <small>${d.count} items</small>
+          </div>
+          <div class="category-right">
+            <div class="base-text">Base: ${formatCurrency(d.base)}</div>
+            <div class="purchase-text">Purchase: ${formatCurrency(d.purchase)}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+
+    <!-- ROOM TABLE -->
+    <table>
+      <tr>
+        <th>Sr</th>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Qty</th>
+        <th>Unit</th>
+        <th>Base Rate</th>
+        <th>Purchase Rate</th>
+        <th>Base Amt</th>
+        <th>Purchase Amt</th>
+        <th>Status</th>
+      </tr>
+
+      ${roomItems.map((item: any, i: number) => {
+        const base = item.quantity * item.rate;
+        const purchase = item.quantity * (item.purchaseRate ?? item.rate);
+
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${item.itemName}</td>
+            <td>${item.category}</td>
+            <td>${item.quantity}</td>
+            <td>${item.unit}</td>
+            <td class="amount">${formatCurrency(item.rate)}</td>
+            <td class="amount">${formatCurrency(item.purchaseRate ?? item.rate)}</td>
+            <td class="amount">${formatCurrency(base)}</td>
+            <td class="amount">${formatCurrency(purchase)}</td>
+            <td>${item.status}</td>
+          </tr>
+        `;
+      }).join("")}
+    </table>
+
+    <!-- ROOM TOTAL -->
+    <div class="totals">
+      <p>Room Base Amount: ${formatCurrency(roomTotals.totalBase)}</p>
+      <p>Room Purchase Amount: ${formatCurrency(roomTotals.totalPurchase)}</p>
+    </div>
+
+    <div style="page-break-after: always;"></div>
+  `;
+}).join("")}
+  <!-- TOTALS -->
+ <div class="totals">
+<p>Total Base Amount: ${formatCurrency(totals.totalBase)}</p>
+<p>Total Purchase Amount: ${formatCurrency(totals.totalPurchase)}</p>
+</div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>Generated by SiteZero</div>
+    <div>${docTime}</div>
+  </div>
+
+</div>
+
+</body>
+</html>
+`;
+};
+
+
+
+
   const fetchLibraryItems = async () => {
     if (!token) {
       console.log("⛔ Token not ready yet");
@@ -261,6 +804,9 @@ const BOQ: React.FC = () => {
       setLibraryItems([]);
     }
   };
+
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Handle library import from CSV/Excel
   const handleLibraryImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1738,8 +2284,8 @@ const BOQ: React.FC = () => {
                   aria-selected={isActive}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`flex-1 py-4 px-2 text-sm font-bold rounded-xl transition-all duration-200 ${isActive
-                      ? "bg-slate-800 text-white shadow-md"
-                      : "text-slate-400 hover:text-slate-600"
+                    ? "bg-slate-800 text-white shadow-md"
+                    : "text-slate-400 hover:text-slate-600"
                     }`}
                 >
                   {tab.label}
@@ -2976,7 +3522,9 @@ const BOQ: React.FC = () => {
                       }
                       return newSet;
                     });
+
                   };
+
 
                   return (
                     <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-[2rem] px-2 py-3 mt-1 mb-0 shadow-xl shadow-slate-200/50 relative overflow-hidden">
@@ -3133,6 +3681,7 @@ const BOQ: React.FC = () => {
                           )}
                         </div>
                       </div>
+
 
                       {isRoomExpanded && filteredItems.length > 0 ? (
                         <>
@@ -3471,10 +4020,27 @@ const BOQ: React.FC = () => {
                           <p className="text-sm">No items added to this room yet.</p>
                           <p className="text-xs mt-1">Click "Add Item" to get started.</p>
                         </div>
+
                       )}
                     </div>
                   );
                 })}
+              </div>
+              <div className="bg-white rounded-2xl px-4 py-4 mt-6 shadow-md border border-slate-200 flex gap-3">
+                <button
+                  onClick={handleExportCompleteBOQPDF}
+                  className="flex-1 bg-slate-900 text-white py-3 rounded-xl"
+                >
+                  Export Complete BOQ PDF
+                </button>
+
+
+                <button
+                  // onClick={handleShareCompleteBOQ}
+                  className="flex-1 bg-white border py-3 rounded-xl"
+                >
+                  Share Complete BOQ
+                </button>
               </div>
             </>
           )}
