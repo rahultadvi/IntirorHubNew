@@ -34,4 +34,11 @@ router.delete(
 router.post('/room/lock', auth, BOQController.lockBOQRoom);
 router.post('/room/unlock', auth, BOQController.unlockBOQRoom);
 
+router.post(
+"/export/pdf",
+auth,
+BOQController.exportAllBOQToPDF
+);
+
+router.post('/export/export-all-boq-html', auth, BOQController.exportAllBOQToHTML);
 export default router;
