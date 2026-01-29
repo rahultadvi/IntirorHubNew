@@ -22,6 +22,7 @@ import {
   Lock,
   Unlock,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
@@ -110,6 +111,11 @@ const BOQ: React.FC = () => {
   const [editedRoomName, setEditedRoomName] = useState<string>("");
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
+  const [isExportingPDF, setIsExportingPDF] = useState<string | null>(null); // Track which room is exporting, null for all rooms export
+  const [isExportingAllPDF, setIsExportingAllPDF] = useState(false);
+  const [isSharingPDF, setIsSharingPDF] = useState<string | null>(null); // Track which room is sharing
+  const [isSharingAllPDF, setIsSharingAllPDF] = useState(false); // Track if sharing all BOQs
+  const [isExportingMaterialsPDF, setIsExportingMaterialsPDF] = useState(false); // Material Used PDF export
   const [editingPurchaseRate, setEditingPurchaseRate] = useState<Record<string, number | null>>({});
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, 'bill' | 'photo' | null>>({});
@@ -267,520 +273,515 @@ const BOQ: React.FC = () => {
   //     showToast("Failed to export complete BOQ PDF", "error");
   //   }
   // };
-  const getRoomCategorySummary = (items: any[]) => {
-  const summary: any = {};
-
-  items.forEach(item => {
-    const base = item.quantity * item.rate;
-    const purchase = item.quantity * (item.purchaseRate ?? item.rate);
-
-    if (!summary[item.category]) {
-      summary[item.category] = {
-        count: 0,
-        base: 0,
-        purchase: 0,
-      };
-    }
-
-    summary[item.category].count += 1;
-    summary[item.category].base += base;
-    summary[item.category].purchase += purchase;
-  });
-
-  return summary;
-};
-const getRoomTotals = (items: any[]) => {
-  let totalBase = 0;
-  let totalPurchase = 0;
-
-  items.forEach(item => {
-    const base = item.quantity * item.rate;
-    const purchase = item.quantity * (item.purchaseRate ?? item.rate);
-
-    totalBase += base;
-    totalPurchase += purchase;
-  });
-
-  return { totalBase, totalPurchase };
-};
   
-const handleExportCompleteBOQPDF = async () => {
-  try {
-    const siteId = activeSite?.id;   // id fix
-    console.log("SITE ID:", siteId);
-
-    if (!siteId || !token) {
-      showToast("Site or token missing", "error");
-      return;
-    }
-
-    // 1. Backend se complete BOQ ka JSON
-    const data = await boqApi.exportAllBOQHTML(siteId, token);
-
-    // 2. JSON → HTML
-    const html = generateBOQHTML(data);
-
-    // 3. Hidden container banao
-    const container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.left = "-9999px";
-    container.style.top = "0";
-    container.style.width = "800px";
-    container.innerHTML = html;
-    document.body.appendChild(container);
-
-    // 4. HTML → Canvas
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-    });
-
-    document.body.removeChild(container);
-
-    // 5. Canvas → PDF
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-
-    const imgWidth = pdfWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pdfHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-    }
-
-    // 6. Direct download
-    const projectName = activeSite?.name || "Project";
-    const filename = `${projectName}_Complete_BOQ_${new Date()
-      .toISOString()
-      .split("T")[0]}.pdf`;
-
-    pdf.save(filename);
-
-    showToast("Complete BOQ PDF downloaded successfully");
-
-  } catch (err) {
-    console.error(err);
-    showToast("Failed to export BOQ PDF", "error");
-  }
-};
-
-
-const generateBOQHTML = (data: any) => {
-  const { site, totals, categorySummary, rooms, groupedByRoom, generatedAt } = data;
-
-  const formatCurrency = (val: number) =>
-    "₹ " + Number(val).toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-  const docDate = new Date(generatedAt).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-
-  const docTime = new Date(generatedAt).toLocaleString("en-IN");
-
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<title>BOQ - ${site.name}</title>
-<style>
-@page {
-  margin: 120px 40px 100px 40px;
-}
-
-/* Repeating Header */
-.print-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100px;
-  background: white;
-  z-index: 1000;
-}
-
-/* Repeating Footer */
-.print-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: white;
-  z-index: 1000;
-}
-
-/* Content ko header/footer ke beech me rakho */
-.page {
-  margin-top: 120px;
-  margin-bottom: 100px;
-}
-  body {
-    font-family: Arial, sans-serif;
-    background: #f3f4f6;
-    padding: 20px;
-    color: #111827;
-    overflow-x: hidden;
-  }
-
-.page {
-background: #ffffff;
-max-width: 900px; /* fixed width nahi, max width */
-width: 100%;
-margin: 0 auto;
-padding: 40px 50px;
-border: 1px solid #d1d5db;
-box-sizing: border-box;
-}
-
-  /* ===== TOP THIN HEADER ===== */
-  .top-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 8px;
-    margin-bottom: 15px;
-  }
-
-  .top-left h3 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: bold;
-  }
-
-  .top-left p {
-    margin: 2px 0 0;
-    font-size: 11px;
-    color: #374151;
-  }
-
-  .top-right {
-    text-align: right;
-    font-size: 11px;
-  }
-
-  /* ===== DARK BANNER HEADER ===== */
-  .banner {
-    background: linear-gradient(to right, #1e293b, #334155);
-    color: white;
-    padding: 30px;
-    border-radius: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-  }
-
-  .banner-left h1 {
-    margin: 0;
-    font-size: 26px;
-  }
-
-  .banner-left p {
-    margin-top: 6px;
-    font-size: 14px;
-    color: #e5e7eb;
-  }
-
-  .banner-date {
-    background: rgba(255,255,255,0.15);
-    padding: 12px 16px;
-    border-radius: 8px;
-    text-align: right;
-  }
-
-  .banner-date small {
-    display: block;
-    font-size: 11px;
-    color: #cbd5f5;
-  }
-
-  .banner-date strong {
-    font-size: 14px;
-    color: #fff;
-  }
-
-  /* ===== SECTION TITLES ===== */
-  h2 {
-    margin-top: 35px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 5px;
-    font-size: 15px;
-  }
-
-  /* ===== CATEGORY SUMMARY CARD ===== */
-  .category-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #fff;
-    padding: 10px;
-  }
-
-  .category-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 8px;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 13px;
-  }
-
-  .category-row:last-child {
-    border-bottom: none;
-  }
-
-  .category-left {
-    font-weight: 600;
-  }
-
-  .category-right {
-    text-align: right;
-  }
-
-  .base-text {
-    color: #6b7280;
-    font-size: 12px;
-  }
-
-  .purchase-text {
-    color: #059669;
-    font-weight: bold;
-  }
-
-  /* ===== TABLE ===== */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 8px;
-    font-size: 11px;
-  }
-
-  th, td {
-    border: 1px solid #d1d5db;
-    padding: 6px;
-  }
-
-  th {
-    background: #1e293b;
-    color: #ffffff;
-    font-weight: bold;
-    text-align: center;
-    text-transform: uppercase;
-  }
-
-  tr:nth-child(even) {
-    background: #f9fafb;
-  }
-
-  .amount {
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  /* ===== ROOM TITLE ===== */
-  .room {
-    margin-top: 30px;
-    font-size: 14px;
-    font-weight: bold;
-  }
-
-  /* ===== TOTAL BOX ===== */
-  .totals {
-    margin-top: 30px;
-    padding: 18px 20px;
-    background: #ecfdf5;
-    border: 2px solid #86efac;
-    border-radius: 12px;
-    width: 380px;
-    font-size: 14px;
-  }
-
-  .totals p {
-    margin: 6px 0;
-    font-weight: bold;
-  }
-
-  /* ===== FOOTER ===== */
-  .footer {
-    margin-top: 40px;
-    padding-top: 10px;
-    border-top: 2px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: #374151;
-  }
-</style>
-</head>
-<body>
-
-
-<div class="page">
-
-  <!-- Thin Header -->
-  <div class="top-header">
-    <div class="top-left">
-      <h3>BILL OF QUANTITIES</h3>
-      <p>${site.projectType} – ${site.name}</p>
-    </div>
-    <div class="top-right">
-      <div>Page 1 of 1</div>
-      <div>${docDate}</div>
-    </div>
-  </div>
-
-  <!-- Dark Banner -->
-  <div class="banner">
-    <div class="banner-left">
-      <h1>BILL OF QUANTITIES</h1>
-      <p>${site.projectType} – ${site.name}</p>
-    </div>
-    <div class="banner-date">
-      <small>DOCUMENT DATE</small>
-      <strong>${docDate}</strong>
-    </div>
-  </div>
-
-  <!-- CATEGORY SUMMARY -->
-  <h2>Summary by Category</h2>
-  <div class="category-card">
-    ${Object.entries(categorySummary).map(([cat, d]: any) => `
-      <div class="category-row">
-        <div class="category-left">
-          ${cat}<br/>
-          <small>${d.count} items</small>
-        </div>
-        <div class="category-right">
-          <div class="base-text">Base: ${formatCurrency(d.base)}</div>
-          <div class="purchase-text">Purchase: ${formatCurrency(d.purchase)}</div>
-        </div>
-      </div>
-    `).join("")}
-  </div>
-
-  <!-- ROOM WISE TABLES -->
-<!-- ROOM WISE TABLES -->
-${rooms.map((room: string) => {
-  const roomItems = groupedByRoom[room];
-  const roomCategorySummary = getRoomCategorySummary(roomItems);
-  const roomTotals = getRoomTotals(roomItems);
-
-  return `
-    <!-- ROOM BANNER (har room ka apna banner) -->
-    <div class="banner">
-      <div class="banner-left">
-        <h1>BILL OF QUANTITIES</h1>
-        <p>${site.projectType} – ${site.name}</p>
-        <p style="font-size:13px; color:#cbd5f5;">Room: ${room}</p>
-      </div>
-      <div class="banner-date">
-        <small>DOCUMENT DATE</small>
-        <strong>${docDate}</strong>
-      </div>
-    </div>
-
-    <div class="room">Room: ${room}</div>
-
-    <!-- ROOM SUMMARY -->
-    <h2>Summary by Category</h2>
-    <div class="category-card">
-      ${Object.entries(roomCategorySummary).map(([cat, d]: any) => `
-        <div class="category-row">
-          <div class="category-left">
-            ${cat}<br/>
-            <small>${d.count} items</small>
-          </div>
-          <div class="category-right">
-            <div class="base-text">Base: ${formatCurrency(d.base)}</div>
-            <div class="purchase-text">Purchase: ${formatCurrency(d.purchase)}</div>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-
-    <!-- ROOM TABLE -->
-    <table>
-      <tr>
-        <th>Sr</th>
-        <th>Item</th>
-        <th>Category</th>
-        <th>Qty</th>
-        <th>Unit</th>
-        <th>Base Rate</th>
-        <th>Purchase Rate</th>
-        <th>Base Amt</th>
-        <th>Purchase Amt</th>
-        <th>Status</th>
-      </tr>
-
-      ${roomItems.map((item: any, i: number) => {
-        const base = item.quantity * item.rate;
-        const purchase = item.quantity * (item.purchaseRate ?? item.rate);
-
+//   const getRoomCategorySummary = (items: any[]) => {
+//   const summary: any = {};
+
+//   items.forEach(item => {
+//     const base = item.quantity * item.rate;
+//     const purchase = item.quantity * (item.purchaseRate ?? item.rate);
+
+//     if (!summary[item.category]) {
+//       summary[item.category] = {
+//         count: 0,
+//         base: 0,
+//         purchase: 0,
+//       };
+//     }
+
+//     summary[item.category].count += 1;
+//     summary[item.category].base += base;
+//     summary[item.category].purchase += purchase;
+//   });
+
+//   return summary;
+// };
+// const getRoomTotals = (items: any[]) => {
+//   let totalBase = 0;
+//   let totalPurchase = 0;
+
+//   items.forEach(item => {
+//     const base = item.quantity * item.rate;
+//     const purchase = item.quantity * (item.purchaseRate ?? item.rate);
+
+//     totalBase += base;
+//     totalPurchase += purchase;
+//   });
+
+//   return { totalBase, totalPurchase };
+// };
+  
+
+
+  // Generate PDF for all BOQs (all rooms)
+  const generateAllBOQPDF = async () => {
+    try {
+      if (!rooms || rooms.length === 0) {
+        throw new Error('No rooms to export');
+      }
+
+      // Collect all items from all rooms
+      const allItems: BOQItem[] = [];
+      rooms.forEach((room) => {
+        room.items.forEach((item) => {
+          allItems.push(item);
+        });
+      });
+
+      if (allItems.length === 0) {
+        throw new Error('No items to export');
+      }
+
+      // Calculate summary by category across all rooms
+      const categorySummary: Record<string, { count: number; totalBaseAmount: number; totalPurchaseAmount: number }> = {};
+      allItems.forEach((item) => {
+        const cat = item.category || 'Other';
+        if (!categorySummary[cat]) {
+          categorySummary[cat] = { count: 0, totalBaseAmount: 0, totalPurchaseAmount: 0 };
+        }
+        categorySummary[cat].count++;
+        const baseAmount = item.quantity * item.rate;
+        const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
+        const purchaseAmount = item.quantity * purchaseRate;
+        categorySummary[cat].totalBaseAmount += baseAmount;
+        categorySummary[cat].totalPurchaseAmount += purchaseAmount;
+      });
+
+      // Calculate totals across all rooms
+      let totalBaseAmount = 0;
+      let totalPurchaseAmount = 0;
+      allItems.forEach((item) => {
+        totalBaseAmount += item.quantity * item.rate;
+        const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
+        totalPurchaseAmount += item.quantity * purchaseRate;
+      });
+
+      const generatedDate = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      });
+
+
+      // Create a hidden div for report rendering
+      const reportDiv = document.createElement('div');
+      reportDiv.style.position = 'absolute';
+      reportDiv.style.left = '-9999px';
+      reportDiv.style.width = '100%';
+      reportDiv.style.maxWidth = '100%';
+      reportDiv.style.padding = '0';
+      reportDiv.style.backgroundColor = '#ffffff';
+      reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
+      // Generate category summary rows
+      const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
+        const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
         return `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${item.itemName}</td>
-            <td>${item.category}</td>
-            <td>${item.quantity}</td>
-            <td>${item.unit}</td>
-            <td class="amount">${formatCurrency(item.rate)}</td>
-            <td class="amount">${formatCurrency(item.purchaseRate ?? item.rate)}</td>
-            <td class="amount">${formatCurrency(base)}</td>
-            <td class="amount">${formatCurrency(purchase)}</td>
-            <td>${item.status}</td>
-          </tr>
+          <div style="display: flex; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="color: #111827; padding: 4px 12px; border-radius: 16px; font-size: 25px; font-weight: 600;">${categoryDisplay}</span>
+              <div style="font-weight: 600; color: #111827; font-size: 24px;">${summary.count} items</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 18px; color: #6b7280; margin-bottom: 2px;">Base: ${formatCurrency(summary.totalBaseAmount)}</div>
+              <div style="font-weight: 600; color: #059669; font-size: 18px;">Purchase: ${formatCurrency(summary.totalPurchaseAmount)}</div>
+            </div>
+          </div>
         `;
-      }).join("")}
-    </table>
+      }).join('');
 
-    <!-- ROOM TOTAL -->
-    <div class="totals">
-      <p>Room Base Amount: ${formatCurrency(roomTotals.totalBase)}</p>
-      <p>Room Purchase Amount: ${formatCurrency(roomTotals.totalPurchase)}</p>
-    </div>
+      // Generate HTML for all rooms
+      let roomsHTML = '';
+      rooms.forEach((room, roomIndex) => {
+        if (room.items.length === 0) return;
 
-    <div style="page-break-after: always;"></div>
-  `;
-}).join("")}
-  <!-- TOTALS -->
- <div class="totals">
-<p>Total Base Amount: ${formatCurrency(totals.totalBase)}</p>
-<p>Total Purchase Amount: ${formatCurrency(totals.totalPurchase)}</p>
-</div>
+        // Generate item rows for this room
+        const itemRows = room.items.map((item, index) => {
+          const baseAmount = item.quantity * item.rate;
+          const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
+          const purchaseAmount = item.quantity * purchaseRate;
+          const categoryDisplay = typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : (item.category || 'N/A');
+          const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
 
-  <!-- FOOTER -->
-  <div class="footer">
-    <div>Generated by SiteZero</div>
-    <div>${docTime}</div>
-  </div>
+          return `
+            <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
+              <td style="padding: 22px 20px; text-align: center; font-size: 22px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
+              <td style="padding: 22px 20px; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 150px;">
+                <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4; font-size: 22px;">${(item.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                <div style="font-size: 18px; color: #6b7280; margin-top: 4px;">
+                  <span style="color: #111827; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block; font-size: 14px;">${categoryDisplay}</span>
+                </div>
+              </td>
+            <td style="padding: 22px 20px; text-align: center; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
+              <div style="font-weight: 600; margin-bottom: 2px; font-size: 22px;">${item.quantity}</div>
+                <div style="font-size: 18px; color: #6b7280;">${formatUnit(item.unit)}</div>
+              </td>
+              <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(item.rate)}</td>
+              <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(purchaseRate)}</td>
+              <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 110px; white-space: nowrap;">${formatCurrency(baseAmount)}</td>
+              <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #059669; font-weight: 600; vertical-align: middle; width: 120px; white-space: nowrap;">${formatCurrency(purchaseAmount)}</td>
+            </tr>
+          `;
+        }).join('');
 
-</div>
+        roomsHTML += `
+          ${roomIndex === 0 ? `
+            <div style="margin-bottom: 24px; padding: 0 40px;">
+              <h3 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Detailed Items</h3>
+            </div>
+          ` : ''}
+          <div style="margin-bottom: 24px; padding: 0 40px;">
+            <h4 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 12px 0;">${room.name}</h4>
+            <div style="overflow-x: visible; border: none; border-radius: 6px; background: white;">
+              <table style="width: 100%; border-collapse: collapse; background: white; table-layout: fixed;">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+                    <th style="padding: 20px 18px; text-align: center; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">No.</th>
+                    <th style="padding: 20px 18px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 150px;">Item Description</th>
+                    <th style="padding: 20px 18px; text-align: center; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Quantity</th>
+                    <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Base Rate</th>
+                    <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Purchase Rate</th>
+                    <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 110px;">Base Amount</th>
+                    <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; width: 120px;">Purchase Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      });
 
-</body>
-</html>
-`;
-};
+      const siteName = activeSite?.name || 'N/A';
+      const companyName = user?.companyName || '';
+      const companyLogo = user?.companyLogo || '';
+      const logoUrl = companyLogo ? (companyLogo.startsWith('http') ? companyLogo : `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL}${companyLogo}`) : '';
+      
+      // Dummy logo SVG if no logo present
+      const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+      const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+      const dummyLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
 
+      reportDiv.innerHTML = `
+        <div style="width: 100%; margin: 0; background: white; padding: 0; border: none;">
+          <!-- Professional Header with Logo at Top Right -->
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px 40px; margin-top: 8px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding: 0;">
+              <!-- Left Side: BOQ Title -->
+              <div style="flex: 1;">
+                <h1 style="font-size: 29px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Bill of Quantities</h1>
+                <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); margin-top: 6px; border-radius: 2px;"></div>
+              </div>
+              <!-- Right Side: Logo at Top -->
+              <div style="flex-shrink: 0; margin-left: 24px;">
+                ${logoUrl ? `
+                  <img src="${logoUrl}" alt="${companyName}" crossorigin="anonymous" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+                ` : `
+                  <img src="${dummyLogo}" alt="Company Logo" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+                `}
+              </div>
+            </div>
+            <!-- Site and Company Info Row -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; padding: 0;">
+              <div style="flex: 1;">
+                <div style="margin-bottom: 8px;">
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Site / Project</p>
+                  <p style="font-size: 24px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.2;">${siteName}</p>
+                </div>
+                <div>
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Company</p>
+                  <p style="font-size: 24px; margin: 0; color: #475569; font-weight: 600;">${companyName || 'N/A'}</p>
+                </div>
+              </div>
+              <!-- Document Date on Right -->
+              <div style="flex-shrink: 0; margin-left: 24px; text-align: right; padding: 10px 18px; border-radius: 6px; border: none; box-shadow: none;">
+                <p style="font-size: 18px; margin: 0 0 3px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Document Date</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700;">${generatedDate}</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Report Content -->
+          <div style="padding: 32px 0; border: none;">
+            <!-- Room Info Section -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; padding: 0 40px 20px 40px; border-bottom: 1px solid #e5e7eb;">
+              <!-- Room Section -->
+              <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Room / Area</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">All Rooms</p>
+              </div>
+              <!-- Total Items Section -->
+              <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Items</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${allItems.length}</p>
+              </div>
+            </div>
 
+            <!-- Category Summary -->
+            <div style="margin-bottom: 24px; padding: 0 40px;">
+              <h3 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Summary by Category</h3>
+              <div style="background: white; border: none; border-radius: 6px; overflow: hidden;">
+                ${categoryRows}
+              </div>
+            </div>
+            
+            ${roomsHTML}
+            
+            <!-- Total Amounts Section -->
+            <div style="margin-top: 24px; padding: 0 40px;">
+              <div style="padding: 28px 40px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 6px; border: none; box-shadow: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #86efac;">
+                  <div style="font-size: 24px; font-weight: 600; color: #166534;">Total Base Amount:</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #166534;">${formatCurrency(totalBaseAmount)}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="font-size: 17px; font-weight: 700; color: #166534;">Total Purchase Amount:</div>
+                  <div style="font-size: 28px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalPurchaseAmount)}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <div style="text-align: center; color: #9ca3af; font-size: 10px; margin-bottom: 8px;">
+                <p style="margin: 0 0 4px 0;">This is computer generated PDF, not required signature</p>
+              </div>
+              <div style="text-align: center; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; color: #6b7280; font-size: 10px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(reportDiv);
+
+      // Wait for rendering and logo to load
+      await new Promise((resolve) => {
+        const img = reportDiv.querySelector('img') as HTMLImageElement;
+        if (img) {
+          if (!img.src.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+          }
+          
+          if (img.complete && img.naturalWidth > 0) {
+            setTimeout(resolve, 300);
+          } else if (img.src.startsWith('data:')) {
+            setTimeout(resolve, 200);
+          } else {
+            const timeout = setTimeout(() => {
+              resolve(null);
+            }, 5000);
+            
+            img.onload = () => {
+              clearTimeout(timeout);
+              setTimeout(resolve, 300);
+            };
+            img.onerror = () => {
+              clearTimeout(timeout);
+              const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+              const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+              img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
+              setTimeout(resolve, 200);
+            };
+          }
+        } else {
+          setTimeout(resolve, 200);
+        }
+      });
+
+      // Render full content
+      const originalScrollTop = reportDiv.scrollTop;
+      reportDiv.scrollTop = reportDiv.scrollHeight;
+      
+      const fullCanvas = await html2canvas(reportDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        width: reportDiv.scrollWidth,
+        height: reportDiv.scrollHeight,
+        windowWidth: reportDiv.scrollWidth,
+        windowHeight: reportDiv.scrollHeight,
+        onclone: (clonedDoc) => {
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach((img) => {
+            if (img.complete && img.naturalWidth === 0) {
+              (img as HTMLElement).style.display = 'none';
+            }
+          });
+          const clonedReportDiv = clonedDoc.querySelector('[style*="width: 100%"]') as HTMLElement;
+          if (clonedReportDiv) {
+            clonedReportDiv.scrollTop = clonedReportDiv.scrollHeight;
+          }
+        }
+      });
+      
+      reportDiv.scrollTop = originalScrollTop;
+
+      // Get all table rows and their positions
+      const tableRows = Array.from(reportDiv.querySelectorAll('tbody tr')) as HTMLElement[];
+      const rowPositions: Array<{ top: number; bottom: number; element: HTMLElement }> = [];
+      
+      tableRows.forEach((row) => {
+        const rect = row.getBoundingClientRect();
+        const reportRect = reportDiv.getBoundingClientRect();
+        rowPositions.push({
+          top: rect.top - reportRect.top,
+          bottom: rect.bottom - reportRect.top,
+          element: row
+        });
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      const marginTop = 8;
+      const marginBottom = 15;
+      const marginLeft = 10;
+      const marginRight = 10;
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const contentWidth = pdfWidth - marginLeft - marginRight;
+      const contentHeight = pdfHeight - marginTop - marginBottom;
+
+      const pixelsToMm = 0.264583;
+      const scale = 2;
+      const imgWidth = fullCanvas.width;
+      const imgHeight = fullCanvas.height;
+      
+      const cssWidth = imgWidth / scale;
+      const cssHeight = imgHeight / scale;
+      const imgWidthMm = cssWidth * pixelsToMm;
+      const imgHeightMm = cssHeight * pixelsToMm;
+
+      const ratio = contentWidth / imgWidthMm;
+      const scaledWidth = contentWidth;
+      const scaledHeight = imgHeightMm * ratio;
+
+      const scaledRowPositions = rowPositions.map(pos => ({
+        top: (pos.top * pixelsToMm) * ratio,
+        bottom: (pos.bottom * pixelsToMm) * ratio,
+        element: pos.element
+      }));
+
+      let currentY = 0;
+      let currentPage = 1;
+      let sourceY = 0;
+
+      while (currentY < scaledHeight) {
+        const availableHeight = contentHeight;
+        let pageEndY = currentY + availableHeight;
+
+        let lastRowIndex = -1;
+        for (let i = 0; i < scaledRowPositions.length; i++) {
+          const row = scaledRowPositions[i];
+          if (row.top < pageEndY) {
+            if (row.bottom > pageEndY && row.top > currentY) {
+              pageEndY = row.top;
+              break;
+            }
+            lastRowIndex = i;
+          } else {
+            break;
+          }
+        }
+
+        if (lastRowIndex >= 0) {
+          const lastRow = scaledRowPositions[lastRowIndex];
+          if (lastRow.bottom > pageEndY) {
+            if (lastRowIndex > 0) {
+              pageEndY = scaledRowPositions[lastRowIndex - 1].bottom;
+            } else {
+              pageEndY = currentY + availableHeight;
+            }
+          } else {
+            pageEndY = lastRow.bottom;
+          }
+        }
+
+        const actualPageHeight = Math.min(pageEndY - currentY, scaledHeight - currentY);
+        
+        if (actualPageHeight <= 0 || actualPageHeight < 5) {
+          break;
+        }
+
+        const sourceHeightCssPx = (actualPageHeight / ratio) / pixelsToMm;
+        const sourceHeightPx = sourceHeightCssPx * scale;
+
+        if (sourceHeightPx <= 0 || sourceHeightPx > imgHeight - sourceY) {
+          break;
+        }
+
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        pageCanvas.height = Math.ceil(sourceHeightPx);
+        const pageCtx = pageCanvas.getContext('2d');
+
+        if (pageCtx) {
+          pageCtx.drawImage(
+            fullCanvas,
+            0, sourceY,
+            imgWidth, sourceHeightPx,
+            0, 0,
+            imgWidth, sourceHeightPx
+          );
+        }
+
+        const pageImgData = pageCanvas.toDataURL('image/png');
+
+        pdf.addImage(pageImgData, 'PNG', marginLeft, marginTop, scaledWidth, actualPageHeight, undefined, 'FAST');
+
+        currentY = pageEndY;
+        sourceY += sourceHeightPx;
+
+        const remainingHeight = scaledHeight - currentY;
+        if (remainingHeight > 10) {
+          pdf.addPage();
+          currentPage++;
+        } else {
+          break;
+        }
+      }
+
+      document.body.removeChild(reportDiv);
+
+      return pdf;
+    } catch (error) {
+      console.error('Error in generateAllBOQPDF:', error);
+      throw error;
+    }
+  };
+
+  const handleExportCompleteBOQPDF = async () => {
+    try {
+      if (!activeSite?.id) {
+        showToast("Site missing", "error");
+        return;
+      }
+
+      setIsExportingAllPDF(true);
+
+      // Generate PDF from frontend
+      const pdf = await generateAllBOQPDF();
+
+      // Download PDF
+      pdf.save(`${activeSite.name.replace(/\s+/g, "_")}_Complete_BOQ_${new Date()
+        .toISOString()
+        .split("T")[0]}.pdf`);
+
+      showToast("Complete BOQ PDF downloaded successfully");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to export complete BOQ PDF", "error");
+    } finally {
+      setIsExportingAllPDF(false);
+    }
+  };
 
 
   const fetchLibraryItems = async () => {
@@ -1395,19 +1396,12 @@ ${rooms.map((room: string) => {
         year: "numeric"
       });
 
-      const generatedDateTime = new Date().toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-
       // Create a hidden div for report rendering
       const reportDiv = document.createElement('div');
       reportDiv.style.position = 'absolute';
       reportDiv.style.left = '-9999px';
-      reportDiv.style.width = '800px';
+      reportDiv.style.width = '100%';
+      reportDiv.style.maxWidth = '100%';
       reportDiv.style.padding = '0';
       reportDiv.style.backgroundColor = '#ffffff';
       reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -1422,21 +1416,21 @@ ${rooms.map((room: string) => {
 
         return `
           <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
-            <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
-            <td style="padding: 12px 10px; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; min-width: 200px;">
-              <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4;">${(item.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-              <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">
-                <span style="color: #111827; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block;">${categoryDisplay}</span>
+            <td style="padding: 22px 20px; text-align: center; font-size: 22px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
+            <td style="padding: 22px 20px; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 150px;">
+              <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4; font-size: 22px;">${(item.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <div style="font-size: 18px; color: #6b7280; margin-top: 4px;">
+                <span style="color: #111827; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block; font-size: 18px;">${categoryDisplay}</span>
               </div>
             </td>
-            <td style="padding: 12px 10px; text-align: center; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
-              <div style="font-weight: 600; margin-bottom: 2px;">${item.quantity}</div>
-              <div style="font-size: 10px; color: #6b7280;">${formatUnit(item.unit)}</div>
+            <td style="padding: 22px 20px; text-align: center; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
+              <div style="font-weight: 600; margin-bottom: 2px; font-size: 22px;">${item.quantity}</div>
+              <div style="font-size: 18px; color: #6b7280;">${formatUnit(item.unit)}</div>
             </td>
-            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(item.rate)}</td>
-            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(purchaseRate)}</td>
-            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 110px; white-space: nowrap;">${formatCurrency(baseAmount)}</td>
-            <td style="padding: 12px 10px; text-align: right; font-size: 12px; color: #059669; font-weight: 600; vertical-align: middle; width: 120px; white-space: nowrap;">${formatCurrency(purchaseAmount)}</td>
+            <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(item.rate)}</td>
+            <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(purchaseRate)}</td>
+            <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 110px; white-space: nowrap;">${formatCurrency(baseAmount)}</td>
+            <td style="padding: 22px 20px; text-align: right; font-size: 22px; color: #059669; font-weight: 600; vertical-align: middle; width: 120px; white-space: nowrap;">${formatCurrency(purchaseAmount)}</td>
           </tr>
         `;
       }).join('');
@@ -1445,14 +1439,14 @@ ${rooms.map((room: string) => {
       const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
         const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
         return `
-          <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid #e5e7eb;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="color: #111827; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600;">${categoryDisplay}</span>
-              <div style="font-weight: 600; color: #111827; font-size: 14px;">${summary.count} items</div>
+              <span style="color: #111827; padding: 4px 12px; border-radius: 16px; font-size: 20px; font-weight: 600;">${categoryDisplay}</span>
+              <div style="font-weight: 600; color: #111827; font-size: 24px;">${summary.count} items</div>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 12px; color: #6b7280; margin-bottom: 2px;">Base: ${formatCurrency(summary.totalBaseAmount)}</div>
-              <div style="font-weight: 600; color: #059669; font-size: 14px;">Purchase: ${formatCurrency(summary.totalPurchaseAmount)}</div>
+              <div style="font-size: 18px; color: #6b7280; margin-bottom: 2px;">Base: ${formatCurrency(summary.totalBaseAmount)}</div>
+              <div style="font-weight: 600; color: #059669; font-size: 18px;">Purchase: ${formatCurrency(summary.totalPurchaseAmount)}</div>
             </div>
           </div>
         `;
@@ -1460,74 +1454,91 @@ ${rooms.map((room: string) => {
 
       const siteName = activeSite?.name || 'N/A';
       const companyName = user?.companyName || '';
-      const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+      const companyLogo = user?.companyLogo || '';
+      const logoUrl = companyLogo ? (companyLogo.startsWith('http') ? companyLogo : `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL}${companyLogo}`) : '';
+      
+      // Dummy logo SVG if no logo present
+      const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+      const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+      const dummyLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
 
       reportDiv.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto; background: white;">
-          <!-- Header with Gradient -->
-          <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 40px 48px; color: white; border-radius: 12px 12px 0 0;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
-              <div>
-                <h2 style="font-size: 32px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.5px;">BILL OF QUANTITIES</h2>
-                <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 400;">${siteByCompany}</p>
+        <div style="width: 100%; margin: 0; background: white; padding: 0; border: none;">
+          <!-- Professional Header with Logo at Top Right -->
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px 40px; margin-top: 8px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding: 0;">
+              <!-- Left Side: BOQ Title -->
+              <div style="flex: 1;">
+                <h1 style="font-size: 67px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Bill of Quantities</h1>
+                <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); margin-top: 6px; border-radius: 2px;"></div>
               </div>
-              <div style="text-align: right; background: rgba(255, 255, 255, 0.1); padding: 16px 20px; border-radius: 12px; backdrop-filter: blur(10px);">
-                <div style="font-size: 11px; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">Document Date</div>
-                <div style="font-size: 16px; font-weight: 600;">${generatedDate}</div>
+              <!-- Right Side: Logo at Top -->
+              <div style="flex-shrink: 0; margin-left: 24px;">
+                ${logoUrl ? `
+                  <img src="${logoUrl}" alt="${companyName}" crossorigin="anonymous" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+                ` : `
+                  <img src="${dummyLogo}" alt="Company Logo" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+                `}
+              </div>
+            </div>
+            <!-- Site and Company Info Row -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; padding: 0;">
+              <div style="flex: 1;">
+                <div style="margin-bottom: 8px;">
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Site / Project</p>
+                  <p style="font-size: 24px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.2;">${siteName}</p>
+                </div>
+                <div>
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Company</p>
+                  <p style="font-size: 24px; margin: 0; color: #475569; font-weight: 600;">${companyName || 'N/A'}</p>
+                </div>
+              </div>
+              <!-- Document Date on Right -->
+              <div style="flex-shrink: 0; margin-left: 24px; text-align: right; padding: 10px 18px; border-radius: 6px; border: none; box-shadow: none;">
+                <p style="font-size: 18px; margin: 0 0 3px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Document Date</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700;">${generatedDate}</p>
               </div>
             </div>
           </div>
           
           <!-- Report Content -->
-          <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-            <!-- Project Info Section -->
-            <div style="margin-bottom: 32px; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                <div>
-                  <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Project / Site</div>
-                  <div style="font-size: 18px; font-weight: 700; color: #0f172a;">${activeSite?.name || 'N/A'}</div>
-                </div>
-                <div>
-                  <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Room / Area</div>
-                  <div style="font-size: 18px; font-weight: 700; color: #0f172a;">${room.name}</div>
-                </div>
+          <div style="padding: 32px 0; border: none;">
+            <!-- Room Info Section -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; padding: 0 40px 20px 40px; border-bottom: 1px solid #e5e7eb;">
+              <!-- Room Section -->
+              <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Room / Area</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${room.name}</p>
               </div>
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #cbd5e1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Total Items</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #0f172a;">${room.items.length}</div>
-                  </div>
-                  <div style="text-align: right;">
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Generated On</div>
-                    <div style="font-size: 13px; font-weight: 500; color: #475569;">${generatedDateTime}</div>
-                  </div>
-                </div>
+              <!-- Total Items Section -->
+              <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Items</p>
+                <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${room.items.length}</p>
               </div>
             </div>
 
             <!-- Category Summary -->
-            <div style="margin-bottom: 40px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">Summary by Category</h3>
-              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div style="margin-bottom: 24px; padding: 0 40px;">
+              <h3 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Summary by Category</h3>
+              <div style="background: white; border: none; border-radius: 6px; overflow: hidden;">
                 ${categoryRows}
               </div>
             </div>
             
             <!-- BOQ Items Table -->
-            <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">Detailed Items</h3>
-              <div style="overflow-x: visible; border: 2px solid #e5e7eb; border-radius: 12px; background: white;">
+            <div style="margin-bottom: 24px; padding: 0 40px;">
+              <h3 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Detailed Items</h3>
+              <div style="overflow-x: visible; border: none; border-radius: 6px; background: white;">
                 <table style="width: 100%; border-collapse: collapse; background: white; table-layout: fixed;">
                   <thead>
                     <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
-                      <th style="padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">S.No</th>
-                      <th style="padding: 14px 10px; text-align: left; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); min-width: 200px;">Item Description</th>
-                      <th style="padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Quantity</th>
-                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Base Rate</th>
-                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Purchase Rate</th>
-                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 110px;">Base Amount</th>
-                      <th style="padding: 14px 10px; text-align: right; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; width: 120px;">Purchase Amount</th>
+                      <th style="padding: 20px 18px; text-align: center; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">No.</th>
+                      <th style="padding: 20px 18px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 150px;">Item Description</th>
+                      <th style="padding: 20px 18px; text-align: center; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Quantity</th>
+                      <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Base Rate</th>
+                      <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Purchase Rate</th>
+                      <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 110px;">Base Amount</th>
+                      <th style="padding: 20px 18px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; width: 120px;">Purchase Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1538,27 +1549,26 @@ ${rooms.map((room: string) => {
             </div>
             
             <!-- Total Amounts Section -->
-            <div style="margin-top: 40px;">
-              <div style="padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #86efac;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 2px solid #86efac;">
-                  <div style="font-size: 16px; font-weight: 600; color: #166534;">Total Base Amount:</div>
-                  <div style="font-size: 20px; font-weight: 700; color: #166534;">${formatCurrency(totalBaseAmount)}</div>
+            <div style="margin-top: 24px; padding: 0 40px;">
+              <div style="padding: 28px 40px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 6px; border: none; box-shadow: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #86efac;">
+                  <div style="font-size: 24px; font-weight: 600; color: #166534;">Total Base Amount:</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #166534;">${formatCurrency(totalBaseAmount)}</div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="font-size: 20px; font-weight: 700; color: #166534;">Total Purchase Amount:</div>
-                  <div style="font-size: 32px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalPurchaseAmount)}</div>
+                  <div style="font-size: 24px; font-weight: 700; color: #166534;">Total Purchase Amount:</div>
+                  <div style="font-size: 28px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalPurchaseAmount)}</div>
                 </div>
               </div>
             </div>
             
             <!-- Footer -->
-            <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
-              <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
-                <p style="margin: 0 0 8px 0; font-weight: 500;">This is a computer-generated Bill of Quantities. No signature required.</p>
-                <p style="margin: 0;">Generated on ${generatedDateTime} by SiteZero</p>
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <div style="text-align: center; color: #9ca3af; font-size: 10px; margin-bottom: 8px;">
+                <p style="margin: 0 0 4px 0;">This is computer generated PDF, not required signature</p>
               </div>
-              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
-                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #1e293b; font-weight: 700;">SiteZero</span> - Professional Interior Design Management</p>
+              <div style="text-align: center; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; color: #6b7280; font-size: 10px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
               </div>
             </div>
           </div>
@@ -1567,27 +1577,100 @@ ${rooms.map((room: string) => {
 
       document.body.appendChild(reportDiv);
 
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Convert to PDF using html2canvas and jsPDF
-      const canvas = await html2canvas(reportDiv, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: reportDiv.scrollWidth,
-        height: reportDiv.scrollHeight,
+      // Wait for rendering and logo to load
+      await new Promise((resolve) => {
+        const img = reportDiv.querySelector('img') as HTMLImageElement;
+        if (img) {
+          // Set crossOrigin for CORS if it's not a data URI
+          if (!img.src.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+          }
+          
+          if (img.complete && img.naturalWidth > 0) {
+            // Image already loaded successfully
+            setTimeout(resolve, 300);
+          } else if (img.src.startsWith('data:')) {
+            // Data URI loads immediately
+            setTimeout(resolve, 200);
+          } else {
+            // Wait for image to load
+            const timeout = setTimeout(() => {
+              resolve(null);
+            }, 5000); // Max 5 second wait
+            
+            img.onload = () => {
+              clearTimeout(timeout);
+              setTimeout(resolve, 300);
+            };
+            img.onerror = () => {
+              clearTimeout(timeout);
+              // Replace with dummy logo if real logo fails
+              const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+              const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+              img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
+              setTimeout(resolve, 200);
+            };
+          }
+        } else {
+          setTimeout(resolve, 200);
+        }
       });
 
-      // Clean up
-      document.body.removeChild(reportDiv);
+      // First, render full content to get row positions
+      // Ensure footer is visible by scrolling to bottom if needed
+      const originalScrollTop = reportDiv.scrollTop;
+      reportDiv.scrollTop = reportDiv.scrollHeight;
+      
+      const fullCanvas = await html2canvas(reportDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        width: reportDiv.scrollWidth,
+        height: reportDiv.scrollHeight,
+        windowWidth: reportDiv.scrollWidth,
+        windowHeight: reportDiv.scrollHeight,
+        onclone: (clonedDoc) => {
+          // Ensure images are loaded in cloned document
+          const images = clonedDoc.querySelectorAll('img');
+          images.forEach((img) => {
+            if (img.complete && img.naturalWidth === 0) {
+              // Image failed to load, hide it
+              (img as HTMLElement).style.display = 'none';
+            }
+          });
+          // Ensure footer is visible in cloned document
+          const clonedReportDiv = clonedDoc.querySelector('[style*="width: 100%"]') as HTMLElement;
+          if (clonedReportDiv) {
+            clonedReportDiv.scrollTop = clonedReportDiv.scrollHeight;
+          }
+        }
+      });
+      
+      // Restore original scroll position
+      reportDiv.scrollTop = originalScrollTop;
+
+      // Get all table rows and their positions (in CSS pixels relative to reportDiv)
+      const tableRows = Array.from(reportDiv.querySelectorAll('tbody tr')) as HTMLElement[];
+      const rowPositions: Array<{ top: number; bottom: number; element: HTMLElement }> = [];
+      
+      tableRows.forEach((row) => {
+        const rect = row.getBoundingClientRect();
+        const reportRect = reportDiv.getBoundingClientRect();
+        rowPositions.push({
+          top: rect.top - reportRect.top,
+          bottom: rect.bottom - reportRect.top,
+          element: row
+        });
+      });
 
       const pdf = new jsPDF('p', 'mm', 'a4');
 
-      // Define margins to avoid cut edges
-      const marginTop = 25; // mm - space for header
-      const marginBottom = 30; // mm - space for footer
+      // Define margins
+      const marginTop = 8; // mm
+      const marginBottom = 15; // mm
       const marginLeft = 10; // mm
       const marginRight = 10; // mm
 
@@ -1596,97 +1679,97 @@ ${rooms.map((room: string) => {
       const contentWidth = pdfWidth - marginLeft - marginRight;
       const contentHeight = pdfHeight - marginTop - marginBottom;
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-
-      // Convert pixels to mm (96 DPI = 96 pixels per inch = 3.7795 pixels per mm)
+      // Convert pixels to mm (96 DPI = 0.264583 mm per CSS pixel)
       const pixelsToMm = 0.264583;
-      const imgWidthMm = imgWidth * pixelsToMm;
-      const imgHeightMm = imgHeight * pixelsToMm;
+      const scale = 2; // html2canvas scale factor
+      const imgWidth = fullCanvas.width; // canvas pixels
+      const imgHeight = fullCanvas.height; // canvas pixels
+      
+      // Convert canvas dimensions to CSS pixels, then to mm
+      const cssWidth = imgWidth / scale; // CSS pixels
+      const cssHeight = imgHeight / scale; // CSS pixels
+      const imgWidthMm = cssWidth * pixelsToMm; // mm
+      const imgHeightMm = cssHeight * pixelsToMm; // mm
 
       // Calculate ratio to fit content width
       const ratio = contentWidth / imgWidthMm;
       const scaledWidth = contentWidth;
       const scaledHeight = imgHeightMm * ratio;
 
-      // Calculate total pages needed
-      const totalPages = Math.ceil(scaledHeight / contentHeight) || 1;
+      // Convert row positions (CSS pixels) to scaled PDF coordinates (mm)
+      // Row positions are in CSS pixels relative to reportDiv
+      // Convert: CSS pixels -> mm -> scaled mm
+      const scaledRowPositions = rowPositions.map(pos => ({
+        top: (pos.top * pixelsToMm) * ratio,
+        bottom: (pos.bottom * pixelsToMm) * ratio,
+        element: pos.element
+      }));
 
-      // Helper function to add header on each page
-      const addHeader = (pageNum: number) => {
-        pdf.setFontSize(10);
-        pdf.setTextColor(30, 41, 59); // slate-800
-        pdf.setFont('helvetica', 'bold');
-
-        // Left side - Document title
-        pdf.text('BILL OF QUANTITIES', marginLeft, 12);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        const siteText = siteByCompany.length > 50 ? siteByCompany.substring(0, 47) + '...' : siteByCompany;
-        pdf.text(siteText, marginLeft, 16);
-
-        // Right side - Page number and Date
-        const pageText = `Page ${pageNum} of ${totalPages}`;
-        const pageTextWidth = pdf.getTextWidth(pageText);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, 12);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.text(generatedDate, pdfWidth - marginRight - pageTextWidth, 16);
-
-        // Header line
-        pdf.setDrawColor(226, 232, 240); // slate-200
-        pdf.setLineWidth(0.5);
-        pdf.line(marginLeft, 20, pdfWidth - marginRight, 20);
-      };
-
-      // Helper function to add footer on each page
-      const addFooter = (pageNum: number) => {
-        const footerY = pdfHeight - marginBottom + 12;
-
-        // Footer line
-        pdf.setDrawColor(226, 232, 240); // slate-200
-        pdf.setLineWidth(0.5);
-        pdf.line(marginLeft, footerY - 8, pdfWidth - marginRight, footerY - 8);
-
-        // Footer text
-        pdf.setFontSize(7);
-        pdf.setTextColor(107, 114, 128); // gray-500
-        pdf.setFont('helvetica', 'normal');
-
-        // Left side
-        pdf.text('Generated by SiteZero', marginLeft, footerY);
-
-        // Right side - Page number
-        const pageText = `Page ${pageNum} of ${totalPages}`;
-        const pageTextWidth = pdf.getTextWidth(pageText);
-        pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, footerY);
-
-        // Center - Generated time (if space allows)
-        const timeText = generatedDateTime;
-        const timeTextWidth = pdf.getTextWidth(timeText);
-        if (timeTextWidth < contentWidth * 0.7) {
-          pdf.text(timeText, (pdfWidth - timeTextWidth) / 2, footerY + 4);
-        }
-      };
-
-      // Add image across multiple pages
-      let imgY = marginTop;
-      let remainingHeight = scaledHeight;
+      // Generate pages ensuring rows aren't cut
+      let currentY = 0;
       let currentPage = 1;
       let sourceY = 0;
 
-      while (remainingHeight > 0) {
-        // Add header and footer before adding content
-        addHeader(currentPage);
-        addFooter(currentPage);
-
-        // Calculate how much of the image fits on this page
+      while (currentY < scaledHeight) {
+        // Calculate available height for this page
         const availableHeight = contentHeight;
-        const imageHeightForThisPage = Math.min(remainingHeight, availableHeight);
+        let pageEndY = currentY + availableHeight;
 
-        // Calculate source position in pixels
-        const sourceHeightPx = imageHeightForThisPage / ratio / pixelsToMm;
+        // Find the last row that fits completely on this page
+        let lastRowIndex = -1;
+        for (let i = 0; i < scaledRowPositions.length; i++) {
+          const row = scaledRowPositions[i];
+          // Check if row starts before page end
+          if (row.top < pageEndY) {
+            // If row would be cut, move page end to before this row
+            if (row.bottom > pageEndY && row.top > currentY) {
+              // This row would be cut, so end page before it
+              pageEndY = row.top;
+              break;
+            }
+            // Row fits completely
+            lastRowIndex = i;
+          } else {
+            // Row starts after page end
+            break;
+          }
+        }
+
+        // If we found rows that would be cut, adjust pageEndY
+        if (lastRowIndex >= 0) {
+          const lastRow = scaledRowPositions[lastRowIndex];
+          if (lastRow.bottom > pageEndY) {
+            // Last row would be cut, end page before it starts
+            if (lastRowIndex > 0) {
+              pageEndY = scaledRowPositions[lastRowIndex - 1].bottom;
+            } else {
+              // First row doesn't fit, include it anyway (will be on next page)
+              pageEndY = currentY + availableHeight;
+            }
+          } else {
+            // Include the last complete row
+            pageEndY = lastRow.bottom;
+          }
+        }
+
+        // Ensure we don't go beyond total height
+        const actualPageHeight = Math.min(pageEndY - currentY, scaledHeight - currentY);
+        
+        if (actualPageHeight <= 0 || actualPageHeight < 5) {
+          // No more content or too small to be a valid page (less than 5mm)
+          break;
+        }
+
+        // Calculate source position in canvas pixels
+        // actualPageHeight is in scaled mm
+        // Convert back: scaled mm -> mm -> CSS pixels -> canvas pixels
+        const sourceHeightCssPx = (actualPageHeight / ratio) / pixelsToMm;
+        const sourceHeightPx = sourceHeightCssPx * scale;
+
+        // Ensure we have valid source height and don't exceed canvas bounds
+        if (sourceHeightPx <= 0 || sourceHeightPx > imgHeight - sourceY) {
+          break;
+        }
 
         // Create a temporary canvas for this page's portion
         const pageCanvas = document.createElement('canvas');
@@ -1697,7 +1780,7 @@ ${rooms.map((room: string) => {
         if (pageCtx) {
           // Draw the portion of the original canvas
           pageCtx.drawImage(
-            canvas,
+            fullCanvas,
             0, sourceY, // source x, y
             imgWidth, sourceHeightPx, // source width, height
             0, 0, // destination x, y
@@ -1708,18 +1791,26 @@ ${rooms.map((room: string) => {
         const pageImgData = pageCanvas.toDataURL('image/png');
 
         // Add the image portion to PDF
-        pdf.addImage(pageImgData, 'PNG', marginLeft, imgY, scaledWidth, imageHeightForThisPage, undefined, 'FAST');
+        pdf.addImage(pageImgData, 'PNG', marginLeft, marginTop, scaledWidth, actualPageHeight, undefined, 'FAST');
 
         // Update for next iteration
-        remainingHeight -= availableHeight;
+        currentY = pageEndY;
         sourceY += sourceHeightPx;
 
-        if (remainingHeight > 0) {
+        // Only add new page if there's more substantial content remaining
+        // Check if we've reached the end or if remaining content is too small
+        const remainingHeight = scaledHeight - currentY;
+        if (remainingHeight > 10) { // Only add page if more than 10mm of content remains
           pdf.addPage();
           currentPage++;
-          imgY = marginTop;
+        } else {
+          // No more content, stop adding pages
+          break;
         }
       }
+
+      // Clean up
+      document.body.removeChild(reportDiv);
 
       return pdf;
     } catch (error) {
@@ -1771,6 +1862,8 @@ ${rooms.map((room: string) => {
         return;
       }
 
+      setIsExportingPDF(room.id);
+      
       // Try full PDF generation
       const pdf = await generatePDFFromElement(room);
       const projectName = activeSite?.name || 'Project';
@@ -1781,62 +1874,174 @@ ${rooms.map((room: string) => {
       console.error('Simple PDF export failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       showToast(`Failed to generate PDF: ${errorMessage}`, 'error');
+    } finally {
+      setIsExportingPDF(null);
     }
   };
 
   const handleShareBOQ = async (room: Room) => {
     try {
+      setIsSharingPDF(room.id);
       const pdf = await generatePDFFromElement(room);
       const blob = pdf.output('blob');
       const projectName = activeSite?.name || 'Project';
       const filename = `${projectName}_${room.name}_BOQ_${new Date().toISOString().split('T')[0]}.pdf`;
       const file = new File([blob], filename, { type: 'application/pdf' });
 
-      // Try Web Share API first
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Try Web Share API first (works on mobile and some desktop browsers)
+      if (navigator.share) {
         try {
-          await (navigator as any).share({
-            title: `BOQ for ${room.name}`,
-            text: `Bill of Quantities for ${room.name}`,
-            files: [file],
-          });
-          return;
-        } catch (err) {
-          console.error('Web Share failed:', err);
+          // Check if files can be shared
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `BOQ for ${room.name}`,
+              text: `Bill of Quantities for ${room.name}`,
+              files: [file],
+            });
+            showToast('BOQ shared successfully');
+            return;
+          } else {
+            // Try sharing without files (text only)
+            await navigator.share({
+              title: `BOQ for ${room.name}`,
+              text: `Bill of Quantities for ${room.name}. Download link will be provided.`,
+            });
+            // Download the file after sharing text
+            pdf.save(filename);
+            showToast('BOQ shared and downloaded');
+            return;
+          }
+        } catch (shareErr: any) {
+          // User cancelled or share failed, continue to fallback
+          if (shareErr.name !== 'AbortError') {
+            console.error('Web Share failed:', shareErr);
+          }
         }
       }
 
-      // WhatsApp sharing
+      // Fallback: Download the file and show WhatsApp option
       const url = URL.createObjectURL(blob);
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-        `BOQ for ${room.name}\n\nPlease find attached the Bill of Quantities document.\n\nGenerated by IntirorHub`
-      )}`;
-
-      // Open WhatsApp in new tab
-      window.open(whatsappUrl, '_blank');
-
-      // Also provide download as fallback
+      pdf.save(filename);
+      
+      // Show option to share via WhatsApp (text only, user needs to attach file manually)
+      const whatsappText = encodeURIComponent(
+        `BOQ for ${room.name}\n\nI've generated the Bill of Quantities document. Please check your downloads.\n\nGenerated by IntirorHub`
+      );
+      const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+      
+      // Ask user if they want to open WhatsApp
+      const openWhatsApp = window.confirm(
+        'PDF downloaded successfully!\n\nWould you like to open WhatsApp to share a message about this BOQ?'
+      );
+      
+      if (openWhatsApp) {
+        window.open(whatsappUrl, '_blank');
+      } else {
+        showToast('BOQ downloaded successfully');
+      }
+      
+      // Clean up URL after a delay
       setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = url;
-        const projectName = activeSite?.name || 'Project';
-        const filename = `${projectName}_${room.name}_BOQ_${new Date().toISOString().split('T')[0]}.pdf`;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 1000);
 
     } catch (err) {
       console.error('Share BOQ failed:', err);
+      showToast('Failed to share BOQ', 'error');
       // Fallback: just download
       try {
         const pdf = await generatePDFFromElement(room);
-        pdf.save(`${room.name}_BOQ.pdf`);
+        const projectName = activeSite?.name || 'Project';
+        const filename = `${projectName}_${room.name}_BOQ_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(filename);
+        showToast('BOQ downloaded successfully');
       } catch (fallbackErr) {
         console.error('Fallback download failed:', fallbackErr);
+        showToast('Failed to generate BOQ PDF', 'error');
       }
+    } finally {
+      setIsSharingPDF(null);
+    }
+  };
+
+  const handleShareAllBOQ = async () => {
+    try {
+      if (!activeSite?.id) {
+        showToast("Site missing", "error");
+        return;
+      }
+      if (!rooms?.length) {
+        showToast("No rooms to share", "error");
+        return;
+      }
+      const hasItems = rooms.some((r) => r.items?.length > 0);
+      if (!hasItems) {
+        showToast("No BOQ items to share", "error");
+        return;
+      }
+
+      setIsSharingAllPDF(true);
+      const pdf = await generateAllBOQPDF();
+      const blob = pdf.output("blob");
+      const projectName = activeSite?.name || "Project";
+      const filename = `${projectName.replace(/\s+/g, "_")}_Complete_BOQ_${new Date().toISOString().split("T")[0]}.pdf`;
+      const file = new File([blob], filename, { type: "application/pdf" });
+
+      if (navigator.share) {
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `Complete BOQ for ${projectName}`,
+              text: `Complete Bill of Quantities for ${projectName}`,
+              files: [file],
+            });
+            showToast("Complete BOQ shared successfully");
+            return;
+          }
+          await navigator.share({
+            title: `Complete BOQ for ${projectName}`,
+            text: `Complete Bill of Quantities for ${projectName}. Download link will be provided.`,
+          });
+          pdf.save(filename);
+          showToast("Complete BOQ shared and downloaded");
+          return;
+        } catch (shareErr: unknown) {
+          if (shareErr instanceof Error && shareErr.name !== "AbortError") {
+            console.error("Web Share failed:", shareErr);
+          }
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      pdf.save(filename);
+      const whatsappText = encodeURIComponent(
+        `Complete BOQ for ${projectName}\n\nI've generated the complete Bill of Quantities document for all rooms. Please check your downloads.\n\nGenerated by IntirorHub`
+      );
+      const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+      const openWhatsApp = window.confirm(
+        "PDF downloaded successfully!\n\nWould you like to open WhatsApp to share a message about this complete BOQ?"
+      );
+      if (openWhatsApp) {
+        window.open(whatsappUrl, "_blank");
+      } else {
+        showToast("Complete BOQ downloaded successfully");
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error("Share All BOQ failed:", err);
+      showToast("Failed to share complete BOQ", "error");
+      try {
+        const pdf = await generateAllBOQPDF();
+        const projectName = activeSite?.name || "Project";
+        const filename = `${projectName.replace(/\s+/g, "_")}_Complete_BOQ_${new Date().toISOString().split("T")[0]}.pdf`;
+        pdf.save(filename);
+        showToast("Complete BOQ downloaded successfully");
+      } catch (fallbackErr) {
+        console.error("Fallback download failed:", fallbackErr);
+        showToast("Failed to generate complete BOQ PDF", "error");
+      }
+    } finally {
+      setIsSharingAllPDF(false);
     }
   };
 
@@ -1890,6 +2095,7 @@ ${rooms.map((room: string) => {
         showToast('No materials found to export.', 'error');
         return;
       }
+      setIsExportingMaterialsPDF(true);
 
       // Calculate summary by category
       const categorySummary: Record<string, { count: number; totalCost: number }> = {};
@@ -1911,18 +2117,23 @@ ${rooms.map((room: string) => {
 
       const siteName = activeSite?.name || 'N/A';
       const companyName = user?.companyName || '';
-      const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+      const companyLogo = user?.companyLogo || '';
+      const logoUrl = companyLogo ? (companyLogo.startsWith('http') ? companyLogo : `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL}${companyLogo}`) : '';
+      const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+      const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+      const dummyLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
 
-      // Create a hidden div for report rendering
+      // Create a hidden div for report rendering (match BOQ: full width)
       const reportDiv = document.createElement('div');
       reportDiv.style.position = 'absolute';
       reportDiv.style.left = '-9999px';
-      reportDiv.style.width = '800px';
-      reportDiv.style.padding = '40px';
+      reportDiv.style.width = '100%';
+      reportDiv.style.maxWidth = '100%';
+      reportDiv.style.padding = '0';
       reportDiv.style.backgroundColor = '#ffffff';
       reportDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-      // Generate materials table rows
+      // Generate materials table rows (match BOQ: 22px font, same padding)
       const materialsRows = materials.map((material, index) => {
         const descriptionParts = material.description?.split("•") || [];
         const brand = descriptionParts[0]?.trim() || "";
@@ -1931,113 +2142,129 @@ ${rooms.map((room: string) => {
         const warrantyInfo = hasWarranty
           ? `${material.warranty?.duration || ''}${material.warranty?.model ? ` • ${material.warranty.model}` : ''}`.trim()
           : 'N/A';
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
 
         return `
-          <tr style="border-bottom: 1px solid #f3f4f6;">
-            <td style="padding: 12px 8px; text-align: center; font-size: 13px; color: #6b7280; font-weight: 500;">${index + 1}</td>
-            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">
-              <div style="font-weight: 600; margin-bottom: 4px;">${material.name || 'N/A'}</div>
-              ${brand || model ? `<div style="font-size: 11px; color: #6b7280;">${brand}${model ? ` • ${model}` : ''}</div>` : ''}
+          <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
+            <td style="padding: 10px 8px; text-align: center; font-size: 18px; color: #6b7280; font-weight: 500;">${index + 1}</td>
+            <td style="padding: 10px 8px; font-size: 18px; color: #111827; font-weight: 500;">
+              <div style="font-weight: 600; margin-bottom: 2px;">${material.name || 'N/A'}</div>
+              ${brand || model ? `<div style="font-size: 18px; color: #6b7280;">${brand}${model ? ` • ${model}` : ''}</div>` : ''}
             </td>
-            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">${material.category || 'N/A'}</td>
-            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">${material.installedAt || 'N/A'}</td>
-            <td style="padding: 12px 8px; font-size: 13px; color: #111827; font-weight: 500;">
-              ${material.vendor?.name || 'N/A'}${material.vendor?.city ? `<br><span style="font-size: 11px; color: #6b7280;">${material.vendor.city}</span>` : ''}
+            <td style="padding: 10px 8px; font-size: 18px; color: #111827; font-weight: 500;">${material.category || 'N/A'}</td>
+            <td style="padding: 10px 8px; font-size: 18px; color: #111827; font-weight: 500;">${material.installedAt || 'N/A'}</td>
+            <td style="padding: 10px 8px; font-size: 18px; color: #111827; font-weight: 500;">
+              ${material.vendor?.name || 'N/A'}${material.vendor?.city ? `<br><span style="font-size: 18px; color: #6b7280;">${material.vendor.city}</span>` : ''}
             </td>
-            <td style="padding: 12px 8px; text-align: right; font-size: 13px; color: #111827; font-weight: 600;">${formatCurrency(material.cost || 0)}</td>
-            <td style="padding: 12px 8px; font-size: 12px; color: #6b7280; font-weight: 400;">${warrantyInfo}</td>
+            <td style="padding: 10px 8px; text-align: right; font-size: 18px; color: #111827; font-weight: 600;">${formatCurrency(material.cost || 0)}</td>
+            <td style="padding: 10px 8px; font-size: 18px; color: #6b7280; font-weight: 400;">${warrantyInfo}</td>
           </tr>
         `;
       }).join('');
 
       // Generate category summary rows
-      const categoryRows = Object.entries(categorySummary).map(([category, summary]) => `
-        <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
-          <div style="font-weight: 600; color: #111827; font-size: 14px;">${category}</div>
-          <div style="font-weight: 600; color: #6b7280; font-size: 14px;">${summary.count} items</div>
-          <div style="font-weight: 600; color: #059669; font-size: 14px; text-align: right;">${formatCurrency(summary.totalCost)}</div>
-        </div>
-      `).join('');
+      const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
+        const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #111827; padding: 2px 8px; border-radius: 12px; font-size: 18px; font-weight: 600;">${categoryDisplay}</span>
+              <div style="font-weight: 600; color: #111827; font-size: 18px;">${summary.count} items</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 600; color: #059669; font-size: 18px;">${formatCurrency(summary.totalCost)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
 
       reportDiv.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
-          <!-- Header with Company Name -->
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
-            <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${siteByCompany}</h2>
-            <p style="font-size: 14px; margin: 0; opacity: 0.95;">Material Used Report</p>
+        <div style="width: 100%; margin: 0; background: white; padding: 3%; border: none; box-sizing: border-box;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 14px 20px; margin-top: 4px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 10px 0;">
+              <div style="flex: 1;">
+                <h1 style="font-size: 25px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; letter-spacing: -0.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Material Used Report</h1>
+                <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); margin-top: 4px; border-radius: 2px;"></div>
+              </div>
+              <div style="flex-shrink: 0; margin-left: 12px;">
+                ${logoUrl ? `<img src="${logoUrl}" alt="${companyName}" crossorigin="anonymous" style="max-height: 110px; max-width: 120px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />` : `<img src="${dummyLogo}" alt="Company Logo" style="max-height: 110px; max-width: 120px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />`}
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 8px; padding: 10px 0;">
+              <div style="flex: 1;">
+                <div style="margin-bottom: 4px;">
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Site / Project</p>
+                  <p style="font-size: 18px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.2;">${siteName}</p>
+                </div>
+                <div>
+                  <p style="font-size: 18px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Company</p>
+                  <p style="font-size: 18px; margin: 0; color: #475569; font-weight: 600;">${companyName || 'N/A'}</p>
+                </div>
+              </div>
+              <div style="flex-shrink: 0; margin-left: 12px; text-align: right; padding: 6px 10px; border-radius: 6px;">
+                <p style="font-size: 18px; margin: 0 0 2px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Document Date</p>
+                <p style="font-size: 18px; margin: 0; color: #0f172a; font-weight: 700;">${generatedDate}</p>
+              </div>
+            </div>
           </div>
           
-          <!-- Report Content -->
-          <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-            <!-- Report Title -->
-            <div style="text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
-              <h1 style="font-size: 36px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: 1px;">MATERIAL USED REPORT</h1>
-              <p style="font-size: 16px; color: #6b7280; margin: 0;">Complete Material Inventory</p>
-            </div>
-            
-            <!-- Report Details -->
-            <div style="margin-bottom: 32px;">
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Site/Project:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${activeSite?.name || 'N/A'}</div>
+          <div style="padding: 16px 3%; border: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; padding: 0 20px 12px 20px; border-bottom: 1px solid #e5e7eb;">
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 4px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Materials</p>
+                <p style="font-size: 18px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${materials.length}</p>
               </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Total Materials:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${materials.length}</div>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 16px 0;">
-                <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Generated Date:</div>
-                <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${generatedDate}</div>
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 6px; border: none;">
+                <p style="font-size: 18px; margin: 0 0 4px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Cost</p>
+                <p style="font-size: 18px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${formatCurrency(totalCost)}</p>
               </div>
             </div>
 
-            <!-- Category Summary -->
-            <div style="margin-bottom: 40px; padding: 24px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Summary by Category</h3>
-              ${categoryRows}
-              <div style="display: flex; justify-content: space-between; padding: 16px 0 0 0; margin-top: 16px; border-top: 2px solid #e5e7eb;">
-                <div style="font-weight: 700; color: #111827; font-size: 16px;">Total</div>
-                <div style="font-weight: 700; color: #059669; font-size: 16px; text-align: right;">${formatCurrency(totalCost)}</div>
+            <div style="margin-bottom: 14px; padding: 0 20px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb;">Summary by Category</h3>
+              <div style="background: white; border: none; border-radius: 6px; overflow: hidden;">
+                ${categoryRows}
               </div>
             </div>
             
-            <!-- Materials Table -->
-            <div style="margin-bottom: 32px;">
-              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">Material Details</h3>
-              <table style="width: 100%; border-collapse: collapse; background: white;">
-                <thead>
-                  <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">S.No</th>
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Material Name</th>
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Category</th>
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Installed At</th>
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Vendor</th>
-                    <th style="padding: 14px 8px; text-align: right; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Cost</th>
-                    <th style="padding: 14px 8px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Warranty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${materialsRows}
-                </tbody>
-              </table>
-            </div>
-            
-            <!-- Total Cost Section -->
-            <div style="margin-top: 40px; padding: 32px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #bae6fd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 20px; font-weight: 600; color: #0c4a6e;">Total Cost:</div>
-                <div style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalCost)}</div>
+            <div style="margin-bottom: 14px; padding: 0 20px;">
+              <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb;">Material Details</h3>
+              <div style="overflow-x: visible; border: none; border-radius: 6px; background: white;">
+                <table style="width: 100%; border-collapse: collapse; background: white; table-layout: fixed;">
+                  <thead>
+                    <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+                      <th style="padding: 10px 8px; text-align: center; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">No</th>
+                      <th style="padding: 10px 8px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">Material Name</th>
+                      <th style="padding: 10px 8px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">Category</th>
+                      <th style="padding: 10px 8px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">Installed At</th>
+                      <th style="padding: 10px 8px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">Vendor</th>
+                      <th style="padding: 10px 8px; text-align: right; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2);">Cost</th>
+                      <th style="padding: 10px 8px; text-align: left; font-size: 18px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px;">Warranty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${materialsRows}
+                  </tbody>
+                </table>
               </div>
             </div>
             
-            <!-- Footer -->
-            <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
-              <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
-                <p style="margin: 0 0 8px 0;">This is a computer-generated report. No signature required.</p>
-                <p style="margin: 0;">Generated on ${new Date().toLocaleString("en-IN")}</p>
+            <div style="margin-top: 14px; padding: 0 20px;">
+              <div style="padding: 16px 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 6px; border: none; box-shadow: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="font-size: 18px; font-weight: 700; color: #166534;">Total Cost:</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totalCost)}</div>
+                </div>
               </div>
-              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
-                <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
+            </div>
+            
+            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+              <div style="text-align: center; color: #9ca3af; font-size: 18px; margin-bottom: 6px;">
+                <p style="margin: 0 0 2px 0;">This is computer generated PDF, not required signature</p>
+              </div>
+              <div style="text-align: center; padding-top: 8px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; color: #6b7280; font-size: 9px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
               </div>
             </div>
           </div>
@@ -2046,15 +2273,28 @@ ${rooms.map((room: string) => {
 
       document.body.appendChild(reportDiv);
 
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+        const img = reportDiv.querySelector('img') as HTMLImageElement;
+        if (img) {
+          if (!img.src.startsWith('data:')) img.crossOrigin = 'anonymous';
+          if (img.complete && img.naturalWidth > 0) setTimeout(resolve, 300);
+          else if (img.src.startsWith('data:')) setTimeout(resolve, 200);
+          else {
+            const t = setTimeout(resolve, 5000);
+            img.onload = () => { clearTimeout(t); setTimeout(resolve, 300); };
+            img.onerror = () => { clearTimeout(t); img.src = dummyLogo; setTimeout(resolve, 200); };
+          }
+        } else setTimeout(resolve, 200);
+      });
 
-      // Convert to PDF using html2canvas and jsPDF
+      // Convert to PDF using html2canvas and jsPDF (match BOQ options)
       const canvas = await html2canvas(reportDiv, {
         scale: 2,
         useCORS: true,
+        allowTaint: false,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
       });
 
       // Clean up
@@ -2080,6 +2320,8 @@ ${rooms.map((room: string) => {
     } catch (error) {
       console.error('Error generating materials PDF:', error);
       showToast('Failed to generate PDF report. Please try again.', 'error');
+    } finally {
+      setIsExportingMaterialsPDF(false);
     }
   };
 
@@ -2737,10 +2979,20 @@ ${rooms.map((room: string) => {
                 </div>
                 <button
                   onClick={generateMaterialsPDF}
-                  className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition-transform"
+                  disabled={isExportingMaterialsPDF}
+                  className={`bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition-transform ${isExportingMaterialsPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <FileText className="w-3.5 h-3.5" />
-                  Report
+                  {isExportingMaterialsPDF ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5" />
+                      Report
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -3529,8 +3781,8 @@ ${rooms.map((room: string) => {
                   return (
                     <div id={`boq-room-${room.id}`} key={room.id} className="bg-white rounded-[2rem] px-2 py-3 mt-1 mb-0 shadow-xl shadow-slate-200/50 relative overflow-hidden">
                       {/* Room Header */}
-                      <div className="flex justify-between items-center mb-3 py-2">
-                        <div className="flex items-center gap-2 flex-1">
+                      <div className="flex justify-between items-center mb-3 py-2 gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                           <button
                             onClick={toggleRoom}
                             className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -3543,23 +3795,25 @@ ${rooms.map((room: string) => {
                             )}
                           </button>
                           {editingRoomId === room.id ? (
-                            <div className="flex items-center gap-2 flex-1">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
                               <input
                                 type="text"
                                 value={editedRoomName}
                                 onChange={(e) => setEditedRoomName(e.target.value)}
-                                className="text-xl font-bold text-slate-500 border-1 border-gray-200 rounded-lg px-2 py-1 focus:outline-none  focus:ring-2 focus:ring-gray-200"
+                                className="text-xl font-bold text-slate-500 border-1 border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-200 flex-1 min-w-[200px] max-w-[400px]"
                                 autoFocus
                               />
                               <button
                                 onClick={() => handleSaveRoomName()}
-                                className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+                                className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center flex-shrink-0"
+                                title="Save"
                               >
                                 <Check className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={handleCancelEdit}
-                                className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
+                                className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center flex-shrink-0"
+                                title="Cancel"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -3583,7 +3837,7 @@ ${rooms.map((room: string) => {
                             </div>
                           )}
                           {/* Show admin-only buttons when room is unlocked */}
-                          {isAdmin && !lockedRooms.has(room.id) && (
+                          {isAdmin && !lockedRooms.has(room.id) && editingRoomId !== room.id && (
                             <>
                               <button
                                 onClick={async (e) => {
@@ -3653,7 +3907,7 @@ ${rooms.map((room: string) => {
                               </button>
                             </>
                           )}
-                          {isAdmin && (
+                          {isAdmin && editingRoomId !== room.id && (
                             <button
                               onClick={() => handleDeleteRoomMaterials(activeSite?.id, room.name)}
                               title="Delete all materials of this room"
@@ -3662,7 +3916,7 @@ ${rooms.map((room: string) => {
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
-                          {canAddItems && !lockedRooms.has(room.id) ? (
+                          {canAddItems && !lockedRooms.has(room.id) && editingRoomId !== room.id ? (
                             <button
                               onClick={() => {
                                 setBoqForm({ ...boqForm, roomName: room.name });
@@ -3828,7 +4082,7 @@ ${rooms.map((room: string) => {
                                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pl-2">QUANTITY</span>
                                         <div className="flex items-center gap-2">
                                           <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{formatUnit(item.unit)}</span>
+                                            <span className="text-[18px] font-bold text-slate-400 uppercase tracking-wider">{formatUnit(item.unit)}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             {isAdmin && !lockedRooms.has(room.id) ? (
@@ -4000,18 +4254,37 @@ ${rooms.map((room: string) => {
                           <div className="flex gap-3">
                             <button
                               onClick={() => handleExportPDF(room)}
-                              disabled={room.items.length === 0}
-                              className={`flex-1 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-800/10 ${room.items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={room.items.length === 0 || isExportingPDF === room.id}
+                              className={`flex-1 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-800/10 ${room.items.length === 0 || isExportingPDF === room.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              <Download className="w-4 h-4" />
-                              Export PDF
+                              {isExportingPDF === room.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  Export PDF
+                                </>
+                              )}
                             </button>
                             <button
                               onClick={() => handleShareBOQ(room)}
-                              className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+                              disabled={room.items.length === 0 || isSharingPDF === room.id}
+                              className={`flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors ${room.items.length === 0 || isSharingPDF === room.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              <Share2 className="w-4 h-4" />
-                              Share BOQ
+                              {isSharingPDF === room.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Sharing...
+                                </>
+                              ) : (
+                                <>
+                                  <Share2 className="w-4 h-4" />
+                                  Share BOQ
+                                </>
+                              )}
                             </button>
                           </div>
                         </>
@@ -4029,17 +4302,39 @@ ${rooms.map((room: string) => {
               <div className="bg-white rounded-2xl px-4 py-4 mt-6 shadow-md border border-slate-200 flex gap-3">
                 <button
                   onClick={handleExportCompleteBOQPDF}
-                  className="flex-1 bg-slate-900 text-white py-3 rounded-xl"
+                  disabled={isExportingAllPDF}
+                  className={`flex-1 bg-slate-900 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-medium hover:bg-slate-800 transition-colors duration-200 ${isExportingAllPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Export Complete BOQ PDF
+                  {isExportingAllPDF ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} />
+                      Export All BOQs
+                    </>
+                  )}
                 </button>
 
 
                 <button
-                  // onClick={handleShareCompleteBOQ}
-                  className="flex-1 bg-white border py-3 rounded-xl"
+                  onClick={handleShareAllBOQ}
+                  disabled={isSharingAllPDF}
+                  className={`flex-1 bg-white border border-slate-300 py-3 rounded-xl flex items-center justify-center gap-2 font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors duration-200 ${isSharingAllPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Share Complete BOQ
+                  {isSharingAllPDF ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Sharing...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 size={18} />
+                      Share All BOQs
+                    </>
+                  )}
                 </button>
               </div>
             </>

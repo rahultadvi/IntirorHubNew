@@ -33,6 +33,7 @@ const Payments: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Bank Transfer' | 'UPI' | 'NEFT'>('Bank Transfer');
   const [paymentDate, setPaymentDate] = useState("");
   const [selectedPaymentAmount, setSelectedPaymentAmount] = useState<number>(0);
+  const [downloadingPaymentId, setDownloadingPaymentId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -213,8 +214,9 @@ const Payments: React.FC = () => {
     const receiptDiv = document.createElement('div');
     receiptDiv.style.position = 'absolute';
     receiptDiv.style.left = '-9999px';
-    receiptDiv.style.width = '800px';
-    receiptDiv.style.padding = '40px';
+    receiptDiv.style.width = '100%';
+    receiptDiv.style.maxWidth = '210mm'; // A4 width
+    receiptDiv.style.padding = '0';
     receiptDiv.style.backgroundColor = '#ffffff';
     receiptDiv.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
     
@@ -223,79 +225,140 @@ const Payments: React.FC = () => {
     
     const siteName = activeSite?.name || 'N/A';
     const companyName = user?.companyName || '';
-    const siteByCompany = companyName ? `${siteName} By ${companyName}` : siteName;
+    const companyLogo = user?.companyLogo || '';
+    const logoUrl = companyLogo ? (companyLogo.startsWith('http') ? companyLogo : `${import.meta.env.VITE_BACKEND_URL}${companyLogo}`) : '';
+    
+    // Get payment date - use paidDate if paid, otherwise use current date
+    const paymentDate = payment.status === 'paid' && payment.paidDate 
+      ? new Date(payment.paidDate).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        })
+      : new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        });
+    
+    // Dummy logo SVG if no logo present
+    const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+    const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+    const dummyLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
     
     receiptDiv.innerHTML = `
-      <div style="max-width: 800px; margin: 0 auto; background: white; padding: 0;">
-        <!-- Header with Company Name -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 48px; border-radius: 12px 12px 0 0; color: white;">
-          <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px;">${siteByCompany}</h2>
-          <p style="font-size: 14px; margin: 0; opacity: 0.95;">Payment Receipt</p>
+      <div style="width: 100%; margin: 0; background: white; padding: 0; border: none;">
+        <!-- Professional Header with Logo at Top Right -->
+        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 20px 0; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding: 0;">
+            <!-- Left Side: Payment Receipt Title -->
+            <div style="flex: 1;">
+              <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Payment Receipt</h1>
+              <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); margin-top: 6px; border-radius: 2px;"></div>
+            </div>
+            <!-- Right Side: Logo at Top -->
+            <div style="flex-shrink: 0; margin-left: 24px;">
+              ${logoUrl ? `
+                <img src="${logoUrl}" alt="${companyName}" crossorigin="anonymous" style="max-height: 60px; max-width: 140px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+              ` : `
+                <img src="${dummyLogo}" alt="Company Logo" style="max-height: 60px; max-width: 140px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+              `}
+            </div>
+          </div>
+          <!-- Site and Company Info Row -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px; padding: 0;">
+            <div style="flex: 1;">
+              <div style="margin-bottom: 6px;">
+                <p style="font-size: 10px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Site / Project</p>
+                <p style="font-size: 15px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.2;">${siteName}</p>
+              </div>
+              <div>
+                <p style="font-size: 10px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Company</p>
+                <p style="font-size: 13px; margin: 0; color: #475569; font-weight: 600;">${companyName || 'N/A'}</p>
+              </div>
+            </div>
+            <!-- Payment Date on Right -->
+            <div style="flex-shrink: 0; margin-left: 24px; text-align: right; padding: 8px 16px; border-radius: 6px; border: none; box-shadow: none;">
+              <p style="font-size: 9px; margin: 0 0 3px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Payment Date</p>
+              <p style="font-size: 12px; margin: 0; color: #0f172a; font-weight: 700;">${paymentDate}</p>
+            </div>
+          </div>
         </div>
         
         <!-- Receipt Content -->
-        <div style="padding: 48px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-          <!-- Receipt Title -->
-          <div style="text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
-            <h1 style="font-size: 36px; font-weight: 700; color: #111827; margin: 0 0 8px 0; letter-spacing: 1px;">PAYMENT RECEIPT</h1>
-            <p style="font-size: 16px; color: #6b7280; margin: 0;">Official Payment Confirmation</p>
+        <div style="padding: 32px 0; border: none;">
+          <!-- From and Billed To Section -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; padding: 0 40px 18px 40px; border-bottom: 1px solid #e5e7eb;">
+            <!-- From Section -->
+            <div style="background: #f8fafc; padding: 12px 16px; border-radius: 6px; border: none;">
+              <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">From</p>
+              <p style="font-size: 14px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${companyName || 'N/A'}</p>
+            </div>
+            <!-- Billed To Section -->
+            <div style="background: #f8fafc; padding: 12px 16px; border-radius: 6px; border: none;">
+              <p style="font-size: 18px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Billed To</p>
+              <p style="font-size: 14px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${activeSite?.clientEmail || 'N/A'}</p>
+              ${activeSite?.clientPhone ? `
+                <p style="font-size: 11px; margin: 3px 0 0 0; color: #64748b; font-weight: 500;">${activeSite.clientPhone}</p>
+              ` : ''}
+            </div>
           </div>
           
           <!-- Receipt Details -->
-          <div style="margin-bottom: 32px;">
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Receipt Number:</div>
-              <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; letter-spacing: 0.5px;">#${payment._id.slice(-8).toUpperCase()}</div>
+          <div style="margin-bottom: 24px; padding: 0;">
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Receipt Number:</div>
+              <div style="font-weight: 600; color: #111827; font-size: 18px; text-align: right; letter-spacing: 0.5px;">#${payment._id.slice(-8).toUpperCase()}</div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Title:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${payment.title || 'N/A'}</div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Payment Title:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right;">${payment.title || 'N/A'}</div>
             </div>
             ${payment.description ? `
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Description:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right; max-width: 60%;">${payment.description}</div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Description:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right; max-width: 60%;">${payment.description}</div>
             </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Site/Project:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${activeSite?.name || 'N/A'}</div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Site/Project:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right;">${activeSite?.name || 'N/A'}</div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Due Date:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date(payment.dueDate).toLocaleDateString("en-IN", {
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Due Date:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right;">${new Date(payment.dueDate).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "long",
                 year: "numeric"
               })}</div>
             </div>
             ${payment.status === 'paid' && payment.paidDate ? `
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Date:</div>
-              <div style="font-weight: 600; color: #059669; font-size: 14px; text-align: right;">${new Date(payment.paidDate).toLocaleDateString("en-IN", {
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Payment Date:</div>
+              <div style="font-weight: 600; color: #059669; font-size: 18px; text-align: right;">${new Date(payment.paidDate).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "long",
                 year: "numeric"
               })}</div>
             </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Payment Made By:</div>
-              <div style="font-weight: 600; color: #111827; font-size: 14px; text-align: right; padding: 4px 12px;  border-radius: 6px; display: inline-block;">
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Payment Made By:</div>
+              <div style="font-weight: 600; color: #111827; font-size: 18px; text-align: right; padding: 3px 10px; border-radius: 4px; display: inline-block;">
                 ${receiptPaymentMethod}
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Status:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">
-                <span style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; color: ${payment.status === 'paid' ? '#059669' : '#d97706'};">
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18px;">Status:</div>
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right;">
+                <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${payment.status === 'paid' ? '#059669' : '#d97706'};">
                   ${payment.status.toUpperCase()}
                 </span>
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 16px 0;">
-              <div style="font-weight: 600; color: #6b7280; font-size: 14px;">Generated Date:</div>
-              <div style="font-weight: 500; color: #111827; font-size: 14px; text-align: right;">${new Date().toLocaleDateString("en-IN", {
+            <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+              <div style="font-weight: 600; color: #6b7280; font-size: 18
+              <div style="font-weight: 500; color: #111827; font-size: 18px; text-align: right;">${new Date().toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "long",
                 year: "numeric"
@@ -304,21 +367,21 @@ const Payments: React.FC = () => {
           </div>
           
           <!-- Amount Section -->
-          <div style="margin-top: 40px; padding: 32px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #bae6fd; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+          <div style="margin-top: 24px; padding: 16px 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 6px; border: none; box-shadow: none; margin-left: 40px; margin-right: 40px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div style="font-size: 20px; font-weight: 600; color: #0c4a6e;">Amount ${payment.status === 'paid' ? 'Paid' : 'Due'}:</div>
-              <div style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(payment.amount)}</div>
+              <div style="font-size: 18px; font-weight: 600; color: #0c4a6e;">Amount ${payment.status === 'paid' ? 'Paid' : 'Due'}:</div>
+              <div style="font-size: 24px; font-weight: 700; color: #059669; letter-spacing: -0.5px;">${formatCurrency(payment.amount)}</div>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="margin-top: 48px; padding-top: 32px; border-top: 2px solid #e5e7eb;">
-            <div style="text-align: center; color: #9ca3af; font-size: 12px; margin-bottom: 16px;">
-              <p style="margin: 0 0 8px 0;">This is a computer-generated receipt. No signature required.</p>
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+            <div style="text-align: center; color: #9ca3af; font-size: 18px; margin-bottom: 8px;">
+              <p style="margin: 0 0 4px 0;">This is a computer-generated receipt. No signature required.</p>
               <p style="margin: 0;">Generated on ${new Date().toLocaleString("en-IN")}</p>
             </div>
-            <div style="text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
-              <p style="margin: 0; color: #6b7280; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
+            <div style="text-align: center; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+              <p style="margin: 0; color: #6b7280; font-size: 18px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
             </div>
           </div>
         </div>
@@ -327,15 +390,63 @@ const Payments: React.FC = () => {
     
     document.body.appendChild(receiptDiv);
     
-    // Wait for rendering
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for rendering and logo to load
+    await new Promise((resolve) => {
+      const img = receiptDiv.querySelector('img') as HTMLImageElement;
+      if (img) {
+        // Set crossOrigin for CORS if it's not a data URI
+        if (!img.src.startsWith('data:')) {
+          img.crossOrigin = 'anonymous';
+        }
+        
+        if (img.complete && img.naturalWidth > 0) {
+          // Image already loaded successfully
+          setTimeout(resolve, 300);
+        } else if (img.src.startsWith('data:')) {
+          // Data URI loads immediately
+          setTimeout(resolve, 200);
+        } else {
+          // Wait for image to load
+          const timeout = setTimeout(() => {
+            resolve(null);
+          }, 5000); // Max 5 second wait
+          
+          img.onload = () => {
+            clearTimeout(timeout);
+            setTimeout(resolve, 300);
+          };
+          img.onerror = () => {
+            clearTimeout(timeout);
+            // Replace with dummy logo if real logo fails
+            const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
+            const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
+            img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
+            setTimeout(resolve, 200);
+          };
+        }
+      } else {
+        setTimeout(resolve, 200);
+      }
+    });
     
     // Convert to PDF using html2canvas and jsPDF
     const canvas = await html2canvas(receiptDiv, {
       scale: 2,
       useCORS: true,
+      allowTaint: false,
       logging: false,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      imageTimeout: 15000,
+      onclone: (clonedDoc) => {
+        // Ensure images are loaded in cloned document
+        const images = clonedDoc.querySelectorAll('img');
+        images.forEach((img) => {
+          if (img.complete && img.naturalWidth === 0) {
+            // Image failed to load, hide it
+            (img as HTMLElement).style.display = 'none';
+          }
+        });
+      }
     });
     
     // Clean up
@@ -343,9 +454,9 @@ const Payments: React.FC = () => {
     
     const pdf = new jsPDF('p', 'mm', 'a4');
 
-    // Define margins to avoid cut edges
-    const marginTop = 25; // mm - space for header
-    const marginBottom = 30; // mm - space for footer
+    // Define margins to avoid cut edges - optimized for single page
+    const marginTop = 8; // mm - minimal top margin
+    const marginBottom = 15; // mm - space for footer
     const marginLeft = 10; // mm
     const marginRight = 10; // mm
     
@@ -378,33 +489,7 @@ const Payments: React.FC = () => {
       minute: "2-digit"
     });
 
-    // Helper function to add header on each page
-    const addHeader = (pageNum: number) => {
-      pdf.setFontSize(10);
-      pdf.setTextColor(30, 41, 59); // slate-800
-      pdf.setFont('helvetica', 'bold');
-      
-      // Left side - Document title
-      pdf.text('PAYMENT RECEIPT', marginLeft, 12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      const siteText = siteByCompany.length > 50 ? siteByCompany.substring(0, 47) + '...' : siteByCompany;
-      pdf.text(siteText, marginLeft, 16);
-      
-      // Right side - Page number and Date
-      const pageText = `Page ${pageNum} of ${totalPages}`;
-      const pageTextWidth = pdf.getTextWidth(pageText);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(pageText, pdfWidth - marginRight - pageTextWidth, 12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.text(generatedDateTime, pdfWidth - marginRight - pageTextWidth, 16);
-      
-      // Header line
-      pdf.setDrawColor(226, 232, 240); // slate-200
-      pdf.setLineWidth(0.5);
-      pdf.line(marginLeft, 20, pdfWidth - marginRight, 20);
-    };
+ 
 
     // Helper function to add footer on each page
     const addFooter = (pageNum: number) => {
@@ -443,8 +528,7 @@ const Payments: React.FC = () => {
     let sourceY = 0;
 
     while (remainingHeight > 0) {
-      // Add header and footer before adding content
-      addHeader(currentPage);
+      // Add footer before adding content
       addFooter(currentPage);
       
       // Calculate how much of the image fits on this page
@@ -501,6 +585,7 @@ const Payments: React.FC = () => {
     }
 
     try {
+      setDownloadingPaymentId(paymentId);
       const pdfBlob = await generatePDFBlob(payment);
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
@@ -515,6 +600,8 @@ const Payments: React.FC = () => {
     } catch (error) {
       console.error("Error generating receipt:", error);
       showToast("Failed to generate receipt", "error");
+    } finally {
+      setDownloadingPaymentId(null);
     }
   };
 
@@ -942,10 +1029,20 @@ const Payments: React.FC = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleDownloadInvoice(payment._id)}
-                    className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all"
+                    disabled={downloadingPaymentId === payment._id}
+                    className={`flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all ${downloadingPaymentId === payment._id ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    <Download className="w-5 h-5" />
-                    Download
+                    {downloadingPaymentId === payment._id ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5" />
+                        Download
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => handleShareInvoice(payment._id)}
@@ -986,10 +1083,20 @@ const Payments: React.FC = () => {
                     <div className="flex gap-3 w-full">
                       <button
                         onClick={() => handleDownloadInvoice(payment._id)}
-                        className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all"
+                        disabled={downloadingPaymentId === payment._id}
+                        className={`flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gray-900/50 transition-all ${downloadingPaymentId === payment._id ? 'opacity-70 cursor-not-allowed' : ''}`}
                       >
-                        <Download className="w-5 h-5" />
-                        Download
+                        {downloadingPaymentId === payment._id ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-5 h-5" />
+                            Download
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => handleShareInvoice(payment._id)}

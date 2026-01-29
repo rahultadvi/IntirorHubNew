@@ -20,6 +20,7 @@ import AdminSignup from "./pages/AdminSignup";
 import Adminpanel from "./pages/Adminpanel";
 import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
+import Landing from "./pages/Landing";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SiteProvider } from "./context/SiteContext";
@@ -36,7 +37,7 @@ const PublicRoute = ({ children }: { children: ReactElement }) => {
 const RootRedirect = () => {
   const { token } = useAuth();
   if (token) return <Navigate to="/home" replace />;
-  return <Navigate to="/login" replace />;
+  return <Landing />;
 };
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {

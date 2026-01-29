@@ -5,6 +5,14 @@
   text-align: center;
 }
 
+/* Landing page: full width, no side gapping */
+#root:has(.landing-full-width) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

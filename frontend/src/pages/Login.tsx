@@ -20,6 +20,15 @@ const Login: React.FC = () => {
     }
   }, [location.state]);
 
+  useEffect(() => {
+    // Prevent body scroll
+    document.body.style.overflow = "hidden";
+    return () => {
+      // Restore body scroll on unmount
+      document.body.style.overflow = "unset";
+    };
+  }, []);
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
@@ -53,7 +62,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white text-black">
+    <div className="h-screen w-full flex bg-white text-black overflow-hidden">
       <div className="hidden lg:flex lg:w-1/2 bg-[#040404] text-white flex-col justify-center items-center p-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_#060606,_#000000_60%)] opacity-80"></div>
         <div className="relative z-10 text-center max-w-lg">
@@ -66,7 +75,7 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center py-16 px-6 sm:px-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 sm:px-12 overflow-y-auto py-8">
         <div className="w-full max-w-md space-y-8">
           <div className="flex items-center justify-between lg:hidden">
             <Link to="/" className="flex items-center gap-3 no-underline">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Building2, Mail, Lock, Eye, EyeOff, Phone, Briefcase, User, Loader2 } from "lucide-react";
 import { authApi, ApiError } from "../services/api";
@@ -133,8 +133,17 @@ const Signup: React.FC = () => {
     setSuccess(null);
   };
 
+  useEffect(() => {
+    // Prevent body scroll
+    document.body.style.overflow = "hidden";
+    return () => {
+      // Restore body scroll on unmount
+      document.body.style.overflow = "unset";
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex bg-white text-black">
+    <div className="h-screen w-full flex bg-white text-black overflow-hidden">
       <div className="hidden lg:flex lg:w-1/2 bg-[#050505] text-white flex-col justify-center items-center p-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#111111,_#050505_60%)] opacity-80"></div>
         <div className="relative z-10 text-center max-w-lg">
@@ -147,7 +156,7 @@ const Signup: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center py-16 px-6 sm:px-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 sm:px-12 overflow-y-auto py-8">
         <div className="w-full max-w-lg space-y-8">
           <div className="flex items-center justify-between lg:hidden">
             <Link to="/" className="flex items-center gap-3 no-underline">
