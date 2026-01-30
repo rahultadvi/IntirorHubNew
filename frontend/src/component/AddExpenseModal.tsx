@@ -45,8 +45,7 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitExpense = async (closeAfterSave: boolean) => {
     if (!token) return alert('Not authenticated');
     if (!title || amount === '' || !dueDate) return alert('Please fill title, amount and due date');
     
@@ -54,12 +53,9 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
     if (budgetAllocation && budgetAllocation.categories) {
       const categoryBudget = budgetAllocation.categories[category] || 0;
       if (categoryBudget > 0) {
-        // Calculate total spent in this category (approved expenses)
         const totalSpentInCategory = existingExpenses
           .filter(e => e.category === category && e.status === 'approved')
           .reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        // Check if adding this expense would exceed the allocated budget
         const newTotal = totalSpentInCategory + Number(amount);
         if (newTotal > categoryBudget) {
           const remaining = categoryBudget - totalSpentInCategory;
@@ -109,7 +105,6 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
       }
 
       await expenseApi.addExpense(body, token);
-      // Reset form fields
       setTitle('');
       setDescription('');
       setCategory(categories[0]);
@@ -119,13 +114,20 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
       setVendorName('');
       setFile(null);
       onCreated();
-      onClose();
+      if (closeAfterSave) {
+        onClose();
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to create expense');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitExpense(true);
   };
 
   return (
@@ -295,9 +297,17 @@ const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose, onCreated, token, s
             </div>
           </div>
 
-          <div className="col-span-2 flex flex-row items-center justify-end gap-2 mt-2">
+          <div className="col-span-2 flex flex-row items-center justify-end gap-2 mt-2 flex-wrap">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 transition-colors text-sm">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">{loading ? 'Saving...' : 'Create'}</button>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); submitExpense(false); }}
+              disabled={loading}
+              className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {loading ? 'Saving...' : 'Save & Add Another'}
+            </button>
+            <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">{loading ? 'Saving...' : 'Save'}</button>
           </div>
         </form>
       </div>
