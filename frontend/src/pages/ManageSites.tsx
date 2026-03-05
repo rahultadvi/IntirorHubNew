@@ -423,6 +423,7 @@ const EditSiteModal: React.FC<{
             <X className="w-5 h-5" />
           </button>
         </div>
+           <div className="flex-1 overflow-y-auto pr-2">
         <label className="block mb-3 text-sm">
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
@@ -454,6 +455,7 @@ const EditSiteModal: React.FC<{
         <div className="flex flex-row items-center justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
           <button onClick={save} disabled={loading} className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving' : 'Save'}</button>
+          </div>
         </div>
       </div>
     </div>
