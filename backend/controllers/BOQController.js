@@ -7,7 +7,6 @@ import User from '../models/userModel.js';
 import { getUploadedFilePath } from '../utils/multer.js';
 import fs from 'fs';
 import path from 'path';
-import puppeteer from 'puppeteer';
 
 const REFERENCE_IMAGE_FOLDER = path.join(process.cwd(), 'uploads', 'boq-images');
 
@@ -530,240 +529,19 @@ export const unlockBOQRoom = async (req, res) => {
 
 
 
-export const exportAllBOQToPDF = async (req, res) => {
-  // This function has been moved to frontend - PDF generation now happens client-side
-  return res.status(410).json({ 
-    message: 'PDF export has been moved to frontend. Please use the frontend export functionality.' 
-  });
-};
-
 /**
- * Calculate totals for BOQ items
-    month: "long",
-    year: "numeric"
-  });
-
-  const generatedDateTime = new Date().toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  // Build logo URL (matching frontend format exactly)
-  // Frontend uses: VITE_BACKEND_URL || VITE_API_BASE_URL
-  // Backend should use the same base URL
-  const BACKEND_URL = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : 'http://localhost:2001';
-  const logoUrl = companyLogo ? (companyLogo.startsWith('http') ? companyLogo : `${BACKEND_URL}${companyLogo}`) : '';
-  const logoText = (companyName || 'LOGO').substring(0, 8).toUpperCase();
-  const dummyLogoSvg = `<svg width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="60" fill="#1e293b" rx="8"/><text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${logoText}</text></svg>`;
-  const dummyLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dummyLogoSvg)}`;
-
-  // Generate category summary rows (matching frontend format)
-  const categoryRows = Object.entries(categorySummary).map(([category, summary]) => {
-    const categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1);
-    return `
-      <div style="display: flex; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid #e5e7eb;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="color: #111827; padding: 4px 12px; border-radius: 16px; font-size: 22px; font-weight: 600;">${categoryDisplay}</span>
-          <div style="font-weight: 600; color: #111827; font-size: 24px;">${summary.count} items</div>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 19px; color: #6b7280; margin-bottom: 2px;">Base: ${formatCurrency(summary.base)}</div>
-          <div style="font-weight: 600; color: #059669; font-size: 24px;">Purchase: ${formatCurrency(summary.purchase)}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Generate HTML for all rooms
-  let roomsHTML = '';
-  rooms.forEach((roomName, roomIndex) => {
-    const roomItems = groupedByRoom[roomName];
-    
-    // Generate item rows for this room
-    const itemRows = roomItems.map((item, index) => {
-      const baseAmount = item.quantity * item.rate;
-      const purchaseRate = item.purchaseRate !== null && item.purchaseRate !== undefined ? item.purchaseRate : item.rate;
-      const purchaseAmount = item.quantity * purchaseRate;
-      const categoryDisplay = typeof item.category === 'string' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : (item.category || 'N/A');
-      const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
-
-      return `
-        <tr style="border-bottom: 1px solid #e5e7eb; background-color: ${rowBg};">
-          <td style="padding: 22px 20px; text-align: center; font-size: 21px; color: #6b7280; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 50px;">${index + 1}</td>
-          <td style="padding: 22px 20px; font-size: 21px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 150px;">
-            <div style="font-weight: 600; margin-bottom: 4px; color: #111827; line-height: 1.4; font-size: 21px;">${(item.itemName || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-            <div style="font-size: 17px; color: #6b7280; margin-top: 4px;">
-              <span style="color: #111827; padding: 2px 8px; border-radius: 10px; font-weight: 500; display: inline-block; font-size: 17px;">${categoryDisplay}</span>
-            </div>
-          </td>
-          <td style="padding: 22px 20px; text-align: center; font-size: 21px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px;">
-            <div style="font-weight: 600; margin-bottom: 2px; font-size: 21px;">${item.quantity}</div>
-            <div style="font-size: 17px; color: #6b7280;">${formatUnit(item.unit)}</div>
-          </td>
-          <td style="padding: 22px 20px; text-align: right; font-size: 21px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(item.rate)}</td>
-          <td style="padding: 22px 20px; text-align: right; font-size: 21px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 100px; white-space: nowrap;">${formatCurrency(purchaseRate)}</td>
-          <td style="padding: 22px 20px; text-align: right; font-size: 21px; color: #111827; font-weight: 500; vertical-align: middle; border-right: 1px solid #e5e7eb; width: 110px; white-space: nowrap;">${formatCurrency(baseAmount)}</td>
-          <td style="padding: 22px 20px; text-align: right; font-size: 21px; color: #059669; font-weight: 600; vertical-align: middle; width: 120px; white-space: nowrap;">${formatCurrency(purchaseAmount)}</td>
-        </tr>
-      `;
-    }).join('');
-
-    roomsHTML += `
-      ${roomIndex === 0 ? `
-        <div style="margin-bottom: 24px; padding: 0 40px;">
-          <h3 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Detailed Items</h3>
-        </div>
-      ` : ''}
-      <div style="margin-bottom: 24px; padding: 0 40px;">
-        <h4 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 12px 0;">${roomName}</h4>
-        <div style="overflow-x: visible; border: none; border-radius: 6px; background: white;">
-          <table style="width: 100%; border-collapse: collapse; background: white; table-layout: fixed;">
-            <thead>
-              <tr style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
-                <th style="padding: 20px 18px; text-align: center; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">S.No</th>
-                <th style="padding: 20px 18px; text-align: left; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 150px;">Item Description</th>
-                <th style="padding: 20px 18px; text-align: center; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Quantity</th>
-                <th style="padding: 20px 18px; text-align: right; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Base Rate</th>
-                <th style="padding: 20px 18px; text-align: right; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 100px;">Purchase Rate</th>
-                <th style="padding: 20px 18px; text-align: right; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.2); width: 110px;">Base Amount</th>
-                <th style="padding: 20px 18px; text-align: right; font-size: 19px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; width: 120px;">Purchase Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>BOQ Report - ${site.name}</title>
-      <style>
-        @media print {
-          @page {
-            margin: 0;
-            size: A4;
-          }
-        }
-      </style>
-    </head>
-    <body style="margin: 0; padding: 0; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-      <div style="width: 100%; margin: 0; background: white; padding: 0; border: none;">
-        <!-- Professional Header with Logo at Top Right -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px 40px; margin-top: 8px; border-bottom: 1px solid #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding: 0;">
-            <!-- Left Side: BOQ Title -->
-            <div style="flex: 1;">
-              <h1 style="font-size: 48px; font-weight: 800; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Bill of Quantities</h1>
-              <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); margin-top: 6px; border-radius: 2px;"></div>
-            </div>
-            <!-- Right Side: Logo at Top -->
-            <div style="flex-shrink: 0; margin-left: 24px;">
-              ${logoUrl ? `
-                <img src="${logoUrl}" alt="${companyName}" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
-              ` : `
-                <img src="${dummyLogo}" alt="Company Logo" style="max-height: 110px; max-width: 240px; object-fit: contain; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
-              `}
-            </div>
-          </div>
-          <!-- Site and Company Info Row -->
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; padding: 0;">
-            <div style="flex: 1;">
-              <div style="margin-bottom: 8px;">
-                <p style="font-size: 17px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Site / Project</p>
-                <p style="font-size: 28px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.2;">${site.name || 'N/A'}</p>
-              </div>
-              <div>
-                <p style="font-size: 17px; margin: 0 0 1px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Company</p>
-                <p style="font-size: 26px; margin: 0; color: #475569; font-weight: 600;">${companyName || 'N/A'}</p>
-              </div>
-            </div>
-            <!-- Document Date on Right -->
-            <div style="flex-shrink: 0; margin-left: 24px; text-align: right; padding: 10px 18px; border-radius: 6px; border: none; box-shadow: none;">
-              <p style="font-size: 16px; margin: 0 0 3px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Document Date</p>
-              <p style="font-size: 24px; margin: 0; color: #0f172a; font-weight: 700;">${generatedDate}</p>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Report Content -->
-        <div style="padding: 32px 0; border: none;">
-          <!-- Room Info Section -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; padding: 0 40px 20px 40px; border-bottom: 1px solid #e5e7eb;">
-            <!-- Room Section -->
-            <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
-              <p style="font-size: 17px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Room / Area</p>
-              <p style="font-size: 26px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">All Rooms</p>
-            </div>
-            <!-- Total Items Section -->
-            <div style="background: #f8fafc; padding: 20px 24px; border-radius: 6px; border: none;">
-              <p style="font-size: 17px; margin: 0 0 6px 0; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Items</p>
-              <p style="font-size: 26px; margin: 0; color: #0f172a; font-weight: 700; line-height: 1.3;">${totalItems}</p>
-            </div>
-          </div>
-
-          <!-- Category Summary -->
-          <div style="margin-bottom: 24px; padding: 0 40px;">
-            <h3 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Summary by Category</h3>
-            <div style="background: white; border: none; border-radius: 6px; overflow: hidden;">
-              ${categoryRows}
-            </div>
-          </div>
-          
-          ${roomsHTML}
-          
-          <!-- Total Amounts Section -->
-          <div style="margin-top: 24px; padding: 0 40px;">
-            <div style="padding: 28px 40px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 6px; border: none; box-shadow: none;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #86efac;">
-                <div style="font-size: 26px; font-weight: 600; color: #166534;">Total Base Amount:</div>
-                <div style="font-size: 30px; font-weight: 700; color: #166534;">${formatCurrency(totals.totalBase)}</div>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 28px; font-weight: 700; color: #166534;">Total Purchase Amount:</div>
-                <div style="font-size: 46px; font-weight: 800; color: #059669; letter-spacing: -0.5px;">${formatCurrency(totals.totalPurchase)}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-            <div style="text-align: center; color: #9ca3af; font-size: 10px; margin-bottom: 8px;">
-              <p style="margin: 0 0 4px 0;">This is a computer-generated Bill of Quantities. No signature required.</p>
-              <p style="margin: 0;">Generated on ${generatedDateTime} by SiteZero</p>
-            </div>
-            <div style="text-align: center; padding-top: 12px; border-top: 1px solid #f3f4f6;">
-              <p style="margin: 0; color: #6b7280; font-size: 10px; font-weight: 500; letter-spacing: 0.5px;">Powered by <span style="color: #667eea; font-weight: 600;">SiteZero</span></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  return html;
-};
-
+ * Export all BOQ items for a site to PDF
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const exportAllBOQToPDF = async (req, res) => {
   const { siteId } = req.body;
+  let doc = null;
 
   // Validate request
   if (!siteId) {
     return res.status(400).json({ message: 'siteId is required' });
   }
-
-  let browser = null;
 
   try {
     // Fetch site data
@@ -781,11 +559,6 @@ export const exportAllBOQToPDF = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Fetch user data for company logo and name
-    const user = await User.findById(req.user._id).select('companyName companyLogo');
-    const companyName = user?.companyName || req.user.companyName || '';
-    const companyLogo = user?.companyLogo || req.user.companyLogo || '';
-
     // Fetch BOQ items
     const items = await BOQItem.find({ siteId }).sort({
       roomName: 1,
@@ -801,110 +574,6 @@ export const exportAllBOQToPDF = async (req, res) => {
     const categorySummary = calculateCategorySummary(items);
     const groupedByRoom = groupItemsByRoom(items);
     const rooms = Object.keys(groupedByRoom).sort();
-    
-    // Calculate total items
-    const totalItems = items.length;
-
-    // Generate HTML
-    const html = generateAllBOQHTML(site, companyName, companyLogo, items, totals, categorySummary, groupedByRoom, rooms, totalItems);
-
-    // Launch browser
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    
-    // Set content and wait for resources to load
-    await page.setContent(html, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
-
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0'
-      },
-      preferCSSPageSize: true
-    });
-
-    // Close browser
-    await browser.close();
-
-    // Set response headers
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="BOQ_Report_${site.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf"`
-    );
-
-    // Send PDF
-    res.send(pdfBuffer);
-
-  } catch (error) {
-    console.error('PDF Export Error:', error);
-    
-    // Clean up browser if it was opened
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        console.error('Error closing browser:', e);
-      }
-    }
-
-    // Only send error response if headers not already sent
-    if (!res.headersSent) {
-      res.status(500).json({
-        message: 'PDF Export failed',
-        error: process.env.NODE_ENV === 'production' 
-          ? 'Internal server error' 
-          : error.message
-      });
-    }
-  }
-};
-
-/**
- * Calculate totals for BOQ items
-    const hasAccess = 
-      site.companyName === req.user.companyName ||
-      req.user.siteAccess?.some(id => id.toString() === siteId);
-    
-    if (!hasAccess) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    // Fetch user data for company logo and name
-    const user = await User.findById(req.user._id).select('companyName companyLogo');
-    const companyName = user?.companyName || req.user.companyName || '';
-    const companyLogo = user?.companyLogo || req.user.companyLogo || '';
-
-    // Fetch BOQ items
-    const items = await BOQItem.find({ siteId }).sort({
-      roomName: 1,
-      createdAt: 1
-    });
-
-    if (!items.length) {
-      return res.status(404).json({ message: 'No BOQ items found' });
-    }
-
-    // Calculate totals
-    const totals = calculateBOQTotals(items);
-    const categorySummary = calculateCategorySummary(items);
-    const groupedByRoom = groupItemsByRoom(items);
-    const rooms = Object.keys(groupedByRoom).sort();
-    
-    // Calculate total items
-    const totalItems = items.length;
 
     // PDF Configuration
     const PDF_CONFIG = {
@@ -928,13 +597,13 @@ export const exportAllBOQToPDF = async (req, res) => {
       }
     };
 
-    const { PAGE_MARGIN, SIDE_PADDING, PAGE_WIDTH, PAGE_HEIGHT } = PDF_CONFIG;
-    const CONTENT_WIDTH = PAGE_WIDTH - SIDE_PADDING * 2;
+    const { PAGE_MARGIN, PAGE_WIDTH, PAGE_HEIGHT } = PDF_CONFIG;
+    const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
 
-    // Initialize PDF document - no margins, full width
+    // Initialize PDF document
     doc = new PDFDocument({ 
       size: 'A4', 
-      margin: 0,
+      margin: PAGE_MARGIN,
       info: {
         Title: `All Rooms BOQ Report - ${site.name}`,
         Author: 'BOQ Management System',
@@ -958,106 +627,58 @@ export const exportAllBOQToPDF = async (req, res) => {
     let currentY = 0;
 
     /**
-     * Draw professional header matching frontend format
+     * Draw page header
      * @param {number} pageNo - Current page number
      */
     const drawHeader = (pageNo) => {
-      const headerTop = 8;
-      const headerHeight = 100;
-      
-      // Header background (gradient effect - using solid color)
-      doc.save()
-        .rect(0, headerTop, PAGE_WIDTH, headerHeight)
-        .fill('#f8fafc')
-        .restore();
-
-      // Left side: BOQ Title and Site Info
-      const leftX = SIDE_PADDING;
-      let leftY = headerTop + 24;
+      const top = 20;
       
       doc.save()
         .font(PDF_CONFIG.FONT_BOLD)
         .fontSize(PDF_CONFIG.FONT_SIZES.TITLE)
-        .fillColor('#0f172a')
-        .text('BILL OF QUANTITIES', leftX, leftY)
+        .fillColor('#000')
+        .text('BILL OF QUANTITIES', PAGE_MARGIN, top)
         .restore();
 
-      leftY += 12;
-      
       doc.save()
         .font(PDF_CONFIG.FONT_PRIMARY)
-        .fontSize(18)
-        .fillColor('#64748b')
-        .text('Site Name', leftX, leftY)
+        .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+        .fillColor(PDF_CONFIG.SECONDARY_COLOR)
+        .text(
+          `${site.projectType || '2 BHK Interior'} - ${site.name}`,
+          PAGE_MARGIN,
+          top + 18
+        )
         .restore();
 
-      leftY += 18;
-      
+      // Page number and date
+      const pageInfoX = PAGE_WIDTH - PAGE_MARGIN - 80;
       doc.save()
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(20)
-        .fillColor('#0f172a')
-        .text(site.name || 'N/A', leftX, leftY)
+        .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+        .fillColor('#000')
+        .text(`Page ${pageNo}`, pageInfoX, top, { align: 'right' })
+        .text(
+          new Date().toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }),
+          pageInfoX,
+          top + 15,
+          { align: 'right' }
+        )
         .restore();
 
-      leftY += 20;
-      
+      // Separator line
       doc.save()
-        .font(PDF_CONFIG.FONT_PRIMARY)
-        .fontSize(18)
-        .fillColor('#64748b')
-        .text('Company Name', leftX, leftY)
+        .moveTo(PAGE_MARGIN, top + 35)
+        .lineTo(PAGE_WIDTH - PAGE_MARGIN, top + 35)
+        .strokeColor('#ccc')
+        .lineWidth(0.5)
+        .stroke()
         .restore();
 
-      leftY += 18;
-      
-      doc.save()
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(20)
-        .fillColor('#0f172a')
-        .text(companyName || 'N/A', leftX, leftY, { width: 250 })
-        .restore();
-
-      // Right side: Document Date and Logo
-      const rightX = PAGE_WIDTH - SIDE_PADDING;
-      let rightY = headerTop + 24;
-      
-      // Document Date
-      const dateLabelY = rightY;
-      doc.save()
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(16)
-        .fillColor('#64748b')
-        .text('DOCUMENT DATE', rightX, dateLabelY, { align: 'right', width: 200 })
-        .restore();
-
-      rightY += 18;
-      
-      const generatedDate = new Date().toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-      
-      doc.save()
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(24)
-        .fillColor('#0f172a')
-        .text(generatedDate, rightX, rightY, { align: 'right', width: 200 })
-        .restore();
-
-      // Logo placeholder (if logo exists, would be added here)
-      // For now, we'll add a text-based logo fallback
-      rightY += 35;
-      const logoText = companyName ? companyName.substring(0, 8).toUpperCase() : 'LOGO';
-      doc.save()
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(14)
-        .fillColor('#64748b')
-        .text(logoText, rightX, rightY, { align: 'right', width: 200 })
-        .restore();
-
-      currentY = headerTop + headerHeight + 32;
+      currentY = top + 55;
     };
 
     /**
@@ -1098,8 +719,7 @@ const formatCurrency = (val) => {
      * @param {number} requiredHeight - Height needed for next element
      */
     const checkAndAddPage = (requiredHeight = 100) => {
-      const footerHeight = 50;
-      if (currentY + requiredHeight > PAGE_HEIGHT - footerHeight) {
+      if (currentY + requiredHeight > PAGE_HEIGHT - PAGE_MARGIN) {
         drawFooter();
         doc.addPage();
         pageNumber++;
@@ -1110,143 +730,189 @@ const formatCurrency = (val) => {
     };
 
     /**
-     * Draw room info section matching frontend format
+     * Draw project info card
      * @param {number} y - Starting Y position
      * @returns {number} New Y position
      */
-    const drawRoomInfoSection = (y) => {
-      const boxHeight = 80;
-      const boxWidth = (CONTENT_WIDTH - 24) / 2; // Two boxes with gap
-      const box1X = SIDE_PADDING;
-      const box2X = SIDE_PADDING + boxWidth + 24;
+    const drawProjectInfoCard = (y) => {
+      const cardHeight = 80;
       
-      // Box 1: Room / Area
       doc.save()
-        .roundedRect(box1X, y, boxWidth, boxHeight, 6)
-        .fill('#f8fafc')
-        .stroke('#e5e7eb')
-        .lineWidth(0.5)
+        .roundedRect(PAGE_MARGIN, y, CONTENT_WIDTH, cardHeight, 8)
+        .fill(PDF_CONFIG.BACKGROUND_COLOR)
+        .stroke(PDF_CONFIG.BORDER_COLOR)
         .stroke()
         .restore();
 
+      // Project/Site info
       doc.save()
-        .fillColor('#64748b')
+        .fillColor(PDF_CONFIG.SECONDARY_COLOR)
+        .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+        .text('PROJECT / SITE', PAGE_MARGIN + 20, y + 15)
+        .restore();
+
+      doc.save()
+        .fillColor('#000')
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.ROOM_LABEL)
-        .text('ROOM / AREA', box1X + 24, y + 20)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .text(`${site.projectType} - ${site.name}`, PAGE_MARGIN + 20, y + 30)
+        .restore();
+
+      // Room/Area info
+      doc.save()
+        .fillColor(PDF_CONFIG.SECONDARY_COLOR)
+        .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+        .text('ROOM / AREA', PAGE_MARGIN + 300, y + 15)
         .restore();
 
       doc.save()
-        .fillColor('#0f172a')
+        .fillColor('#000')
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.ROOM_INFO)
-        .text('All Rooms', box1X + 24, y + 45)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .text('All Rooms', PAGE_MARGIN + 300, y + 30)
         .restore();
 
-      // Box 2: Total Items
-      doc.save()
-        .roundedRect(box2X, y, boxWidth, boxHeight, 6)
-        .fill('#f8fafc')
-        .stroke('#e5e7eb')
-        .lineWidth(0.5)
-        .stroke()
-        .restore();
+      // Additional info
+      const infoItems = [
+        { label: 'Total Items', value: items.length },
+        { label: 'Total Rooms', value: rooms.length },
+        { label: 'Report Type', value: 'Detailed BOQ' }
+      ];
 
-      doc.save()
-        .fillColor('#64748b')
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.ROOM_LABEL)
-        .text('TOTAL ITEMS', box2X + 24, y + 20)
-        .restore();
+      let infoX = PAGE_MARGIN + 20;
+      infoItems.forEach((item, index) => {
+        if (index > 0) infoX += 120;
+        
+        doc.save()
+          .fillColor(PDF_CONFIG.SECONDARY_COLOR)
+          .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+          .text(item.label, infoX, y + 55)
+          .restore();
 
-      doc.save()
-        .fillColor('#0f172a')
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.ROOM_INFO)
-        .text(String(totalItems), box2X + 24, y + 45)
-        .restore();
+        doc.save()
+          .fillColor('#000')
+          .font(PDF_CONFIG.FONT_BOLD)
+          .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+          .text(String(item.value), infoX, y + 70)
+          .restore();
+      });
 
-      // Separator line
-      doc.save()
-        .moveTo(SIDE_PADDING, y + boxHeight + 20)
-        .lineTo(PAGE_WIDTH - SIDE_PADDING, y + boxHeight + 20)
-        .strokeColor('#e5e7eb')
-        .lineWidth(1)
-        .stroke()
-        .restore();
-
-      return y + boxHeight + 44;
+      return y + cardHeight + 20;
     };
 
     /**
-     * Draw totals summary box matching frontend format
+     * Draw totals summary box
      * @param {number} y - Starting Y position
      * @param {Object} totals - Total amounts
      * @returns {number} New Y position
      */
     const drawTotalsBox = (y, totals) => {
-      const boxHeight = 120;
+      const boxHeight = 70;
       
       doc.save()
-        .roundedRect(SIDE_PADDING, y, CONTENT_WIDTH, boxHeight, 6)
-        .fill('#f0fdf4')
+        .roundedRect(PAGE_MARGIN, y, CONTENT_WIDTH, boxHeight, 10)
+        .fill('#dcfce7')
         .stroke('#86efac')
-        .lineWidth(0.5)
         .stroke()
         .restore();
 
-      // Base Amount row
+      // Base Amount
       doc.save()
         .fillColor('#166534')
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.TOTAL_LABEL)
-        .text('Total Base Amount:', SIDE_PADDING + 40, y + 28)
-        .restore();
-
-      doc.save()
-        .fillColor('#166534')
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.TOTAL_VALUE)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .text('Total Base Amount:', PAGE_MARGIN + 20, y + 20)
         .text(
           formatCurrency(totals.totalBase),
-          PAGE_WIDTH - SIDE_PADDING - 40,
-          y + 28,
-          { align: 'right', width: 200 }
+          PAGE_WIDTH - PAGE_MARGIN - 20,
+          y + 20,
+          { align: 'right' }
         )
         .restore();
 
-      // Separator line
-      doc.save()
-        .moveTo(SIDE_PADDING + 40, y + 60)
-        .lineTo(PAGE_WIDTH - SIDE_PADDING - 40, y + 60)
-        .strokeColor('#86efac')
-        .lineWidth(1)
-        .stroke()
-        .restore();
-
-      // Purchase Amount row
+      // Purchase Amount
       doc.save()
         .fillColor('#166534')
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.TOTAL_LABEL + 2)
-        .text('Total Purchase Amount:', SIDE_PADDING + 40, y + 75)
-        .restore();
-
-      doc.save()
-        .fillColor('#059669')
-        .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.TOTAL_PURCHASE)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .text('Total Purchase Amount:', PAGE_MARGIN + 20, y + 45)
         .text(
           formatCurrency(totals.totalPurchase),
-          PAGE_WIDTH - SIDE_PADDING - 40,
-          y + 75,
-          { align: 'right', width: 200 }
+          PAGE_WIDTH - PAGE_MARGIN - 20,
+          y + 45,
+          { align: 'right' }
         )
         .restore();
 
-      return y + boxHeight + 24;
+      return y + boxHeight + 20;
     };
 
+    /**
+     * Draw dashboard-style header
+     */
+    const drawDashboardHeader = () => {
+      const bannerTop = currentY + 10;
+      const bannerHeight = 90;
+
+      // Banner background
+      doc.save()
+        .rect(PAGE_MARGIN, bannerTop, CONTENT_WIDTH, bannerHeight)
+        .fill('#1e293b')
+        .restore();
+
+      // Main title
+      doc.save()
+        .fillColor('#fff')
+        .font(PDF_CONFIG.FONT_BOLD)
+        .fontSize(PDF_CONFIG.FONT_SIZES.HEADER)
+        .text('BILL OF QUANTITIES', PAGE_MARGIN + 20, bannerTop + 20)
+        .restore();
+
+      // Subtitle
+      doc.save()
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .font(PDF_CONFIG.FONT_PRIMARY)
+        .fillColor('#fff')
+        .text(
+          `${site.projectType || '2 BHK Interior'} - ${site.name}`,
+          PAGE_MARGIN + 20,
+          bannerTop + 45
+        )
+        .restore();
+
+      // Date card
+      const dateCardWidth = 140;
+      const dateCardHeight = 40;
+      const dateCardX = PAGE_WIDTH - PAGE_MARGIN - dateCardWidth - 20;
+      
+      doc.save()
+        .rect(dateCardX, bannerTop + 20, dateCardWidth, dateCardHeight)
+        .fill('#334155')
+        .restore();
+
+      doc.save()
+        .fillColor('#fff')
+        .fontSize(PDF_CONFIG.FONT_SIZES.BODY)
+        .text('DOCUMENT DATE', dateCardX + 15, bannerTop + 25)
+        .restore();
+
+      doc.save()
+        .font(PDF_CONFIG.FONT_BOLD)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .fillColor('#fff')
+        .text(
+          new Date().toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }),
+          dateCardX + 15,
+          bannerTop + 40
+        )
+        .restore();
+
+      currentY = bannerTop + bannerHeight + 30;
+    };
 
     /**
      * Draw table header
@@ -1256,7 +922,7 @@ const formatCurrency = (val) => {
       const headers = [
         'Sr', 'Item', 'Category', 'Qty', 'Unit',
         'Base Rate', 'Purchase Rate', 'Base Amt',
-        'Purchase Amt', 'Status'
+        'Purchase Amt','Photo','Status'
       ];
       
       const colWidths = [25, 120, 65, 35, 35, 60, 65, 60, 70, 45];
@@ -1287,34 +953,32 @@ const formatCurrency = (val) => {
     };
 
     /**
-     * Draw table row matching frontend format (no Status column)
+     * Draw table row
      * @param {number} y - Y position
-     * @param {Array} row - Row data (7 columns: S.No, Item, Category badge, Qty, Base Rate, Purchase Rate, Base Amt, Purchase Amt)
+     * @param {Array} row - Row data
      * @param {number} index - Row index
      * @param {Array} colWidths - Column widths
      */
     const drawTableRow = (y, row, index, colWidths) => {
-      const rowHeight = 24;
-      
       // Alternate row background
       if (index % 2 === 0) {
         doc.save()
-          .rect(SIDE_PADDING, y - 2, CONTENT_WIDTH, rowHeight)
+          .rect(PAGE_MARGIN, y - 2, CONTENT_WIDTH, 18)
           .fill(PDF_CONFIG.TABLE_STRIPE_COLOR)
           .restore();
       }
 
-      let x = SIDE_PADDING;
+      let x = PAGE_MARGIN;
       doc.save()
-        .fillColor('#0f172a')
+        .fillColor('#000')
         .font(PDF_CONFIG.FONT_PRIMARY)
         .fontSize(PDF_CONFIG.FONT_SIZES.BODY);
 
       row.forEach((cell, colIndex) => {
-        const align = colIndex === 0 ? 'center' : (colIndex === 1 ? 'left' : 'right');
-        doc.text(String(cell), x + 18, y + 4, { 
+        const align = colIndex >= 5 && colIndex <= 8 ? 'right' : 'left';
+        doc.text(String(cell), x + 2, y, { 
           width: colWidths[colIndex], 
-          align: align
+          align 
         });
         x += colWidths[colIndex];
       });
@@ -1323,39 +987,27 @@ const formatCurrency = (val) => {
     };
 
     /**
-     * Draw category summary matching frontend format
+     * Draw category summary
      */
     const drawCategorySummary = () => {
-      checkAndAddPage(200);
+      checkAndAddPage(150);
       
-      // Section title
       doc.save()
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(28)
-        .fillColor('#111827')
-        .text('Summary by Category', SIDE_PADDING, currentY)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .fillColor(PDF_CONFIG.PRIMARY_COLOR)
+        .text('Category Summary', PAGE_MARGIN, currentY)
         .restore();
 
-      currentY += 28;
-
-      // Separator line
-      doc.save()
-        .moveTo(SIDE_PADDING, currentY)
-        .lineTo(PAGE_WIDTH - SIDE_PADDING, currentY)
-        .strokeColor('#e5e7eb')
-        .lineWidth(1)
-        .stroke()
-        .restore();
-
-      currentY += 18;
+      currentY += 20;
 
       // Summary table headers
       const summaryHeaders = ['Category', 'Items', 'Base Amount', 'Purchase Amount'];
-      const summaryWidths = [200, 100, 140, 140];
+      const summaryWidths = [150, 80, 120, 120];
       
-      let x = SIDE_PADDING;
+      let x = PAGE_MARGIN;
       doc.save()
-        .fillColor('#1e293b')
+        .fillColor(PDF_CONFIG.PRIMARY_COLOR)
         .font(PDF_CONFIG.FONT_BOLD)
         .fontSize(PDF_CONFIG.FONT_SIZES.BODY);
       
@@ -1368,15 +1020,15 @@ const formatCurrency = (val) => {
       });
       
       doc.restore();
-      currentY += 25;
+      currentY += 20;
 
       // Summary rows
       Object.entries(categorySummary).forEach(([category, data]) => {
-        if (checkAndAddPage(30)) {
-          currentY += 25;
+        if (checkAndAddPage(20)) {
+          currentY += 20;
         }
 
-        x = SIDE_PADDING;
+        x = PAGE_MARGIN;
         const rowData = [
           category,
           data.count.toString(),
@@ -1385,126 +1037,107 @@ const formatCurrency = (val) => {
         ];
 
         doc.save()
-          .fillColor('#0f172a')
-          .font(PDF_CONFIG.FONT_BOLD)
-          .fontSize(PDF_CONFIG.FONT_SIZES.CATEGORY_NAME);
-
-        // Category name (left aligned)
-        doc.text(rowData[0], x, currentY, { 
-          width: summaryWidths[0], 
-          align: 'left' 
-        });
-        x += summaryWidths[0];
-
-        doc.restore();
-
-        // Other columns (right aligned)
-        doc.save()
-          .fillColor('#0f172a')
+          .fillColor('#000')
           .font(PDF_CONFIG.FONT_PRIMARY)
           .fontSize(PDF_CONFIG.FONT_SIZES.BODY);
 
-        for (let i = 1; i < rowData.length; i++) {
-          doc.text(rowData[i], x, currentY, { 
-            width: summaryWidths[i], 
-            align: 'right' 
+        rowData.forEach((cell, index) => {
+          doc.text(cell, x, currentY, { 
+            width: summaryWidths[index], 
+            align: index > 0 ? 'right' : 'left' 
           });
-          x += summaryWidths[i];
-        }
+          x += summaryWidths[index];
+        });
 
         doc.restore();
-        currentY += 22;
+        currentY += 15;
       });
 
-      currentY += 24;
+      currentY += 20;
     };
 
     // === MAIN PDF GENERATION FLOW ===
 
     // First page header
     drawHeader(pageNumber);
+    drawDashboardHeader();
     
-    // Room info section (Total Rooms and Total Items)
+    // Project info card
     checkAndAddPage(100);
-    currentY = drawRoomInfoSection(currentY);
+    currentY = drawProjectInfoCard(currentY);
     
     // Category summary
     drawCategorySummary();
 
     // Room-wise tables
     rooms.forEach((room, roomIndex) => {
-      // Check if we need a new page for the room section
-      checkAndAddPage(80);
-      
-      // Section title: Detailed Items
-      if (roomIndex === 0) {
-        doc.save()
-          .font(PDF_CONFIG.FONT_BOLD)
-          .fontSize(28)
-          .fillColor('#111827')
-          .text('Detailed Items', SIDE_PADDING, currentY)
-          .restore();
-
-        currentY += 28;
-
-        // Separator line
-        doc.save()
-          .moveTo(SIDE_PADDING, currentY)
-          .lineTo(PAGE_WIDTH - SIDE_PADDING, currentY)
-          .strokeColor('#e5e7eb')
-          .lineWidth(1)
-          .stroke()
-          .restore();
-
-        currentY += 18;
-      }
+      // Check if we need a new page for the room header
+      checkAndAddPage(50);
       
       // Room title
       doc.save()
         .font(PDF_CONFIG.FONT_BOLD)
-        .fontSize(PDF_CONFIG.FONT_SIZES.CATEGORY_NAME)
-        .fillColor('#111827')
-        .text(room, SIDE_PADDING, currentY)
+        .fontSize(PDF_CONFIG.FONT_SIZES.SUBTITLE)
+        .fillColor(PDF_CONFIG.PRIMARY_COLOR)
+        .text(`Room: ${room}`, PAGE_MARGIN, currentY)
         .restore();
       
-      currentY += 30;
+      currentY += 25;
 
       // Table header
       const colWidths = drawTableHeader(currentY);
-      currentY += 32;
+      currentY += 25;
 
       // Table rows
       groupedByRoom[room].forEach((item, itemIndex) => {
-        // Check page break for each row (prevent cutting)
-        if (checkAndAddPage(30)) {
+        // Check page break for each row
+        if (checkAndAddPage(20)) {
           // Redraw table header on new page
           drawTableHeader(currentY);
-          currentY += 32;
+          currentY += 25;
         }
 
         const baseAmount = item.quantity * item.rate;
         const purchaseAmount = item.quantity * (item.purchaseRate ?? item.rate);
 
-        // Row data matching frontend (7 columns, no Status)
         const row = [
           (itemIndex + 1).toString(),
-          item.itemName + (item.category ? ` (${item.category})` : ''),
-          `${item.quantity} ${item.unit}`,
+          item.itemName,
+          item.category,
+          item.quantity.toString(),
+          item.unit,
           formatCurrency(item.rate),
           formatCurrency(item.purchaseRate ?? item.rate),
           formatCurrency(baseAmount),
-          formatCurrency(purchaseAmount)
+          formatCurrency(purchaseAmount),
+          '',
+          item.status || 'Pending'
         ];
 
         drawTableRow(currentY, row, itemIndex, colWidths);
-        currentY += 24;
+
+        if (item.photo) {
+  try {
+    const imagePath = path.join(process.cwd(), item.photo);
+
+    if (fs.existsSync(imagePath)) {
+      doc.image(imagePath, PAGE_MARGIN + 450, currentY - 2, {
+        width: 30,
+        height: 25
+      });
+    }
+  } catch (err) {
+    console.log("Image error:", err);
+  }
+}
+        currentY += 20;
       });
 
-      currentY += 24;
+      currentY += 30;
     });
 
     // Grand total box
-    checkAndAddPage(150);
+    checkAndAddPage(100);
     drawTotalsBox(currentY, totals);
 
     // Final footer
@@ -1668,3 +1301,14 @@ export const exportAllBOQToHTML = async (req, res) => {
   }
 };
   
+export const downloadBOQImage = (req, res) => {
+  const filename = req.params.filename;
+
+  const filePath = path.join(process.cwd(), "uploads/boq", filename);
+
+  if (fs.existsSync(filePath)) {
+    res.download(filePath);
+  } else {
+    res.status(404).json({ message: "File not found" });
+  }
+};
