@@ -1,6 +1,7 @@
 import { Router } from "express";
 import AuthMiddleware from "../middleware/auth.js";
-import { listSites, createSite, updateContractValue, updateSite, saveBudgetAllocation, getBudgetAllocation } from "../controllers/SiteController.js";
+import { listSites, createSite, updateContractValue, updateSite, saveBudgetAllocation, getBudgetAllocation, deleteSite } from "../controllers/SiteController.js";
+
 
 const siteRouter = Router();
 
@@ -16,5 +17,6 @@ siteRouter.put("/:siteId", updateSite);
 // Budget allocation endpoints
 siteRouter.get("/:siteId/budget-allocation", getBudgetAllocation);
 siteRouter.post("/:siteId/budget-allocation", saveBudgetAllocation);
+siteRouter.delete("/:siteId", deleteSite);
 
 export default siteRouter;

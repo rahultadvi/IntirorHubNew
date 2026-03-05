@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
-import { Plus, Building2, Check, X } from "lucide-react";
+import { Plus, Building2, Check, X, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { siteApi } from "../services/api";
 
@@ -23,6 +23,17 @@ const ManageSites: React.FC = () => {
   });
   const navigate = useNavigate();
   const isAdmin = user?.role === "ADMIN";
+const handleDeleteSite = async (siteId: string) => {
+  if (!confirm("Are you sure you want to delete this site?")) return;
+
+  try {
+    if (!token) throw new Error('No auth token');
+    await siteApi.deleteSite(siteId, token);
+    await refreshSites();
+  } catch (error) {
+    console.error("Delete site failed", error);
+  }
+};
 
   if (!isAdmin) {
     return (
@@ -78,8 +89,8 @@ const ManageSites: React.FC = () => {
         {/* Sites Grid */}
         <div className="bg-white rounded-xl shadow-sm p-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Sites</h2>
-          
-              {sites.length === 0 ? (
+
+          {sites.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Building2 className="h-8 w-8 text-gray-400" />
@@ -98,19 +109,24 @@ const ManageSites: React.FC = () => {
                 Create Site
               </button>
             </div>
-              ) : (
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sites.map((site) => {
                 const isCurrent = activeSite?.id === site.id;
                 return (
                   <div
                     key={site.id}
-                    className={`relative group rounded-xl p-6 transition-all border-2 ${
-                      isCurrent
+                    className={`relative group rounded-xl p-6 transition-all border-2 ${isCurrent
                         ? "bg-gray-50 border-gray-900 shadow-md"
                         : "bg-white border-gray-200 hover:border-gray-400 hover:shadow-sm"
-                    }`}
+                      }`}
                   >
+                    <button
+                      onClick={() => handleDeleteSite(site.id)}
+                      className="absolute -top-3 -right-3 bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-full shadow-sm transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                     {isCurrent && (
                       <div className="absolute top-1 right-3">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-600 text-white text-xs font-semibold">
@@ -123,9 +139,8 @@ const ManageSites: React.FC = () => {
                     {/* Site Icon */}
                     <div className="flex items-start gap-4 mb-4">
                       <div
-                        className={`flex-shrink-0 h-16 w-16 rounded-xl flex items-center justify-center ${
-                          isCurrent ? "bg-gray-900" : "bg-gradient-to-br from-gray-700 to-gray-900"
-                        }`}
+                        className={`flex-shrink-0 h-16 w-16 rounded-xl flex items-center justify-center ${isCurrent ? "bg-gray-900" : "bg-gradient-to-br from-gray-700 to-gray-900"
+                          }`}
                       >
                         <span className="text-xl font-bold text-white">
                           {site.name.slice(0, 2).toUpperCase()}
@@ -133,17 +148,15 @@ const ManageSites: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0 mt-2">
                         <h3
-                          className={`font-semibold text-lg truncate ${
-                            isCurrent ? "text-gray-900" : "text-gray-900"
-                          }`}
+                          className={`font-semibold text-lg truncate ${isCurrent ? "text-gray-900" : "text-gray-900"
+                            }`}
                         >
                           {site.name}
                         </h3>
                         {site.description && (
                           <p
-                            className={`text-sm mt-1 line-clamp-2 ${
-                              isCurrent ? "text-gray-600" : "text-gray-500"
-                            }`}
+                            className={`text-sm mt-1 line-clamp-2 ${isCurrent ? "text-gray-600" : "text-gray-500"
+                              }`}
                           >
                             {site.description}
                           </p>
@@ -166,8 +179,8 @@ const ManageSites: React.FC = () => {
                           Switch Site
                         </button>
                       )}
-                      <button 
-                        onClick={() => setEditingSite(site)} 
+                      <button
+                        onClick={() => setEditingSite(site)}
                         className="flex-1 px-2 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-sm font-medium transition-all"
                       >
                         Edit Site
@@ -181,7 +194,7 @@ const ManageSites: React.FC = () => {
         </div>
       </div>
       {showCreateProjectModal && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -190,7 +203,7 @@ const ManageSites: React.FC = () => {
           }}
         >
           <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100" />
-          <div 
+          <div
             className="relative bg-white rounded-xl w-full max-w-lg p-4 sm:p-6 shadow-lg
         overflow-auto max-h-[calc(100vh-8rem)]
         transform transition-all duration-300
@@ -204,7 +217,8 @@ const ManageSites: React.FC = () => {
               </div>
               <button onClick={() => setShowCreateProjectModal(false)} className="p-1 rounded-md hover:bg-gray-100"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={async (e) => { e.preventDefault();
+            <form onSubmit={async (e) => {
+              e.preventDefault();
               try {
                 if (!token) throw new Error('No auth token');
                 const payload = {
@@ -242,7 +256,7 @@ const ManageSites: React.FC = () => {
                   required
                   className="w-full mt-1 p-2 border rounded"
                   value={createProjectForm.projectName}
-                  onChange={(e) => setCreateProjectForm({...createProjectForm, projectName: e.target.value})}
+                  onChange={(e) => setCreateProjectForm({ ...createProjectForm, projectName: e.target.value })}
                 />
               </div>
               <div>
@@ -251,7 +265,7 @@ const ManageSites: React.FC = () => {
                   required
                   className="w-full mt-1 p-2 border rounded"
                   value={createProjectForm.projectType}
-                  onChange={(e) => setCreateProjectForm({...createProjectForm, projectType: e.target.value})}
+                  onChange={(e) => setCreateProjectForm({ ...createProjectForm, projectType: e.target.value })}
                 >
                   <option>Residential</option>
                   <option>Commercial</option>
@@ -265,7 +279,7 @@ const ManageSites: React.FC = () => {
                   required
                   className="w-full mt-1 p-2 border rounded"
                   value={createProjectForm.projectLocation}
-                  onChange={(e) => setCreateProjectForm({...createProjectForm, projectLocation: e.target.value})}
+                  onChange={(e) => setCreateProjectForm({ ...createProjectForm, projectLocation: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -276,7 +290,7 @@ const ManageSites: React.FC = () => {
                     type="date"
                     className="w-full mt-1 p-2 border rounded"
                     value={createProjectForm.startDate}
-                    onChange={(e) => setCreateProjectForm({...createProjectForm, startDate: e.target.value})}
+                    onChange={(e) => setCreateProjectForm({ ...createProjectForm, startDate: e.target.value })}
                   />
                 </div>
                 <div>
@@ -286,7 +300,7 @@ const ManageSites: React.FC = () => {
                     type="date"
                     className="w-full mt-1 p-2 border rounded"
                     value={createProjectForm.expectedCompletionDate}
-                    onChange={(e) => setCreateProjectForm({...createProjectForm, expectedCompletionDate: e.target.value})}
+                    onChange={(e) => setCreateProjectForm({ ...createProjectForm, expectedCompletionDate: e.target.value })}
                   />
                 </div>
               </div>
@@ -296,7 +310,7 @@ const ManageSites: React.FC = () => {
                   required
                   className="w-full mt-1 p-2 border rounded"
                   value={createProjectForm.clientName}
-                  onChange={(e) => setCreateProjectForm({...createProjectForm, clientName: e.target.value})}
+                  onChange={(e) => setCreateProjectForm({ ...createProjectForm, clientName: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -306,7 +320,7 @@ const ManageSites: React.FC = () => {
                     type="tel"
                     className="w-full mt-1 p-2 border rounded"
                     value={createProjectForm.clientPhone}
-                    onChange={(e) => setCreateProjectForm({...createProjectForm, clientPhone: e.target.value})}
+                    onChange={(e) => setCreateProjectForm({ ...createProjectForm, clientPhone: e.target.value })}
                   />
                 </div>
                 <div>
@@ -315,7 +329,7 @@ const ManageSites: React.FC = () => {
                     type="email"
                     className="w-full mt-1 p-2 border rounded"
                     value={createProjectForm.clientEmail}
-                    onChange={(e) => setCreateProjectForm({...createProjectForm, clientEmail: e.target.value})}
+                    onChange={(e) => setCreateProjectForm({ ...createProjectForm, clientEmail: e.target.value })}
                   />
                 </div>
               </div>
@@ -327,7 +341,7 @@ const ManageSites: React.FC = () => {
                   min="0"
                   className="w-full mt-1 p-2 border rounded"
                   value={createProjectForm.totalProjectValue}
-                  onChange={(e) => setCreateProjectForm({...createProjectForm, totalProjectValue: e.target.value})}
+                  onChange={(e) => setCreateProjectForm({ ...createProjectForm, totalProjectValue: e.target.value })}
                 />
               </div>
               <div className="flex flex-row items-center justify-end gap-2 mt-2">
@@ -345,7 +359,7 @@ const ManageSites: React.FC = () => {
 };
 
 export default ManageSites;
- 
+
 // Edit Site Modal (renders when `editingSite` is set)
 
 const EditSiteModal: React.FC<{
@@ -405,7 +419,7 @@ const EditSiteModal: React.FC<{
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -413,8 +427,8 @@ const EditSiteModal: React.FC<{
         }
       }}
     >
-      <div 
-        className="w-full max-w-md bg-white rounded-2xl p-6"
+      <div
+        className="w-full max-w-md bg-white rounded-2xl p-6 flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -423,38 +437,38 @@ const EditSiteModal: React.FC<{
             <X className="w-5 h-5" />
           </button>
         </div>
-           <div className="flex-1 overflow-y-auto pr-2">
-        <label className="block mb-3 text-sm">
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <label className="block mb-3 text-sm">
-          Description
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" rows={3} />
-        </label>
-        <label className="block mb-3 text-sm">
-          Contract Value
-          <input value={contractValue} onChange={(e) => setContractValue(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <label className="block mb-3 text-sm">
-          Client Email
-          <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <label className="block mb-3 text-sm">
-          Client Phone
-          <input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <label className="block mb-4 text-sm">
-          Start Date
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <label className="block mb-4 text-sm">
-          Expected Completion Date
-          <input type="date" value={expectedCompletionDate} onChange={(e) => setExpectedCompletionDate(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </label>
-        <div className="flex flex-row items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-          <button onClick={save} disabled={loading} className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving' : 'Save'}</button>
+        <div className="flex-1 overflow-y-auto pr-2">
+          <label className="block mb-3 text-sm">
+            Name
+            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <label className="block mb-3 text-sm">
+            Description
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" rows={3} />
+          </label>
+          <label className="block mb-3 text-sm">
+            Contract Value
+            <input value={contractValue} onChange={(e) => setContractValue(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <label className="block mb-3 text-sm">
+            Client Email
+            <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <label className="block mb-3 text-sm">
+            Client Phone
+            <input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <label className="block mb-4 text-sm">
+            Start Date
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <label className="block mb-4 text-sm">
+            Expected Completion Date
+            <input type="date" value={expectedCompletionDate} onChange={(e) => setExpectedCompletionDate(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
+          </label>
+          <div className="flex flex-row items-center justify-end gap-2">
+            <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
+            <button onClick={save} disabled={loading} className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{loading ? 'Saving' : 'Save'}</button>
           </div>
         </div>
       </div>

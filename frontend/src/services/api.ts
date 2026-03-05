@@ -457,6 +457,12 @@ export const siteApi = {
       token,
     }),
 
+ deleteSite: (siteId: string, token: string) =>
+  request(`/sites/${siteId}`, {
+    method: "DELETE",
+    token,
+  }),
+
   updateContractValue: (siteId: string, body: { contractValue: number }, token: string) =>
     request<{ message: string; site: SiteDto }>(`/sites/${siteId}/contract-value`, {
       method: "PUT",

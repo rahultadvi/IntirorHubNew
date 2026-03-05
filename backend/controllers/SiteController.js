@@ -298,3 +298,32 @@ export default {
   listSites,
   createSite,
 };
+
+export const deleteSite = async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Only admin can delete site" });
+    }
+
+    const { siteId } = req.params;
+
+    if (!siteId || !mongoose.Types.ObjectId.isValid(siteId)) {
+      return res.status(400).json({ message: "Invalid site ID" });
+    }
+
+    const site = await Site.findById(siteId);
+
+    if (!site) {
+      return res.status(404).json({ message: "Site not found" });
+    }
+
+    await Site.findByIdAndDelete(siteId);
+
+    return res.status(200).json({
+      message: "Site deleted successfully",
+    });
+  } catch (error) {
+    console.error("deleteSite error", error);
+    return res.status(500).json({ message: "Unable to delete site" });
+  }
+};
