@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 
 // CORS must come after app creation
 app.use(cors({
-  origin: "http://localhost:5173",   // frontend URL
+  origin: "*",   // frontend URL
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
@@ -64,17 +64,19 @@ const uploadsPath = path.join(__dirname, "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
 // Frontend build
-const frontendDistPath = path.join(__dirname, "../frontend/dist");
-app.use(express.static(frontendDistPath));
+// const frontendDistPath = path.join(__dirname, "../frontend/dist");
+// app.use(express.static(frontendDistPath));
 
 // React routing fallback
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
-    return next();
-  }
-  res.sendFile(path.join(frontendDistPath, "index.html"));
+// app.use((req, res, next) => {
+//   if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+//     return next();
+//   }
+//   res.sendFile(path.join(frontendDistPath, "index.html"));
+// });
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
 });
-
 // Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
