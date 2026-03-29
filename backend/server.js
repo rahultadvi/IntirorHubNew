@@ -64,16 +64,16 @@ const uploadsPath = path.join(__dirname, "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
 // Frontend build
-// const frontendDistPath = path.join(__dirname, "../frontend/dist");
-// app.use(express.static(frontendDistPath));
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
+app.use(express.static(frontendDistPath));
 
 // React routing fallback
-// app.use((req, res, next) => {
-//   if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
-//     return next();
-//   }
-//   res.sendFile(path.join(frontendDistPath, "index.html"));
-// });
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistPath, "index.html"));
+});
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
