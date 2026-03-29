@@ -64,24 +64,13 @@ const uploadsPath = path.join(__dirname, "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
 // Frontend build
-// const frontendDistPath = path.join(__dirname, "../frontend/dist");
-// app.use(express.static(frontendDistPath));
-
-// // React routing fallback
-// app.use((req, res, next) => {
-//   if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
-//     return next();
-//   }
-//   res.sendFile(path.join(frontendDistPath, "index.html"));
-// });
-// Frontend build path
-const frontendDistPath = path.join(process.cwd(), "frontend/dist");
-
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDistPath));
 
-app.get("*", (req, res) => {
+// React routing fallback
+app.use((req, res, next) => {
   if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
-    return res.status(404).json({ message: "API route not found" });
+    return next();
   }
   res.sendFile(path.join(frontendDistPath, "index.html"));
 });
